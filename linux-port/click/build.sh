@@ -1,0 +1,417 @@
+#!/bin/bash
+# Custom clickable builder for the Ubuntu Touch click of the OpenJDK port.
+#
+# Runs inside a CROSS clickable container (amd64 host toolchain, aarch64 target
+# sysroot), which is what keeps a rebuild in minutes: nothing is compiled by an
+# emulated arm64 toolchain. The split is
+#
+#   arch-independent, built on the host first (linux-port/build-all.sh):
+#       out/classpath/*.jar   the app and its dependencies
+#       out/app.apk           resources, assets and the manifest
+#   arm64, built here:
+#       atlas                 the camera2 branch: framework natives, api-impl.jar
+#                             and the HotSpot launcher (javac is a host tool, so
+#                             the jar is the same bytecode either way)
+#       ncnn                  the inference library the ML nodes link
+#       the app's JNI libs    dngCreator, allocator, flacRecorder, camera2native,
+#                             ncnnMl — from app/src/main/cpp against glibc
+#       shim.jar + libportshim.so  the libcore/dalvik compat shim
+#   prebuilt, staged by stage-prebuilt.sh:
+#       art support libs, ART's boot jars, dx, the bionic stubs, GLFW,
+#       libskia.so and the atlas sources — see PROVENANCE.md
+#
+# Unlike the sibling Mercurygram click, atlas is always compiled here: the ATL
+# SDK is built from atl-touch master and this port stands on the camera2 branch.
+# The SDK supplies that build's inputs, not its output.
+#
+# Every step is stamped in $BUILD_DIR/stamps, so a re-run only redoes what
+# changed. The port's own build scripts do the work; this file only retargets
+# them (PORT_ARCH=arm64) and assembles the click.
+set -euo pipefail
+
+ROOT="${ROOT:?not run through clickable}"
+BUILD_DIR="${BUILD_DIR:?}"
+INSTALL_DIR="${INSTALL_DIR:?}"
+ARCH="${ARCH:-arm64}"
+
+PKG="photoncamera-jvm.nekit"
+HOOK="photoncamera-jvm"
+
+[ "$ARCH" = "arm64" ] ||
+	{ echo "this package is arm64 only (ARCH=$ARCH)" >&2; exit 1; }
+
+CLICK_DIR="$ROOT/linux-port/click"
+HOST_OUT="$ROOT/linux-port/out"          # products of the x86_64 host build
+PREBUILT="$HOST_OUT/click-prebuilt"      # staged by stage-prebuilt.sh
+STAGE="$BUILD_DIR/stage"
+PREFIX="$STAGE/usr"                      # build-time sysroot for atlas
+STAMPS="$BUILD_DIR/stamps"
+
+log()        { echo -e "\033[1;34m[click]\033[0m $*"; }
+stamp()      { [ -f "$STAMPS/$1.done" ]; }
+done_stamp() { mkdir -p "$STAMPS"; touch "$STAMPS/$1.done"; }
+
+# --- 0. the port's environment, retargeted at arm64 -------------------------
+
+export PORT_ARCH="arm64"
+# arm64 products stay out of the host build's out/ — same scripts, own tree.
+export PORT_OUT="$BUILD_DIR/port"
+# javac, jar, jlink and every other Java tool: host. The JDK the app runs on: arm64.
+export JAVA_HOME="/usr/lib/jvm/java-21-openjdk-amd64"
+export PORT_TARGET_JAVA_HOME="/usr/lib/jvm/java-21-openjdk-arm64"
+export PORT_SKIA_PREBUILT="$PREBUILT/skia"
+# The framework sources travel inside the repository (stage-prebuilt.sh): the
+# container sees nothing outside it, and the checkout lives next door.
+[ -d "$PREBUILT/atlas-src" ] && export ATLAS_DIR="$PREBUILT/atlas-src"
+
+source "$ROOT/linux-port/env.sh"
+
+[ "$PORT_CROSS" = 1 ] ||
+	{ echo "expected a cross build, got PORT_TRIPLE=$PORT_TRIPLE" >&2; exit 1; }
+
+# atlas resolves art-standalone and glfw3 through pkg-config, links against the
+# staged .so files and includes their headers; the cross gcc reads LIBRARY_PATH.
+export PATH="$PREFIX/bin:$PATH"
+export PKG_CONFIG_PATH="$PREFIX/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+export LIBRARY_PATH="$PREFIX/lib:$PREFIX/lib/art${LIBRARY_PATH:+:$LIBRARY_PATH}"
+# meson ignores LIBRARY_PATH for the host machine of a cross build; these end up
+# in the cross file's [built-in options] instead (write-meson-cross.sh).
+export PORT_CROSS_LIB_DIRS="$PREFIX/lib $PREFIX/lib/art"
+export PORT_CROSS_INCLUDE_DIRS="$PREFIX/include"
+
+log "target $PORT_TRIPLE, $PORT_JOBS jobs"
+log "host JDK $JAVA_HOME, target JDK $PORT_TARGET_JAVA_HOME"
+
+# --- 1. inputs from the host build ------------------------------------------
+
+for f in "$HOST_OUT/app.apk" "$HOST_OUT/classpath"; do
+	[ -e "$f" ] || {
+		echo "missing $f — run linux-port/build-all.sh on the host first" >&2
+		exit 1
+	}
+done
+jar_count=$(find "$HOST_OUT/classpath" -name '*.jar' | wc -l)
+[ "$jar_count" -gt 30 ] ||
+	{ echo "only $jar_count jars in $HOST_OUT/classpath; re-run build-classpath.sh" >&2; exit 1; }
+
+[ -f "$PREBUILT/PROVENANCE.md" ] || {
+	echo "no arm64 prebuilt inputs at $PREBUILT" >&2
+	echo "run linux-port/click/stage-prebuilt.sh on the host first" >&2
+	exit 1
+}
+[ -f "$ATLAS_DIR/meson.build" ] || {
+	echo "no atlas sources at $ATLAS_DIR" >&2
+	echo "run linux-port/click/stage-prebuilt.sh on the host first" >&2
+	exit 1
+}
+
+[ -f "$PORT_TARGET_JAVA_HOME/lib/server/libjvm.so" ] || {
+	echo "no arm64 JVM at $PORT_TARGET_JAVA_HOME (openjdk-21-jdk-headless:arm64)" >&2
+	exit 1
+}
+
+# --- 2. build-time sysroot --------------------------------------------------
+
+if ! stamp "prefix-$(sha256sum "$PREBUILT/PROVENANCE.md" | cut -c1-12)"; then
+	log "staging the build-time sysroot in $PREFIX"
+	mkdir -p "$PREFIX"
+	rsync -a --delete-after "$PREBUILT/usr/" "$PREFIX/"
+
+	# art-standalone.pc puts -lart -lnativebridge on every link line that uses
+	# it. Nothing in this port calls into either (the framework's DT_NEEDED are
+	# libandroidfw and liblog), so an empty .so of each satisfies the linker and
+	# --as-needed drops it again — instead of carrying an ART the click would
+	# never load.
+	for stub in art nativebridge; do
+		"$PORT_CC" -shared -o "$PREFIX/lib/art/lib$stub.so" -x c /dev/null
+	done
+
+	# dx looks for dx.jar in ../framework relative to its own bin/ before it
+	# starts guessing from the linker's search path.
+	mkdir -p "$PREFIX/framework"
+	cp "$PREFIX/lib/java/dx.jar" "$PREFIX/framework/dx.jar"
+
+	mkdir -p "$PREFIX/lib/pkgconfig"
+	cat >"$PREFIX/lib/pkgconfig/art-standalone.pc" <<EOF
+# Generated by linux-port/click/build.sh for the arm64 cross build.
+prefix=$PREFIX
+libdir=\${prefix}/lib
+includedir=\${prefix}/include
+
+Name: art-standalone
+Description: Android ART runtime (boot jars and libandroidfw only, see PROVENANCE.md)
+Version: 0.0.0
+Libs: -L\${libdir}/art -lart -lnativebridge -landroidfw
+Cflags: -I\${includedir} -I\${includedir}/androidfw
+EOF
+	cat >"$PREFIX/lib/pkgconfig/glfw3.pc" <<EOF
+# Generated by linux-port/click/build.sh for the arm64 cross build.
+prefix=$PREFIX
+libdir=\${prefix}/lib
+includedir=\${prefix}/include
+
+Name: GLFW
+Description: GLFW 3.4 (prebuilt, see PROVENANCE.md)
+Version: 3.4
+Libs: -L\${libdir} -lglfw
+Cflags: -I\${includedir}
+EOF
+	done_stamp "prefix-$(sha256sum "$PREBUILT/PROVENANCE.md" | cut -c1-12)"
+fi
+
+# --- 3. atlas: framework natives, api-impl.jar and the HotSpot launcher -----
+
+# First, and not only because everything else is downstream of it: libncnnMl.so
+# links atlas's libandroid.so.0 for the AAsset_* calls that read the ML models
+# out of the apk (BRINGUP_NOTES.md).
+log "atlas ($PORT_TRIPLE, prebuilt skia)"
+"$ROOT/linux-port/build-atlas.sh"
+
+# --- 4. the compat shim -----------------------------------------------------
+
+# shim.jar is bytecode, but libportshim.so is not: without an arm64 build of it
+# every libcore.util.NativeAllocationRegistry falls back to leaking its native
+# peer ("port-shim: libportshim.so is not loaded" in the log).
+log "libcore/dalvik compat shim"
+"$ROOT/linux-port/build-shim.sh"
+
+# --- 5. ncnn and the app's JNI libraries ------------------------------------
+
+log "ncnn ($PORT_TRIPLE)"
+"$ROOT/linux-port/native/build_ncnn_linux.sh"
+
+log "the app's JNI libraries ($PORT_TRIPLE)"
+"$ROOT/linux-port/native/build_natives_linux.sh"
+
+# libarchive-jni.so is the same stub as on the desktop, and it has to be: the
+# apk does carry the me.zhanghai.android.libarchive AAR's own arm64 build, but
+# that is a *bionic* object (NEEDED liblog.so, libm.so, libdl.so, libc.so), and
+# this vehicle has no bionic — nothing here loads bionic_translation. So the
+# system libarchive answers dngCreator's dlopen/dlsym instead, exactly as on
+# x86_64, which is what makes libarchive-dev a target dependency.
+[ -s "$PORT_LIB_OUT/libarchive-jni.so" ] || {
+	echo "no $PORT_LIB_OUT/libarchive-jni.so: the CMake overlay found no libarchive" >&2
+	echo "add libarchive-dev to dependencies_target in clickable.yaml" >&2
+	exit 1
+}
+# A stub whose only reason to exist is its DT_NEEDED: dlsym searches a handle's
+# dependency chain, and --as-needed would drop the one entry that makes that
+# work. Nothing else in the stub references libarchive, so this cannot be
+# checked by looking for a symbol.
+archive_jni_dyn=$(readelf -d "$PORT_LIB_OUT/libarchive-jni.so")
+grep -q 'NEEDED.*libarchive\.so' <<<"$archive_jni_dyn" || {
+	echo "libarchive-jni.so lost its libarchive DT_NEEDED; dlsym would resolve nothing" >&2
+	exit 1
+}
+
+# --- 6. assemble the click tree ---------------------------------------------
+
+log "assembling $INSTALL_DIR"
+rm -rf "$INSTALL_DIR"
+mkdir -p "$INSTALL_DIR/lib" "$INSTALL_DIR/atlas" "$INSTALL_DIR/classpath"
+
+# One flat directory for every native object, launcher included: atlas's natives
+# find each other through their $ORIGIN/ RUNPATH, and the absolute paths the
+# build baked into it (this build tree) do not exist on the device.
+cp "$ATLAS_OUT/android-translation-layer-hotspot" "$INSTALL_DIR/lib/"
+cp "$ATLAS_OUT/libtranslation_layer_main.so" "$ATLAS_OUT/libandroid.so.0" \
+   "$ATLAS_OUT/libskia.so" "$INSTALL_DIR/lib/"
+ln -sfn libandroid.so.0 "$INSTALL_DIR/lib/libandroid.so"
+cp "$PORT_LIB_OUT"/*.so "$INSTALL_DIR/lib/"
+
+# What libtranslation_layer_main.so needs and Ubuntu Touch does not ship:
+# art's libandroidfw and its own dependencies, and GLFW 3.4.
+cp "$PREFIX"/lib/art/*.so "$INSTALL_DIR/lib/"
+rm -f "$INSTALL_DIR/lib/libart.so" "$INSTALL_DIR/lib/libnativebridge.so"  # the stubs
+cp -a "$PREFIX"/lib/libglfw.so* "$INSTALL_DIR/lib/"
+
+cp "$ATLAS_OUT/api-impl.jar" "$ATLAS_OUT/framework-res.apk" "$INSTALL_DIR/atlas/"
+mkdir -p "$INSTALL_DIR/atlas/system/etc"
+cp "$ATLAS_OUT/system/etc/fonts.xml" "$INSTALL_DIR/atlas/system/etc/"
+
+# The bundled Roboto faces the framework lays text out against. On the desktop
+# it finds them beside its own library; here the natives are in lib/ and the
+# atlas data in atlas/, so run.sh points ATL_FONT_DIR at this.
+mkdir -p "$INSTALL_DIR/atlas/system/fonts"
+cp "$ATLAS_OUT/system/fonts"/*.ttf "$INSTALL_DIR/atlas/system/fonts/"
+
+cp "$PORT_OUT/shim.jar" "$INSTALL_DIR/classpath/"
+cp "$HOST_OUT"/classpath/*.jar "$INSTALL_DIR/classpath/"
+cp "$HOST_OUT/app.apk" "$INSTALL_DIR/app.apk"
+
+# --- 7. the bundled JVM ------------------------------------------------------
+
+# A jlink image of the modules the app reaches, not a copy of the whole JDK.
+# jlink is arch-neutral, so the host one builds the arm64 image out of the arm64
+# jmods; nothing here has to run under qemu.
+#
+# jdeps over classpath/ + api-impl + shim finds java.{base,compiler,instrument,
+# sql} and jdk.unsupported (java.xml follows transitively); the rest is what
+# static analysis cannot see — locales, charsets, EC for TLS, the JDWP agent the
+# launcher's JDWP_LISTEN needs. Re-run this when a dependency is added:
+#
+#   jdeps --ignore-missing-deps --print-module-deps --multi-release 21 \
+#         -cp 'classpath/*:atlas/api-impl.jar' classpath/*.jar atlas/api-impl.jar
+#
+# A missing module is not a build error — it is a NoClassDefFoundError on
+# whatever path first needs it, so keep the set generous.
+#
+# A jlink image also fixes what --copy-unsafe-links used to paper over: Debian's
+# JDK is a tree of symlinks into /etc/java-21-openjdk and /etc/ssl/certs, none of
+# which exists on the device. jlink writes real files, including a populated
+# cacerts rather than the build host's symlink.
+PORT_JVM_MODULES="java.base,java.compiler,java.instrument,java.logging"
+PORT_JVM_MODULES="$PORT_JVM_MODULES,java.management,java.naming,java.sql,java.xml"
+PORT_JVM_MODULES="$PORT_JVM_MODULES,jdk.charsets,jdk.crypto.ec,jdk.jdwp.agent"
+PORT_JVM_MODULES="$PORT_JVM_MODULES,jdk.localedata,jdk.unsupported,jdk.zipfs"
+
+[ -d "$PORT_TARGET_JAVA_HOME/jmods" ] || {
+	echo "no jmods at $PORT_TARGET_JAVA_HOME (openjdk-21-jdk-headless:arm64)" >&2
+	echo "jlink needs them; the jre package alone is not enough" >&2
+	exit 1
+}
+# jlink refuses jmods from another JDK build. Both packages come from the same
+# Debian release in the container, so this only fires if one was pinned.
+host_build=$(sed -n 's/^JAVA_VERSION="\(.*\)"/\1/p' "$JAVA_HOME/release")
+target_build=$(sed -n 's/^JAVA_VERSION="\(.*\)"/\1/p' "$PORT_TARGET_JAVA_HOME/release")
+[ "$host_build" = "$target_build" ] || {
+	echo "JDK mismatch: host jlink is $host_build, arm64 jmods are $target_build" >&2
+	exit 1
+}
+
+log "jlinking the arm64 JVM ($PORT_JVM_MODULES)"
+rm -rf "$INSTALL_DIR/jvm"
+"$JAVA_HOME/bin/jlink" \
+	--module-path "$PORT_TARGET_JAVA_HOME/jmods" \
+	--add-modules "$PORT_JVM_MODULES" \
+	--no-header-files --no-man-pages --compress=zip-6 \
+	--output "$INSTALL_DIR/jvm"
+
+# libjvm.so is the launcher's DT_NEEDED and the JVM derives java.home from where
+# it was loaded from, so this one file decides whether the image is usable.
+[ -f "$INSTALL_DIR/jvm/lib/server/libjvm.so" ] ||
+	{ echo "jlink produced no lib/server/libjvm.so" >&2; exit 1; }
+log "  JVM image: $(du -sh "$INSTALL_DIR/jvm" | cut -f1)"
+
+# The base CDS archive. jlink does not write one, and without it HotSpot refuses
+# the app archive run.sh asks for on the device — silently, to its cds log only,
+# so every run would pay full class loading with run.sh doing nothing.
+#
+# A CDS archive is architecture-specific, so this has to be the arm64 java:
+# native on an arm64 builder, otherwise qemu-user. Not fatal; the click works
+# without it, only slower.
+log "dumping the base CDS archive"
+jvm_java="$INSTALL_DIR/jvm/bin/java"
+if [ "$(uname -m)" = "aarch64" ]; then
+	cds_run=("$jvm_java")
+elif command -v qemu-aarch64-static >/dev/null; then
+	cds_run=(qemu-aarch64-static "$jvm_java")
+elif command -v qemu-aarch64 >/dev/null; then
+	cds_run=(qemu-aarch64 "$jvm_java")
+else
+	cds_run=()
+	echo "  !! no qemu-aarch64 — shipping without a base CDS archive" >&2
+fi
+if [ ${#cds_run[@]} -gt 0 ]; then
+	# -Xshare:dump writes lib/server/classes.jsa, which is where the runtime
+	# looks with no -XX:SharedArchiveFile, so the launcher needs no extra flag.
+	"${cds_run[@]}" -Xshare:dump >"$BUILD_DIR/cds-dump.log" 2>&1 ||
+		echo "  !! -Xshare:dump failed, see $BUILD_DIR/cds-dump.log" >&2
+fi
+if [ -f "$INSTALL_DIR/jvm/lib/server/classes.jsa" ]; then
+	log "  base CDS archive: $(du -h "$INSTALL_DIR/jvm/lib/server/classes.jsa" | cut -f1)"
+else
+	echo "  !! no jvm/lib/server/classes.jsa — AppCDS will be off on the device" >&2
+fi
+
+# The class-path (app) archive is deliberately NOT built here: HotSpot records
+# each entry's size and mtime, so one made against this build tree is stale the
+# moment the click is installed. run.sh creates it on the device, in the cache
+# directory, with -XX:+AutoCreateSharedArchive on top of the base above.
+
+# --- 8. the package metadata -------------------------------------------------
+
+install -m 0755 "$CLICK_DIR/run.sh" "$INSTALL_DIR/run.sh"
+cp "$CLICK_DIR/$HOOK.desktop" "$CLICK_DIR/$HOOK.apparmor" "$INSTALL_DIR/"
+# The app's own store icon. PhotonCamera's launcher icon is an adaptive one —
+# three Android vector drawables no click tool can read — and this is the same
+# artwork already rasterised in the repository.
+cp "$ROOT/fastlane/metadata/android/en-US/images/icon.png" "$INSTALL_DIR/$HOOK.png"
+
+# clickable fills in @CLICK_ARCH@ and @CLICK_FRAMEWORK@; the version is the app's
+# own, from version.properties, so a click is identifiable as that build.
+app_version=$(sed -n 's/^VERSION_NAME=//p' "$ROOT/app/version.properties" | tr -d ' \r')
+sed "s|@CLICK_VERSION@|${app_version:-0.0.0}|" "$CLICK_DIR/manifest.json" \
+	>"$INSTALL_DIR/manifest.json"
+
+# --- 9. bundle what the device does not have --------------------------------
+
+# device-libs.txt is the device's own `ldconfig -p`. Anything the click needs
+# that is not there has to travel with it: Ubuntu Touch has no GLFW, no
+# libportal, no libswscale, no maliit or content-hub glib bindings. Closure,
+# because a bundled library brings its own DT_NEEDED (libswscale -> libavutil).
+device_libs="$CLICK_DIR/device-libs.txt"
+[ -f "$device_libs" ] || { echo "missing $device_libs" >&2; exit 1; }
+
+search_dirs=("/usr/lib/$PORT_TRIPLE" "/lib/$PORT_TRIPLE" "$PREFIX/lib" "$PREFIX/lib/art")
+unavailable=""
+while :; do
+	needed=$(for f in "$INSTALL_DIR"/lib/*; do
+			readelf -d "$f" 2>/dev/null | sed -n 's/.*NEEDED.*\[\(.*\)\]/\1/p'
+		done | sort -u)
+	# The JVM's own libraries count as present: libjvm.so and friends live in
+	# jvm/lib/, which run.sh puts on LD_LIBRARY_PATH.
+	have=$( { ls "$INSTALL_DIR/lib"
+		  find "$INSTALL_DIR/jvm" -name '*.so' -printf '%f\n' 2>/dev/null
+		  echo "$unavailable"
+		  grep -v '^#' "$device_libs"; } | sort -u)
+	missing=$(comm -23 <(echo "$needed") <(echo "$have"))
+	[ -n "$missing" ] || break
+	for lib in $missing; do
+		found=""
+		for d in "${search_dirs[@]}"; do
+			[ -e "$d/$lib" ] && { cp -L "$d/$lib" "$INSTALL_DIR/lib/$lib"; found=1; break; }
+		done
+		if [ -n "$found" ]; then
+			log "  bundling $lib (not on the device)"
+		else
+			echo "  WARNING: $lib is neither on the device nor in this container" >&2
+			unavailable="$unavailable$lib"$'\n'
+		fi
+	done
+done
+[ -z "$unavailable" ] || {
+	echo "unresolvable libraries — the app would fail to start:" >&2
+	echo "$unavailable" >&2
+	exit 1
+}
+
+# --- 10. verify what is about to be packaged ---------------------------------
+
+log "verifying the staged tree"
+bad=0
+while read -r f; do
+	case "$(file -b "$f")" in
+	*"ARM aarch64"*) ;;
+	*) echo "  NOT aarch64: $f  ($(file -b "$f" | cut -c1-60))" >&2; bad=1 ;;
+	esac
+done < <(find "$INSTALL_DIR/lib" "$INSTALL_DIR/jvm/lib" "$INSTALL_DIR/jvm/bin" -type f \
+	\( -name '*.so' -o -name '*.so.*' -o -perm -u+x \) 2>/dev/null | grep -v '\.jar$')
+[ "$bad" = 0 ] || { echo "the click holds objects for the wrong architecture" >&2; exit 1; }
+
+# The five libraries System.loadLibrary asks for, plus the one dngCreator
+# dlopens. A click that packs without them starts and then fails at the first
+# capture, which is the hardest failure here to read from a phone.
+for name in dngCreator allocator flacRecorder camera2native ncnnMl archive-jni; do
+	[ -s "$INSTALL_DIR/lib/lib$name.so" ] ||
+		{ echo "the click has no lib/lib$name.so" >&2; exit 1; }
+done
+# ncnnMl is the real library only when ncnn built; the stub answers every ML
+# call with "not available", which is a silent loss of the alignment and
+# denoising nodes rather than a crash.
+ml_syms=$("$PORT_NM" -D --defined-only "$INSTALL_DIR/lib/libncnnMl.so" |
+	grep -c "Java_com_particlesdevs_photoncamera_processing_ml" || true)
+[ "$ml_syms" -ge 6 ] ||
+	{ echo "libncnnMl.so exports only $ml_syms ML entry points (the stub?)" >&2; exit 1; }
+
+log "click tree staged: $(du -sh "$INSTALL_DIR" | cut -f1)"

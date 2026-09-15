@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=PhotonCamera (JVM)
+Comment=PhotonCamera on OpenJDK via the atlas framework
+Exec=run.sh %u
+Icon=photoncamera-jvm.png
+Terminal=false
+Type=Application
+Categories=Graphics;Photography;
+X-Ubuntu-Touch=true
+X-Lomiri-Touch=true

@@ -28,3 +28,10 @@ allprojects {
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
+
+// Desktop OpenJDK port (linux-port/): jars the app's javac output instead of
+// dexing it. Applied only under -PlinuxPort, so a normal Android build never
+// configures any of it.
+if (hasProperty('linuxPort')) {
+    apply from: "$rootDir/linux-port/gradle/jar-for-linux-port.gradle"
+}

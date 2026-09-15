@@ -79,10 +79,15 @@ android {
         }
     }
 
-    externalNativeBuild {
-        cmake {
-            version "3.22.1"
-            path "src/main/cpp/CMakeLists.txt"
+    // The desktop port builds src/main/cpp itself, against glibc, out of
+    // linux-port/native/. Letting the NDK run under -PlinuxPort would only
+    // dirty src/main/cpp/deps/ and slow the build down.
+    if (!project.hasProperty('linuxPort')) {
+        externalNativeBuild {
+            cmake {
+                version "3.22.1"
+                path "src/main/cpp/CMakeLists.txt"
+            }
         }
     }
 

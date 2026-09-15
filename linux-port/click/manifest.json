@@ -1,0 +1,15 @@
+{
+    "name": "photoncamera-jvm.nekit",
+    "description": "PhotonCamera on OpenJDK with the atlas framework as jars",
+    "architecture": "@CLICK_ARCH@",
+    "title": "PhotonCamera (JVM)",
+    "hooks": {
+        "photoncamera-jvm": {
+            "apparmor": "photoncamera-jvm.apparmor",
+            "desktop": "photoncamera-jvm.desktop"
+        }
+    },
+    "version": "@CLICK_VERSION@",
+    "maintainer": "Nikita Ukhrenkov <nikita.ukhrenkov@volla.online>",
+    "framework": "@CLICK_FRAMEWORK@"
+}
