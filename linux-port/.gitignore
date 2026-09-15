@@ -1,0 +1,4 @@
+# Build products and run logs.
+out/
+# The atlas checkout, when it lives here rather than next door: its own git repo.
+atlas/

@@ -1,0 +1,135 @@
+// Desktop OpenJDK port: produce a HotSpot classpath instead of dex.
+//
+// Applied on the root project from build.gradle when -PlinuxPort is set, so a
+// normal Android build never configures any of this.
+//
+// Variant: debug. PhotonCamera has no product flavors, and debug is the only
+// build type that does not run R8 — release/standalone rename the classes the
+// launcher, the checks and the shim have to name.
+//
+// What lands in $PORT_OUT/classpath/:
+//   photoncamera-app.jar  - :app javac output (data binding included), jarred here
+//   photoncamera-res.jar  - the app's runtime R classes (all packages, because
+//                           android.nonTransitiveRClass=false)
+//   <group>-<module>-<version>.jar / <project>.jar - every runtime-classpath
+//                           artifact, AAR classes.jar entries included; AGP has
+//                           already unpacked those for us
+// plus $PORT_OUT/app.apk for resources and assets (shaders, models, LUTs).
+//
+// Everything hangs off gradle.projectsEvaluated: this script is evaluated with
+// the root project, so its afterEvaluate would run before AGP's and the variant
+// configurations would not exist yet.
+
+import org.gradle.api.artifacts.component.ModuleComponentIdentifier
+import org.gradle.api.artifacts.component.ProjectComponentIdentifier
+
+def variant = System.getenv('PORT_VARIANT') ?: 'debug'
+def variantCap = variant.capitalize()
+
+def portOut = file(System.getenv('PORT_OUT') ?: "$rootDir/linux-port/out")
+def classpathDir = new File(portOut, 'classpath')
+
+gradle.projectsEvaluated {
+    def app = project(':app')
+
+    // AGP resolves AAR dependencies to their classes.jar under this artifact
+    // type; asking for it keeps us off the internal AndroidArtifacts API.
+    def runtimeJars = app.configurations.getByName("${variant}RuntimeClasspath")
+            .incoming.artifactView {
+                attributes { attribute(Attribute.of('artifactType', String), 'android-classes-jar') }
+            }.artifacts
+
+    def jarApp = app.tasks.register('jarLinuxPortApp', Jar) {
+        description = 'Jar :app javac output for the desktop port (no d8).'
+        from app.tasks.named("compile${variantCap}JavaWithJavac").map { it.destinationDirectory }
+        destinationDirectory = classpathDir
+        archiveFileName = 'photoncamera-app.jar'
+    }
+
+    // Copied by hand rather than with Copy/Sync: every AAR resolves to a file
+    // literally named classes.jar, so each one needs a per-component name.
+    def copyDeps = app.tasks.register('copyLinuxPortDeps') {
+        description = 'Copy runtime-classpath dependency jars for the desktop port.'
+        inputs.files runtimeJars.artifactFiles
+        outputs.file new File(classpathDir, 'deps.list')
+        doLast {
+            def written = [] as Set
+            runtimeJars.each { artifact ->
+                def id = artifact.id.componentIdentifier
+                // Must be String, not GString: these go into a Set that is then
+                // queried with real Strings, and the two never hash alike.
+                String name
+                if (id instanceof ModuleComponentIdentifier) {
+                    name = "${id.group}-${id.module}-${id.version}.jar"
+                } else if (id instanceof ProjectComponentIdentifier) {
+                    name = "${id.projectName}.jar"
+                } else {
+                    name = artifact.file.name
+                }
+                written << name
+                java.nio.file.Files.copy(artifact.file.toPath(),
+                        new File(classpathDir, name).toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            }
+            // Drop jars from an earlier run whose dependency is gone; a stale jar
+            // on the classpath would shadow the current one.
+            classpathDir.listFiles({ f ->
+                f.name.endsWith('.jar') && !f.name.startsWith('photoncamera-') && !written.contains(f.name)
+            } as FileFilter)?.each {
+                logger.lifecycle("linux-port: removing stale ${it.name}")
+                it.delete()
+            }
+            new File(classpathDir, 'deps.list').text = written.sort().join('\n') + '\n'
+            logger.lifecycle("linux-port: copied ${written.size()} dependency jars to $classpathDir")
+        }
+    }
+
+    // The R classes the app would dex. AGP writes them next to the
+    // resource-linking task's output; there is no public artifact for it.
+    def processResources = app.tasks.named("process${variantCap}Resources")
+    def copyRJar = app.tasks.register('copyLinuxPortRJar') {
+        description = 'Copy the runtime R class jar for the desktop port.'
+        // as an input, not just a dependency: without one Gradle calls this
+        // up-to-date forever and a new string never reaches the classpath
+        inputs.files processResources.map { it.outputs.files }
+        outputs.file new File(classpathDir, 'photoncamera-res.jar')
+        doLast {
+            def root = app.layout.buildDirectory
+                    .dir("intermediates/compile_and_runtime_not_namespaced_r_class_jar/${variant}")
+                    .get().asFile
+            def rJar = root.exists() ? app.fileTree(root).matching { include '**/R.jar' }.files.find() : null
+            if (rJar == null) {
+                throw new GradleException("linux-port: no R.jar under $root; " +
+                        'AGP moved the runtime R class jar, update this task')
+            }
+            java.nio.file.Files.copy(rJar.toPath(),
+                    new File(classpathDir, 'photoncamera-res.jar').toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        }
+    }
+
+    // Not a Copy task: Gradle resolves a Copy's `from` while building the task
+    // graph, which is before the APK exists.
+    def packageApk = app.tasks.named("package${variantCap}")
+    def copyApk = app.tasks.register('copyLinuxPortApk') {
+        description = 'Copy the matching APK for the desktop port (resources and assets).'
+        inputs.files packageApk.map { it.outputs.files }
+        outputs.file new File(portOut, 'app.apk')
+        doLast {
+            def apks = packageApk.get().outputs.files.asFileTree
+                    .matching { include '**/*.apk' }.files
+            if (apks.size() != 1) {
+                throw new GradleException("linux-port: expected one APK for $variant, got $apks")
+            }
+            java.nio.file.Files.copy(apks.first().toPath(),
+                    new File(portOut, 'app.apk').toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        }
+    }
+
+    app.tasks.register('jarForLinuxPort') {
+        group = 'linux port'
+        description = "Build the desktop OpenJDK classpath and APK from the $variant variant."
+        dependsOn jarApp, copyDeps, copyRJar, copyApk
+    }
+}

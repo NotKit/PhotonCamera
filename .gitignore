@@ -100,3 +100,6 @@ lint/tmp/
 __pycache__/
 .venv/
 tools/alignment-bench/data/
+
+# Clickable build container state
+.clickable/
