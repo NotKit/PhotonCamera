@@ -92,3 +92,6 @@ lint/tmp/
 # lint/reports/
 /app/google-services.json
 .idea/.name
+
+# Clickable build container state
+.clickable/
