@@ -241,6 +241,13 @@ done
 class_count=$(grep -cE "\.class\$" <<<"$jar_listing")
 [ "$class_count" -ge 1000 ] || { echo "only $class_count classes in the jar" >&2; exit 1; }
 
+# PhotonCamera overrides what the HAL reported by reflecting on AOSP's private
+# camera2 members. Nothing here references them by name, so a rename in atlas
+# breaks the app with a swallowed NoSuchFieldException.
+"$JAVA_HOME/bin/javac" -nowarn -d "$PORT_OUT/tools" -cp "$ATLAS_OUT/api-impl.jar" \
+	"$PORT_DIR/tools/CameraReflectionCheck.java"
+"$JAVA_HOME/bin/java" -cp "$ATLAS_OUT/api-impl.jar:$PORT_OUT/tools" CameraReflectionCheck
+
 # Proves the JDK parses these class files. atlas compiles with -source/-target 1.8
 # (major 52); anything above 65 would be unloadable on 21.
 major=$("$JAVA_HOME/bin/javap" -verbose -cp "$ATLAS_OUT/api-impl.jar" android.os.Looper |
