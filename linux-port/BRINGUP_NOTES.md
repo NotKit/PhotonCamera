@@ -423,14 +423,6 @@ The device's NDK ids, fingerprinted by focal length through
 
 ### Still open
 
-Photo, Motion and Night shutter presses do not capture: their click handler
-starts `CountDownTimer` and calls `takePicture()` only from `onFinish()`, but
-atlas's `android.os.CountDownTimer.start()` returns without scheduling either
-`onTick()` or `onFinish()`. The oneplus11 click ships that exact stub in
-`api-impl.jar`; fix the timer in atlas, including immediate completion for the
-default zero-second setting. The device log shows touch events but no capture
-start, and no DNG or JPEG was written.
-
 The preview is upright and correctly letterboxed on the back camera. The front
 camera is untested: Lomiri offers no input injection to phablet (`/dev/uinput`
 is root-only and `sudo` wants a password), so the flip button cannot be tapped
@@ -443,7 +435,59 @@ overwrites it with `setMeasuredDimension(mRatioWidth, mRatioHeight)`
 (`GLPreview.java:178-182`) — raw pixels, not a ratio — and `GLPreview.setTransform()`
 is an empty stub. Both are app bugs, and neither is currently visible.
 
-## The desktop skia build needs `PORT_SKIA_PREBUILT` on clang 22
+## HDRX processing on oneplus11 (2026-09-15)
+
+A shutter press captured its burst and then produced nothing. Three framework
+gaps, one behind the other; each was found only after the one in front of it was
+fixed. There is no input injection on Lomiri, so the shutter was pressed with
+atlas's own `ATL_DEBUG_TAP=<seconds>:<x>,<y>` — window pixels, and
+`ATL_DUMP_HIERARCHY=all` prints the bounds to aim at.
+
+- **`android.opengl.GLES31` did not exist.** The app's whole raw pipeline is
+  compute shaders (`import static android.opengl.GLES31.*` in `GLProg`,
+  `GLTexture`, `GLBuffer`), so `ApplyHdrX` died on a `NoClassDefFoundError` right
+  after packing the frames. Fixed in atlas (`opengl: add GLES 3.1, and the 3.0
+  calls a compute pipeline needs`) — the 3.1-only calls plus the 3.0 ones those
+  imports resolve to by inheritance (`glMapBufferRange`, `glBindBufferBase`, the
+  `glUniform*ui` family).
+- **A heap `Buffer` was taken for a direct one.** `get_nio_buffer` treated a
+  non-zero `Buffer.address` as a direct address, but the JDK stores the array
+  base offset there for heap buffers — 16 on HotSpot. `ESD4D.createKernelsMap`
+  uploads a `FloatBuffer.wrap(float[])`, so the Adreno driver got `0x10` as its
+  pixel pointer and the JVM took a SIGSEGV at exactly that address. Fixed in
+  atlas (`jni: a heap buffer is not a direct one`), which decides on `isDirect()`.
+  Every GL binding shares that helper, so this was one crash away on any app
+  that uploads from a heap buffer.
+- **`Bitmap.copyPixelsFromBuffer` was an empty method.** With the two above
+  fixed, the pipeline ran to the end and wrote a 3072x4096 JPEG in which every
+  pixel was zero: the app reads its finished frame back with `glReadPixels` and
+  copies it into a `Bitmap`, and that copy did nothing. The camera was not the
+  problem — `ATL_CAMERA_RECORD` plus `atl-camrec.py stats` showed the RAW frames
+  arriving with min 59, max 397 on a 1023 white level. Fixed in atlas
+  (`graphics: implement Bitmap.copyPixelsFromBuffer()`). **Not yet confirmed on
+  device**: the run meant to check it hit the pre-capture race below.
+
+Processing takes about 12 s for a 15-frame burst, and the app does not restart
+the preview until it finishes, so the viewfinder is frozen for that whole time
+with no progress in the UI. It is not a hang — `kill -3` shows the main thread
+in the GLib loop and the GL thread idle — but it reads as one.
+
+### Still open after that
+
+- **The pre-capture sequence never converges.** `W/CaptureController: Timed out
+  waiting for pre-capture sequence to complete.` on every shot, and the app then
+  runs `captureStillPicture()` more than once. Each call resets `mExposures` and
+  clears `IMAGE_BUFFER` (`CaptureController.java:2318-2321`), so when the second
+  one lands while the first burst's images are still in flight, processing throws
+  `NullPointerException` out of `exposures.get(frame.getTimestamp())`
+  (`HdrxProcessor.java:124`) and saves nothing. Intermittent — it depends on how
+  many frames `FrameNumberSelector` asks for. The timestamps themselves are
+  sound: a recording shows every buffer's timestamp present in the results.
+- **A second capture in the same session is refused.** After one burst,
+  `createCaptureRequest` fails with `-10006` (`ACAMERA_ERROR_CAMERA_SERVICE`),
+  every queued frame comes back `failed, reason 1` (flushed), and
+  `CameraDevice.onError` reports error 4. The first capture after a fresh start
+  works, which is why this hides behind the first press.
 
 Building the skia subproject from source fails on this host:
 
