@@ -24,8 +24,12 @@ port_start_display() {
 	command -v Xvfb >/dev/null || { echo "no display and no Xvfb to make one" >&2; return 1; }
 
 	local display xvfb_pid=""
+	# Fit the Xvfb screen to the window run.sh asks for (env.sh); a smaller
+	# screen crops the window and its screenshot.
+	local screen_w="${PORT_WINDOW_WIDTH:-540}"
+	local screen_h="${PORT_WINDOW_HEIGHT:-960}"
 	for display in $(seq 90 99); do
-		Xvfb ":$display" -screen 0 960x540x24 >/dev/null 2>&1 &
+		Xvfb ":$display" -screen 0 "${screen_w}x${screen_h}x24" >/dev/null 2>&1 &
 		xvfb_pid=$!
 		sleep 1
 		if kill -0 "$xvfb_pid" 2>/dev/null; then

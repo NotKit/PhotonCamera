@@ -82,6 +82,12 @@ export PORT_VARIANT="${PORT_VARIANT:-debug}"
 export ATL_CAMERA_BACKEND="${ATL_CAMERA_BACKEND:-gst}"
 export ATL_CAMERA_GST_SRC="${ATL_CAMERA_GST_SRC:-videotestsrc is-live=true}"
 
+# Desktop window size for run.sh. Portrait: the app's camera UI assumes a
+# tall display (its bottom bar resolves to zero height on a short one),
+# and the launcher itself defaults to 960x540 landscape.
+export PORT_WINDOW_WIDTH="${PORT_WINDOW_WIDTH:-540}"
+export PORT_WINDOW_HEIGHT="${PORT_WINDOW_HEIGHT:-960}"
+
 # Target architecture of every native product: x86_64 is the desktop port, arm64
 # the Ubuntu Touch click (linux-port/click/), which cross-compiles.
 export PORT_ARCH="${PORT_ARCH:-x86_64}"
