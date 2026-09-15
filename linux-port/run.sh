@@ -19,6 +19,8 @@
 #                 GLES, so this only makes sense for a UI-only smoke run.
 #   --require-preview  with --seconds, require a synthetic camera frame and
 #                 its GL presentation into the SurfaceView.
+#   The window is portrait $PORT_WINDOW_WIDTH x $PORT_WINDOW_HEIGHT by
+#   default (env.sh); the camera UI needs a tall display.
 # Anything after -- is passed straight to the launcher.
 #
 # Writes out/run.log and, with --seconds, out/screenshots/run.png.
@@ -102,6 +104,8 @@ run_launcher() {
 		--api-impl-jar "$ATLAS_API_IMPL_JAR" \
 		--framework-res "$ATLAS_FRAMEWORK_RES" \
 		--natives-dir "$ATLAS_NATIVES_DIR" \
+		--window-width "$PORT_WINDOW_WIDTH" \
+		--window-height "$PORT_WINDOW_HEIGHT" \
 		--classpath "$PORT_OUT/shim.jar:$PORT_OUT/classpath/*" \
 		--library-path "$PORT_LIB_OUT" \
 		--launch-activity "$activity" \
