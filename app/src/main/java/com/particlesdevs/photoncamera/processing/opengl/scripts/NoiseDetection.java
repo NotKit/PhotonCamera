@@ -7,6 +7,7 @@ import com.particlesdevs.photoncamera.processing.opengl.GLCoreBlockProcessing;
 import com.particlesdevs.photoncamera.processing.opengl.GLOneScript;
 import com.particlesdevs.photoncamera.processing.opengl.GLProg;
 import com.particlesdevs.photoncamera.processing.opengl.GLTexture;
+import java.nio.Buffer;
 
 public class NoiseDetection extends GLOneScript {
     public NoiseDetection(Point size) {
@@ -22,6 +23,6 @@ public class NoiseDetection extends GLOneScript {
         ScriptParams scriptParams = (ScriptParams) additionalParams;
         GLProg glProg = glOne.glProgram;
         glProg.setTexture("InputBuffer", scriptParams.textureInput);
-        super.WorkingTexture = new GLTexture(scriptParams.textureInput.mSize, scriptParams.textureInput.mFormat, null);
+        super.workingTexture = new GLTexture(scriptParams.textureInput.mSize, scriptParams.textureInput.mFormat, (Buffer) null);
     }
 }

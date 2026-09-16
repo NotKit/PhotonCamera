@@ -62,9 +62,9 @@ public class LocalLaplacian extends Node {
 
     @Override
     public void Run() {
-        final GLTexture input = previousNode.WorkingTexture;
+        final GLTexture input = previousNode.workingTexture;
         if (!enabled || input.mSize.x < 2 || input.mSize.y < 2) {
-            WorkingTexture = input;
+            workingTexture = input;
             glProg.closed = true;
             return;
         }
@@ -114,6 +114,6 @@ public class LocalLaplacian extends Node {
             reconstructed = output;
         }
 
-        WorkingTexture = reconstructed;
+        workingTexture = reconstructed;
     }
 }

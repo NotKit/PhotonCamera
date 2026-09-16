@@ -743,7 +743,7 @@ public final class TileDriver {
         int hCap = (captureActive && cap != null) ? cap.halo() : 0;
         int hShp = shp.halo();
         GLTexture capLegacyFull = (canProve && captureActive && cap != null)
-                ? cap.WorkingTexture : null;
+                ? cap.workingTexture : null;
         java.util.List<int[]> bands = computeBands(imgH, TAIL_TILE_ROWS);
         java.util.List<GLTexture> capTiles = new java.util.ArrayList<>();
         boolean failed = false;
@@ -912,10 +912,10 @@ public final class TileDriver {
         // whose true output lives only in tiles); the program stays sharpen's
         // (as after its legacy Run).
         if (captureActive && cap != null) {
-            cap.WorkingTexture = assembly;
+            cap.workingTexture = assembly;
             cap.glProg.setTexture("InputBuffer", entry);
         }
-        shp.WorkingTexture = assembly;
+        shp.workingTexture = assembly;
         shp.glProg.setTexture("InputBuffer", assembly);
         shp.glProg.setTexture("BlurBuffer", assembly);
         if (prove) {
@@ -1065,9 +1065,9 @@ public final class TileDriver {
         }
         // Restore nodes to valid placeholders (same post-state convention as
         // runTailTiled; true output lives in the sink bitmap now).
-        cap.WorkingTexture = entry;
+        cap.workingTexture = entry;
         cap.glProg.setTexture("InputBuffer", entry);
-        shp.WorkingTexture = entry;
+        shp.workingTexture = entry;
         shp.glProg.setTexture("InputBuffer", entry);
         shp.glProg.setTexture("BlurBuffer", entry);
         rot.glProg.setTexture("InputBuffer", entry);

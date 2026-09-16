@@ -117,21 +117,21 @@ public class LocalLaplacian2 extends Node {
      * Identity when detail = 0 and both slopes = 1.
      */
     private float remapCurve(float x, float anchor) {
-        final float sigma = Math.min(1.f, Math.max(0.001f, midtone));
+        final float sigma = Math.min(1.0f, Math.max(0.001f, midtone));
         final float c = x - anchor;
         float val;
-        if (c > 2.f * sigma) {
+        if (c > 2.0f * sigma) {
             val = anchor + sigma + shadows * (c - sigma);
-        } else if (c < -2.f * sigma) {
+        } else if (c < -2.0f * sigma) {
             val = anchor - sigma + highlights * (c + sigma);
-        } else if (c > 0.f) {
-            final float t = Math.min(c / (2.f * sigma), 1.f);
-            val = anchor + sigma * 2.f * (1.f - t) * t + t * t * (sigma + sigma * shadows);
+        } else if (c > 0.0f) {
+            final float t = Math.min(c / (2.0f * sigma), 1.0f);
+            val = anchor + sigma * 2.0f * (1.0f - t) * t + t * t * (sigma + sigma * shadows);
         } else {
-            final float t = Math.min(-c / (2.f * sigma), 1.f);
-            val = anchor - sigma * 2.f * (1.f - t) * t + t * t * (-sigma - sigma * highlights);
+            final float t = Math.min(-c / (2.0f * sigma), 1.0f);
+            val = anchor - sigma * 2.0f * (1.0f - t) * t + t * t * (-sigma - sigma * highlights);
         }
-        val += detail * c * (float) Math.exp(-c * c / (2.f * sigma * sigma / 3.f));
+        val += detail * c * (float) Math.exp(-c * c / (2.0f * sigma * sigma / 3.0f));
         return val;
     }
 
@@ -209,9 +209,9 @@ public class LocalLaplacian2 extends Node {
     }
 
     public void Run() {
-        final GLTexture input = previousNode.WorkingTexture;
+        final GLTexture input = previousNode.workingTexture;
         if (!enabled || input.mSize.x < 8 || input.mSize.y < 8) {
-            WorkingTexture = input;
+            workingTexture = input;
             glProg.close();
             return;
         }
@@ -309,7 +309,7 @@ public class LocalLaplacian2 extends Node {
         }
 
         lut.close();
-        WorkingTexture = reconstructed;
+        workingTexture = reconstructed;
         // The cropped-recrop path feeds this node a full-frame UpscaleCrop
         // output that is not one of the pipeline's ping-pong mains and has no
         // other owner; free it now instead of holding it through the tail and
@@ -348,7 +348,7 @@ public class LocalLaplacian2 extends Node {
                     tileY0 = b0;
                     tileY1 = b0 + rows;
                     tileOut = reg;
-                    WorkingTexture = reg;
+                    workingTexture = reg;
                     glProg.setVar("u_tileOrigin", 0, b0);
                     glProg.drawBlocks(reg);
                     return reg;
@@ -357,7 +357,7 @@ public class LocalLaplacian2 extends Node {
         tileY0 = 0;
         tileY1 = -1;
         tileOut = null;
-        WorkingTexture = fullOut;
+        workingTexture = fullOut;
         glProg.setVar("u_tileOrigin", 0, 0);
     }
 }

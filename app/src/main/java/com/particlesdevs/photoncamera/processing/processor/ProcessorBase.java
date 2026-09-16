@@ -35,7 +35,7 @@ import java.nio.file.Path;
  * Created by Vibhor Srivastava on 02/Jan/2021
  */
 public abstract class ProcessorBase {
-    public static float FAKE_WL = 65535.f;
+    public static float FAKE_WL = 65535.0f;
     protected final ProcessingEventsListener processingEventsListener;
     protected Path dngFile;
     protected Path imageFile;
@@ -51,7 +51,7 @@ public abstract class ProcessorBase {
         Canvas canvas = new Canvas(bmOverlay);
         canvas.drawBitmap(bmp1, new Matrix(), null);
         Matrix mat = new Matrix();
-        mat.setTranslate(bmp2.getWidth()*cnt,0);
+        mat.setTranslate((float) (bmp2.getWidth()*cnt),0f);
         canvas.drawBitmap(bmp2, mat, null);
         return bmOverlay;
     }
@@ -64,7 +64,7 @@ public abstract class ProcessorBase {
         for(Bitmap inb : bmp2) {
             if(inb == null) continue;
             Matrix mat = new Matrix();
-            mat.setTranslate(prevS, 0);
+            mat.setTranslate((float) prevS, 0f);
             canvas.drawBitmap(inb, mat, null);
             prevS+=inb.getWidth();
         }
@@ -81,7 +81,7 @@ public abstract class ProcessorBase {
         //Increase WL and BL for processing
         for (int i = 0; i < 4; i++) {
             //parameters.blackLevel[i] *= FAKE_WL / parameters.whiteLevel;
-            parameters.blackLevel[i] = 0;
+            parameters.blackLevel[i] = 0f;
         }
         IncreaseWL(parameters);
     }

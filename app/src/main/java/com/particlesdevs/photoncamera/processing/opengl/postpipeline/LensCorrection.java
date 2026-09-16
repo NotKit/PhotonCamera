@@ -18,14 +18,14 @@ public class LensCorrection extends Node {
 
     @Override
     public void Run() {
-        glProg.setTexture("InputBuffer",previousNode.WorkingTexture);
+        glProg.setTexture("InputBuffer",previousNode.workingTexture);
         glProg.setVar("intens",-.15f);
         glProg.setVar("start",0.5f);
-        glProg.setVar("size",previousNode.WorkingTexture.mSize);
+        glProg.setVar("size",previousNode.workingTexture.mSize);
         GLTexture GainMapTex = new GLTexture(basePipeline.mParameters.mapSize, new GLFormat(GLFormat.DataType.FLOAT_16,4),
                 FloatBuffer.wrap(basePipeline.mParameters.gainMap));
         glProg.setTexture("GainMap",GainMapTex);
-        float br = 0.f;
+        float br = 0.0f;
         br = basePipeline.mParameters.gainMap[0];
         float[][] compressedmap = new float[basePipeline.mParameters.mapSize.x][basePipeline.mParameters.mapSize.y];
         for(int y=0;y<basePipeline.mParameters.mapSize.y; y++){
@@ -57,13 +57,13 @@ public class LensCorrection extends Node {
         GLTexture PolarMap = new GLTexture(new Point(maxrad,1), new GLFormat(GLFormat.DataType.FLOAT_16,1), FloatBuffer.wrap(polar));
         glProg.setTexture("PolarMap",PolarMap);
         for(int i =0; i<basePipeline.mParameters.gainMap.length;i++){
-            br=(br+basePipeline.mParameters.gainMap[i])/2.f;
+            br=(br+basePipeline.mParameters.gainMap[i])/2.0f;
         }
         br = polar[0];
-        for (float v : polar) br = (br + v) / 2.f;
+        for (float v : polar) br = (br + v) / 2.0f;
         Log.d(Name,"avrbr:"+br);
         glProg.setVar("avrbr",br);
-        WorkingTexture = basePipeline.getMain();
+        workingTexture = basePipeline.getMain();
         //glProg.drawBlocks(WorkingTexture);
         //WorkingTexture = glUtils.blur(WorkingTexture,1.5);
         //glProg.close();

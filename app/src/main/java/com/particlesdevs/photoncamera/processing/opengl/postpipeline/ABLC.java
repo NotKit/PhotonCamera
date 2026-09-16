@@ -96,11 +96,11 @@ public class ABLC extends Node {
 
     public void Run() {
         if(!enable){
-            WorkingTexture = super.previousNode.WorkingTexture;
+            workingTexture = super.previousNode.workingTexture;
             return;
         }
-        blackLevels = computeBlackLevels(previousNode.WorkingTexture);
-        renderLevels(previousNode.WorkingTexture);
+        blackLevels = computeBlackLevels(previousNode.workingTexture);
+        renderLevels(previousNode.workingTexture);
         if (((PostPipeline) basePipeline).debugTiledCompare) {
             verifyRegions();
         }
@@ -137,8 +137,8 @@ public class ABLC extends Node {
         glProg.useAssetProgram("ABLC/levelcorrection");
         glProg.setTexture("InputBuffer", input);
         glProg.setVar("blackLevel", blackLevels);
-        WorkingTexture = tileActive() ? tileOut : basePipeline.getMain();
-        glProg.drawBlocks(WorkingTexture);
+        workingTexture = tileActive() ? tileOut : basePipeline.getMain();
+        glProg.drawBlocks(workingTexture);
         glProg.closed = true;
     }
 
@@ -148,8 +148,8 @@ public class ABLC extends Node {
      * bit-exactness vs the full render.
      */
     private void verifyRegions() {
-        GLTexture fullOut = WorkingTexture;
-        GLTexture fullIn = previousNode.WorkingTexture;
+        GLTexture fullOut = workingTexture;
+        GLTexture fullIn = previousNode.workingTexture;
         int imgW = fullOut.mSize.x;
         int imgH = fullOut.mSize.y;
         float worst = TileDriver.verifyNodeBands(fullOut, imgW, imgH, 2,
@@ -170,7 +170,7 @@ public class ABLC extends Node {
                     tileY0 = b0;
                     tileY1 = b0 + rows;
                     tileOut = reg;
-                    WorkingTexture = reg;
+                    workingTexture = reg;
                     renderLevels(inTile);
                     inTile.close();
                     return reg;
@@ -179,6 +179,6 @@ public class ABLC extends Node {
         tileY0 = 0;
         tileY1 = -1;
         tileOut = null;
-        WorkingTexture = fullOut;
+        workingTexture = fullOut;
     }
 }

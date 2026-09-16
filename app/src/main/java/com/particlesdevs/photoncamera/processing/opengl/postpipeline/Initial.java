@@ -23,6 +23,7 @@ import static android.opengl.GLES20.GL_CLAMP_TO_EDGE;
 import static android.opengl.GLES20.GL_LINEAR;
 import static android.opengl.GLES20.GL_NEAREST;
 import static com.particlesdevs.photoncamera.util.Math2.mix;
+import java.nio.Buffer;
 
     public class Initial extends Node {
     public Initial() {
@@ -37,10 +38,10 @@ import static com.particlesdevs.photoncamera.util.Math2.mix;
         }
         if (postLut != null) postLut.close();
         if (interpolatedCurve != null) interpolatedCurve.close();
-        if (GammaTexture != null) GammaTexture.close();
-        if (HSVTexture != null) HSVTexture.close();
-        if (LookupTexture != null) LookupTexture.close();
-        if(((PostPipeline)basePipeline).FusionMap != null) ((PostPipeline)basePipeline).FusionMap.close();
+        if (gammaTexture != null) gammaTexture.close();
+        if (hsvTexture != null) hsvTexture.close();
+        if (lookupTexture != null) lookupTexture.close();
+        if(((PostPipeline)basePipeline).fusionMap != null) ((PostPipeline)basePipeline).fusionMap.close();
         if(((PostPipeline)basePipeline).exposureCurve != null) {
             ((PostPipeline)basePipeline).exposureCurve.close();
             ((PostPipeline)basePipeline).exposureCurve = null;
@@ -55,9 +56,9 @@ import static com.particlesdevs.photoncamera.util.Math2.mix;
     GLTexture TonemapCoeffs;
     GLTexture lut;
     GLTexture postLut;
-    GLTexture GammaTexture;
-    GLTexture HSVTexture;
-    GLTexture LookupTexture;
+    GLTexture gammaTexture;
+    GLTexture hsvTexture;
+    GLTexture lookupTexture;
     GLImage lutbm;
     float highersatmpy = 1.0f;
     @Tunable(title = "Gamma Coefficient", category = "Color & Tone", min = 1.0f, max = 3.0f, defaultValue = 2.2f)
@@ -82,7 +83,7 @@ import static com.particlesdevs.photoncamera.util.Math2.mix;
     float tonemapx3 = -1.6f;
     
     @Tunable(title = "Saturation Const", category = "Color & Tone", max = 3.0f, defaultValue = 1.0f)
-    float saturationConst = 1.f;
+    float saturationConst = 1.0f;
     
     @Tunable(title = "Saturation Gauss", category = "Color & Tone", max = 3.0f, defaultValue = 1.5f)
     float saturationGauss = 1.5f;
@@ -119,7 +120,7 @@ import static com.particlesdevs.photoncamera.util.Math2.mix;
     @Override
     public int halo() {
         // FUSION path taps +-2; default path is pointwise.
-        return ((PostPipeline) basePipeline).FusionMap != null ? 2 : 0;
+        return ((PostPipeline) basePipeline).fusionMap != null ? 2 : 0;
     }
 
     /**
@@ -168,9 +169,9 @@ import static com.particlesdevs.photoncamera.util.Math2.mix;
         }
         float[] WP = basePipeline.mParameters.whitePoint;
         float minP = (WP[0]+WP[1]+WP[2])/3.f;
-        if (basePipeline.mParameters.HSVMap != null)
+        if (basePipeline.mParameters.hsvMap != null)
             glProg.setDefine("USE_HSV", 1);
-        if (basePipeline.mParameters.LookMap != null)
+        if (basePipeline.mParameters.lookMap != null)
             glProg.setDefine("LOOKUP", 1);
         glProg.setDefine("MINP",minP);
         glProg.setDefine("NEUTRALPOINT",WP);
@@ -183,7 +184,7 @@ import static com.particlesdevs.photoncamera.util.Math2.mix;
         if(mode == ColorCorrectionTransform.CorrectionMode.CUBES || mode == ColorCorrectionTransform.CorrectionMode.CUBE){
             glProg.setDefine("CCT", 1);
         }
-        if(((PostPipeline)basePipeline).FusionMap != null) glProg.setDefine("FUSION", 1);
+        if(((PostPipeline)basePipeline).fusionMap != null) glProg.setDefine("FUSION", 1);
         if(((PostPipeline)basePipeline).exposureCurve != null) glProg.setDefine("EXPOCURVE", 1);
     }
 
@@ -217,17 +218,17 @@ import static com.particlesdevs.photoncamera.util.Math2.mix;
             glProg.setTexture("LookupTable", lut);
         }
         if(postLut != null) glProg.setTexture("PostLut",postLut);
-        if (basePipeline.mParameters.HSVMap != null) {
-            glProg.setTexture("HSVMap", HSVTexture);
+        if (basePipeline.mParameters.hsvMap != null) {
+            glProg.setTexture("HSVMap", hsvTexture);
         }
-        if (basePipeline.mParameters.LookMap != null) {
-            glProg.setTexture("LookMap", LookupTexture);
+        if (basePipeline.mParameters.lookMap != null) {
+            glProg.setTexture("LookMap", lookupTexture);
         }
-        glProg.setTexture("GammaCurve",GammaTexture);
+        glProg.setTexture("GammaCurve",gammaTexture);
         glProg.setTexture("InputBuffer",input);
         glProg.setVar("u_tileOrigin", 0, tileActive() ? tileY0 : 0);
         android.graphics.Point fullSize = basePipeline.workSize != null
-                ? basePipeline.workSize : super.previousNode.WorkingTexture.mSize;
+                ? basePipeline.workSize : super.previousNode.workingTexture.mSize;
         glProg.setVar("u_fullSize", (float) fullSize.x, (float) fullSize.y);
         glProg.setTexture("IntenseCurve",interpolatedCurve);
         glProg.setTexture("GainMap", ((PostPipeline)basePipeline).GainMap);
@@ -236,7 +237,7 @@ import static com.particlesdevs.photoncamera.util.Math2.mix;
         glProg.setVar("sensorToIntermediate",basePipeline.mParameters.sensorToProPhoto);
         Log.d(Name,"intermediateToSRGB: "+ Arrays.toString(cct));
         glProg.setVar("intermediateToSRGB",cct);
-        if(((PostPipeline)basePipeline).FusionMap != null) glProg.setTexture("FusionMap",((PostPipeline)basePipeline).FusionMap);
+        if(((PostPipeline)basePipeline).fusionMap != null) glProg.setTexture("FusionMap",((PostPipeline)basePipeline).fusionMap);
         if(((PostPipeline)basePipeline).exposureCurve != null) {
             glProg.setTexture("ExposureCurve",((PostPipeline)basePipeline).exposureCurve);
             glProg.setVar("adaptiveWhitePoint", ((PostPipeline)basePipeline).adaptiveWhitePoint);
@@ -244,7 +245,7 @@ import static com.particlesdevs.photoncamera.util.Math2.mix;
         Log.d(Name,"SensorPix:"+basePipeline.mParameters.sensorPix);
         glProg.setVar("activeSize",2,2,basePipeline.mParameters.sensorPix.right-basePipeline.mParameters.sensorPix.left-2,
                 basePipeline.mParameters.sensorPix.bottom-basePipeline.mParameters.sensorPix.top-2);
-        WorkingTexture = tileActive() ? tileOut : basePipeline.getMain();
+        workingTexture = tileActive() ? tileOut : basePipeline.getMain();
     }
 
     public void Run() {
@@ -252,7 +253,7 @@ import static com.particlesdevs.photoncamera.util.Math2.mix;
         // demosaic/denoise/ABLC) so the Ultra HDR gain-map pass can measure
         // the pre-local-tone-map scene.
         if (((PostPipeline) basePipeline).captureDemosaic) {
-            ((PostPipeline) basePipeline).captureDemosaicLinear(super.previousNode.WorkingTexture);
+            ((PostPipeline) basePipeline).captureDemosaicLinear(super.previousNode.workingTexture);
         }
         // Values are automatically injected in BeforeRun()!
         intenseCurveX = new float[curvePointsCount];
@@ -261,7 +262,7 @@ import static com.particlesdevs.photoncamera.util.Math2.mix;
         intenseHardCurveX = new float[curvePointsCount];
         intenseHardCurveY = new float[curvePointsCount];
         for(int i = 0; i<curvePointsCount;i++){
-            float line = i/((float)(curvePointsCount-1.f));
+            float line = i/((float)(curvePointsCount-1.0f));
             intenseCurveX[i] = line;
             intenseCurveY[i] = 1.0f;
 
@@ -269,14 +270,14 @@ import static com.particlesdevs.photoncamera.util.Math2.mix;
             intenseHardCurveY[i] = 1.0f;
         }
         intenseCurveX[curvePointsCount-2] = 0.99f;
-        intenseCurveY[curvePointsCount-2] = 1.f;
+        intenseCurveY[curvePointsCount-2] = 1.0f;
 
-        intenseCurveY[curvePointsCount-1] = 0.f;
+        intenseCurveY[curvePointsCount-1] = 0.0f;
 
         intenseHardCurveX[curvePointsCount-2] = 0.99f;
-        intenseHardCurveY[curvePointsCount-2] = 1.f;
+        intenseHardCurveY[curvePointsCount-2] = 1.0f;
 
-        intenseHardCurveY[curvePointsCount-1] = 0.f;
+        intenseHardCurveY[curvePointsCount-1] = 0.0f;
 
         if(curvePointsCount == 6){
             intenseCurveX[0] = 0.0f;
@@ -328,7 +329,7 @@ import static com.particlesdevs.photoncamera.util.Math2.mix;
         float[] interpolatedCurveArr = new float[1024];
         float softLight = ((PostPipeline)(basePipeline)).softLight;
         for(int i =0 ;i<interpolatedCurveArr.length;i++){
-            float line = i/ (interpolatedCurveArr.length-1.f);
+            float line = i/ (interpolatedCurveArr.length-1.0f);
             interpolatedCurveArr[i] = mix(splineInterpolatorHard.interpolate(line),splineInterpolator.interpolate(line),softLight);
         }
 
@@ -344,10 +345,10 @@ import static com.particlesdevs.photoncamera.util.Math2.mix;
         // Program bind plus uniforms/textures live in renderInitialBinds().
         float[] gamma = new float[1024];
         for (int i = 0; i < gamma.length; i++) {
-            double pos = ((float) i) / (gamma.length - 1.f);
+            double pos = (double) (((float) i) / (gamma.length - 1.0f));
             gamma[i] = (float) (Math.pow(pos, 1. / gammaKoefficientGenerator));
         }
-        GammaTexture = new GLTexture(gamma.length,1,
+        gammaTexture = new GLTexture(gamma.length,1,
                 new GLFormat(GLFormat.DataType.FLOAT_16),BufferUtils.getFrom(gamma),GL_LINEAR,GL_CLAMP_TO_EDGE);
         File customlut = new File(FileManager.sPHOTON_TUNING_DIR,"initial_lut.png");
         boolean loaded = false;
@@ -365,16 +366,16 @@ import static com.particlesdevs.photoncamera.util.Math2.mix;
         if(lutLoaded) {
             lut = new GLTexture(lutbm, GL_LINEAR, GL_CLAMP_TO_EDGE, 0);
         }
-        if (basePipeline.mParameters.HSVMap != null) {
-            HSVTexture = new GLTexture(new Point(basePipeline.mParameters.HSVMapSize[1], basePipeline.mParameters.HSVMapSize[0]), new GLFormat(GLFormat.DataType.FLOAT_32, 3), BufferUtils.getFrom(basePipeline.mParameters.HSVMap), GL_LINEAR, GL_CLAMP_TO_EDGE);
+        if (basePipeline.mParameters.hsvMap != null) {
+            hsvTexture = new GLTexture(new Point(basePipeline.mParameters.hsvMapSize[1], basePipeline.mParameters.hsvMapSize[0]), new GLFormat(GLFormat.DataType.FLOAT_32, 3), BufferUtils.getFrom(basePipeline.mParameters.hsvMap), GL_LINEAR, GL_CLAMP_TO_EDGE);
         }
-        if (basePipeline.mParameters.LookMap != null) {
-            LookupTexture = new GLTexture(new Point(basePipeline.mParameters.LookMapSize[2] * basePipeline.mParameters.LookMapSize[1], basePipeline.mParameters.LookMapSize[0]), new GLFormat(GLFormat.DataType.FLOAT_32, 3), BufferUtils.getFrom(basePipeline.mParameters.LookMap), GL_LINEAR, GL_CLAMP_TO_EDGE);
+        if (basePipeline.mParameters.lookMap != null) {
+            lookupTexture = new GLTexture(new Point(basePipeline.mParameters.lookMapSize[2] * basePipeline.mParameters.lookMapSize[1], basePipeline.mParameters.lookMapSize[0]), new GLFormat(GLFormat.DataType.FLOAT_32, 3), BufferUtils.getFrom(basePipeline.mParameters.lookMap), GL_LINEAR, GL_CLAMP_TO_EDGE);
         }
         //glProg.setTexture("TonemapTex",TonemapCoeffs);
         renderInitialDefines();
         glProg.useAssetProgram("Initial/initial");
-        renderInitialBinds(super.previousNode.WorkingTexture);
+        renderInitialBinds(super.previousNode.workingTexture);
         // Historical position: set after the program bind, so it stays out of
         // Initial's own compile key exactly as before (pending downstream).
         if (customlut.exists()) glProg.setDefine("LUT", true);
@@ -398,12 +399,12 @@ import static com.particlesdevs.photoncamera.util.Math2.mix;
      * bands would need skirts; covered by the halo contract instead).
      */
     private void verifyRegions() {
-        if (((PostPipeline) basePipeline).FusionMap != null) {
+        if (((PostPipeline) basePipeline).fusionMap != null) {
             Log.d("TiledHarness", "initial strips skipped (fusion path)");
             return;
         }
-        GLTexture fullOut = WorkingTexture;
-        GLTexture fullIn = super.previousNode.WorkingTexture;
+        GLTexture fullOut = workingTexture;
+        GLTexture fullIn = super.previousNode.workingTexture;
         int imgW = fullOut.mSize.x;
         int imgH = fullOut.mSize.y;
         // 512-row bands (not 4-row): matches production tile scale and stays
@@ -439,7 +440,7 @@ import static com.particlesdevs.photoncamera.util.Math2.mix;
         tileY0 = 0;
         tileY1 = -1;
         tileOut = null;
-        WorkingTexture = fullOut;
+        workingTexture = fullOut;
         // Initial never sets closed=true, so runAllInternal redraws it after
         // Run returns: restore the legacy origin or the final draw shifts.
         glProg.setVar("u_tileOrigin", 0, 0);

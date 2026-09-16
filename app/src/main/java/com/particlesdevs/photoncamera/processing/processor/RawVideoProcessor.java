@@ -655,10 +655,10 @@ public class RawVideoProcessor extends ProcessorBase {
             if (mcrawParameters != null) {
                 meta.put("blackLevel", new JSONArray(mcrawParameters.blackLevel));
                 meta.put("whiteLevel", mcrawParameters.whiteLevel);
-                meta.put("colorMatrix1", new JSONArray(mcrawParameters.ColorMatrix1));
-                meta.put("colorMatrix2", new JSONArray(mcrawParameters.ColorMatrix2));
-                meta.put("forwardMatrix1", new JSONArray(mcrawParameters.ForwardTransform1));
-                meta.put("forwardMatrix2", new JSONArray(mcrawParameters.ForwardTransform2));
+                meta.put("colorMatrix1", new JSONArray(mcrawParameters.colorMatrix1));
+                meta.put("colorMatrix2", new JSONArray(mcrawParameters.colorMatrix2));
+                meta.put("forwardMatrix1", new JSONArray(mcrawParameters.forwardTransform1));
+                meta.put("forwardMatrix2", new JSONArray(mcrawParameters.forwardTransform2));
                 meta.put("calibrationMatrix1", new JSONArray(mcrawParameters.calibrationTransform1));
                 meta.put("calibrationMatrix2", new JSONArray(mcrawParameters.calibrationTransform2));
                 meta.put("referenceIlluminant1", mcrawParameters.calibrationIlluminant1);

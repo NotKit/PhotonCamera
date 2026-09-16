@@ -33,7 +33,6 @@ import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 
 public class HdrxProcessor extends ProcessorBase {
@@ -45,7 +44,7 @@ public class HdrxProcessor extends ProcessorBase {
     private int alignAlgorithm;
     private int saveRAW;
     private CameraMode cameraMode;
-    private ArrayList<GyroBurst> BurstShakiness;
+    private ArrayList<GyroBurst> burstShakiness;
 
 
     public HdrxProcessor(ProcessingEventsListener processingEventsListener) {
@@ -60,7 +59,7 @@ public class HdrxProcessor extends ProcessorBase {
 
     public void start(Path dngFile, Path imageFile,
                       ParseExif.ExifData exifData,
-                      ArrayList<GyroBurst> BurstShakiness,
+                      ArrayList<GyroBurst> burstShakiness,
                       ArrayList<ImageFrame> imageBuffer,
                       HashMap<Long, Double> exposures,
                       int imageFormat,
@@ -72,7 +71,7 @@ public class HdrxProcessor extends ProcessorBase {
         this.imageFile = imageFile;
         this.dngFile = dngFile;
         this.exifData = exifData;
-        this.BurstShakiness = new ArrayList<>(BurstShakiness);
+        this.burstShakiness = new ArrayList<>(burstShakiness);
         this.imageFormat = imageFormat;
         this.cameraRotation = cameraRotation;
         this.mImageFramesToProcess = imageBuffer;
@@ -162,7 +161,10 @@ public class HdrxProcessor extends ProcessorBase {
         Log.d(TAG, "Stage[params+pack] elapsed:" + (System.currentTimeMillis() - startTime) + " ms");
         long frameSelectT = System.currentTimeMillis();
         // sort by timestamp first
-        mImageFramesToProcess.sort(Comparator.comparingLong(ImageFrame::getTimestamp));
+        mImageFramesToProcess.sort((a, b) -> {
+            long d = a.getTimestamp() - b.getTimestamp();
+            return d < 0 ? -1 : (d > 0 ? 1 : 0);
+        });
         double minExpo = exposures.get(mImageFramesToProcess.get(0).getTimestamp());
         for (int i = 1; i < mImageFramesToProcess.size(); i++) {
             minExpo = Math.min(minExpo, exposures.get(mImageFramesToProcess.get(i).getTimestamp()));
@@ -171,18 +173,19 @@ public class HdrxProcessor extends ProcessorBase {
         ArrayList<ImageFrame> images = new ArrayList<>();
         int ISO = 0;
         int normalFrames = 0;
-        if(BurstShakiness.size() < mImageFramesToProcess.size()){
-            Log.d(TAG,"Warning: Gyro data size:"+BurstShakiness.size()+" is less than image size:"+mImageFramesToProcess.size());
+        if(burstShakiness.size() < mImageFramesToProcess.size()){
+            Log.d(TAG,"Warning: Gyro data size:"+burstShakiness.size()+" is less than image size:"+mImageFramesToProcess.size());
         }
         for (int i = 0; i < mImageFramesToProcess.size(); i++) {
             ImageFrame frame = mImageFramesToProcess.get(i);
-            frame.frameGyro = BurstShakiness.get(i%BurstShakiness.size()); // cyclic for safety
+            frame.frameGyro = burstShakiness.get(i%burstShakiness.size()); // cyclic for safety
             //frame.image = mImageFramesToProcess.get(i);
             //Log.d(TAG,"Timestamp:"+frame.image.getTimestamp());
             //frame.pair = IsoExpoSelector.pairs.get(i % IsoExpoSelector.patternSize);
             frame.pair = IsoExpoSelector.fullpairs.get(i);
             frame.number = i;
-            frame.pair.layerMpy = (float) (exposures.get(mImageFramesToProcess.get(i).getTimestamp()) / minExpo);
+            double expo = exposures.get(mImageFramesToProcess.get(i).getTimestamp());
+            frame.pair.layerMpy = (float) (expo / minExpo);
             if (frame.pair.layerMpy > 1.0) {
                 frame.pair.curlayer = IsoExpoSelector.ExpoPair.exposureLayer.High;
             } else {
@@ -269,7 +272,7 @@ public class HdrxProcessor extends ProcessorBase {
             Log.d(TAG, "Size after removal:" + images.size());
         }
 
-        float minMpy = 1000.f;
+        float minMpy = 1000.0f;
         for (int i = 0; i < images.size(); i++) {
             if (images.get(i).pair.layerMpy < minMpy) {
                 minMpy = images.get(i).pair.layerMpy;
@@ -308,7 +311,7 @@ public class HdrxProcessor extends ProcessorBase {
         Log.d(TAG, "White Level:" + processingParameters.whiteLevel);
         Log.d(TAG, "Wrapper.loadFrame");
         //float noiseLevel = (float) Math.sqrt((CaptureController.mCaptureResult.get(CaptureResult.SENSOR_SENSITIVITY)) *
-        //        IsoExpoSelector.getMPY() - 40.)*6400.f / (6.2f*IsoExpoSelector.getISOAnalog());
+        //        IsoExpoSelector.getMPY() - 40.)*6400.0f / (6.2f*IsoExpoSelector.getISOAnalog());
 
         ByteBuffer output = null;
         // True when output already holds white/black-level normalized fp16
@@ -330,7 +333,7 @@ public class HdrxProcessor extends ProcessorBase {
             esdT = System.currentTimeMillis();
             esd4d.close();
             Log.d(TAG, "Stage[esd4d.close] elapsed:" + (System.currentTimeMillis() - esdT) + " ms");
-            output = esd4d.Output;
+            output = esd4d.output;
             long postMergeT = System.currentTimeMillis();
             for (int i = 0; i < images.size(); i++) {
                 images.get(i).close();

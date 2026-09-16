@@ -22,8 +22,8 @@ public class SharpenDual extends Node {
     float blurSize = 0.20f;
     float sharpSize = 1.5f;
     float sharpMin = 0.5f;
-    float sharpMax = 1.f;
-    float denoiseActivity = 1.f;
+    float sharpMax = 1.0f;
+    float denoiseActivity = 1.0f;
     @Override
     public void Run() {
         denoiseActivity = getTuning("DenoiseActivity",denoiseActivity);
@@ -31,7 +31,8 @@ public class SharpenDual extends Node {
         sharpSize = getTuning("SharpSize", sharpSize);
         sharpMin = getTuning("SharpMin",sharpMin);
         sharpMax = getTuning("SharpMax",sharpMax);
-        float sharpnessLevel = (float) Math.sqrt((CaptureController.mCaptureResult.get(CaptureResult.SENSOR_SENSITIVITY)) * IsoExpoSelector.getMPY() - 50.) / 14.2f;
+        int iso = CaptureController.mCaptureResult.get(CaptureResult.SENSOR_SENSITIVITY);
+        float sharpnessLevel = (float) Math.sqrt(iso * IsoExpoSelector.getMPY() - 50.) / 14.2f;
         sharpnessLevel = Math.max(0.5f, sharpnessLevel);
         sharpnessLevel = Math.min(1.5f, sharpnessLevel);
         glProg.setDefine("SAVEGREEN",true);
@@ -39,7 +40,7 @@ public class SharpenDual extends Node {
         glProg.useAssetProgram("SharpenDual/blur");
         //glProg.setVar("size", blurSize);
         //glProg.setVar("strength", PreferenceKeys.getSharpnessValue());
-        glProg.setTexture("InputBuffer",previousNode.WorkingTexture);
+        glProg.setTexture("InputBuffer",previousNode.workingTexture);
         glProg.drawBlocks(basePipeline.getMain3());
         glProg.setDefine("INTENSE",denoiseActivity);
         glProg.setDefine("INSIZE",basePipeline.mParameters.rawSize);
@@ -52,10 +53,10 @@ public class SharpenDual extends Node {
         Log.d("PostNode:" + Name, "sharpnessLevel:" + sharpnessLevel + " iso:" + CaptureController.mCaptureResult.get(CaptureResult.SENSOR_SENSITIVITY));
         glProg.setVar("size", sharpSize);
         glProg.setVar("strength", PreferenceKeys.getSharpnessValue());
-        glProg.setTexture("InputBuffer", previousNode.WorkingTexture);
+        glProg.setTexture("InputBuffer", previousNode.workingTexture);
         glProg.setTexture("BlurBuffer",basePipeline.getMain3());
-        WorkingTexture = basePipeline.getMain();
-        glProg.drawBlocks(WorkingTexture);
+        workingTexture = basePipeline.getMain();
+        glProg.drawBlocks(workingTexture);
         glProg.closed = true;
     }
 }

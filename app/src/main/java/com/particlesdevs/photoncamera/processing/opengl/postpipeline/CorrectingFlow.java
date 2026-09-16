@@ -51,7 +51,7 @@ public class CorrectingFlow extends Node {
          */
         Log.d(Name,"Input:"+ Arrays.toString(parsedFlow));
         for(int i =0; i<parsedFlow.length;i++){
-            parsedFlow[i]/=basePipeline.mParameters.rawSize.x/4.0;
+            parsedFlow[i]/=(float)(basePipeline.mParameters.rawSize.x/4.0);
         }
 
 
@@ -122,7 +122,7 @@ public class CorrectingFlow extends Node {
         }*/
 
         if (!willCorrect(basePipeline.mParameters)) {
-            WorkingTexture = previousNode.WorkingTexture;
+            workingTexture = previousNode.workingTexture;
             glProg.closed = true;
             if (((PostPipeline) basePipeline).debugTiledCompare) {
                 verifyCorrectingRegions();
@@ -133,18 +133,18 @@ public class CorrectingFlow extends Node {
         float[] correction = basePipeline.mParameters.sensorSpecifics.aberrationCorrection;
         //correctingFlowRG = new GLTexture(FlowXY,new GLFormat(GLFormat.DataType.FLOAT_16,4), FloatBuffer.wrap(parsedFlowRG),GL_LINEAR, GL_CLAMP_TO_EDGE);
         //correctingFlowB = new GLTexture(FlowXY,new GLFormat(GLFormat.DataType.FLOAT_16,2), FloatBuffer.wrap(parsedFlowB),GL_LINEAR, GL_CLAMP_TO_EDGE);
-        glProg.setDefine("SIZE",previousNode.WorkingTexture.mSize);
+        glProg.setDefine("SIZE",previousNode.workingTexture.mSize);
         glProg.setDefine("C", correction[0],correction[1]);
         glProg.setDefine("RC",correction[2],correction[3]);
         glProg.setDefine("GC",correction[4],correction[5]);
         glProg.setDefine("BC",correction[6],correction[7]);
         glProg.useAssetProgram("CorrectingFlow/correctingflow");
-        glProg.setTexture("InputBuffer",previousNode.WorkingTexture);
+        glProg.setTexture("InputBuffer",previousNode.workingTexture);
         glProg.setVar("u_tileOrigin", 0, tileActive() ? tileY0 : 0);
         //glProg.setTexture("CorrectingFlowRG", correctingFlowRG);
         //glProg.setTexture("CorrectingFlowB", correctingFlowB);
-        WorkingTexture = basePipeline.getMain();
-        glProg.drawBlocks(WorkingTexture);
+        workingTexture = basePipeline.getMain();
+        glProg.drawBlocks(workingTexture);
         glProg.closed = true;
         if (((PostPipeline) basePipeline).debugTiledCompare) {
             verifyCorrectingRegions();
@@ -164,8 +164,8 @@ public class CorrectingFlow extends Node {
             Log.d("TiledHarness", "correcting strips skipped (passthrough)");
             return;
         }
-        GLTexture fullOut = WorkingTexture;
-        GLTexture fullIn = previousNode.WorkingTexture;
+        GLTexture fullOut = workingTexture;
+        GLTexture fullIn = previousNode.workingTexture;
         int imgW = fullOut.mSize.x;
         int imgH = fullOut.mSize.y;
         float worst = TileDriver.verifyNodeBands(fullOut, imgW, imgH, 512,
@@ -175,7 +175,7 @@ public class CorrectingFlow extends Node {
                     tileY0 = b0;
                     tileY1 = b0 + rows;
                     tileOut = reg;
-                    WorkingTexture = reg;
+                    workingTexture = reg;
                     glProg.setTexture("InputBuffer", fullIn);
                     glProg.setVar("u_tileOrigin", 0, b0);
                     glProg.drawBlocks(reg);
@@ -185,7 +185,7 @@ public class CorrectingFlow extends Node {
         tileY0 = 0;
         tileY1 = -1;
         tileOut = null;
-        WorkingTexture = fullOut;
+        workingTexture = fullOut;
         glProg.setVar("u_tileOrigin", 0, 0);
         glProg.setTexture("InputBuffer", fullIn);
     }

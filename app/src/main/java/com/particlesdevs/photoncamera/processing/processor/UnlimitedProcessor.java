@@ -116,7 +116,7 @@ public class UnlimitedProcessor extends ProcessorBase {
         GLTexture.resetPeakVram();
         long processStartMs = System.currentTimeMillis();
         averageRaw.FinalScript();
-        ByteBuffer unlimitedBuffer = averageRaw.Output;
+        ByteBuffer unlimitedBuffer = averageRaw.output;
         averageRaw.close();
         averageRaw = null;
         Allocator.logStage(TAG, "unlimited-start " + parameters.rawSize.x + "x" + parameters.rawSize.y);

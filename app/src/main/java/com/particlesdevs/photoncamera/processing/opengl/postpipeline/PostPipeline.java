@@ -39,7 +39,7 @@ public class PostPipeline extends GLBasePipeline {
     private boolean stackFrameReleased;
     public ByteBuffer lowFrame;
     public ByteBuffer highFrame;
-    public GLTexture FusionMap;
+    public GLTexture fusionMap;
     public GLTexture GainMap;
     /**
      * Linear display gain estimated by {@link LinearExposure} from the linear
@@ -82,12 +82,12 @@ public class PostPipeline extends GLBasePipeline {
     public ArrayList<Bitmap> debugData = new ArrayList<>();
     public ArrayList<ImageFrame> SAGAIN;
     public Point cropSize;
-    public float[] analyzedBL = new float[]{0.f, 0.f, 0.f};
-    float regenerationSense = 1.f;
-    float totalGain = 1.f;
-    float AecCorr = 1.f;
-    float fusionGain = 1.f;
-    float softLight = 1.f;
+    public float[] analyzedBL = new float[]{0.0f, 0.0f, 0.0f};
+    float regenerationSense = 1.0f;
+    float totalGain = 1.0f;
+    float AecCorr = 1.0f;
+    float fusionGain = 1.0f;
+    float softLight = 1.0f;
 
     // Ultra HDR state.
     /**
@@ -242,8 +242,8 @@ public class PostPipeline extends GLBasePipeline {
         noiseO = modeler.computeModel[0].second.floatValue() +
                 modeler.computeModel[1].second.floatValue() +
                 modeler.computeModel[2].second.floatValue();
-        noiseS /= 3.f;
-        noiseO /= 3.f;
+        noiseS /= 3.0f;
+        noiseO /= 3.0f;
         double noisempy = Math.pow(2.0, mSettings.noiseRstr + constShift);
         Log.d("PostPipeline", "noisempy:" + noisempy);
         noiseS *= noisempy;
@@ -1454,8 +1454,8 @@ public class PostPipeline extends GLBasePipeline {
         return 1f;
     }
 
-    private static float srgbToLinear(float c) {
-        c = Math.min(Math.max(c, 0f), 1f);
+    private static float srgbToLinear(float in) {
+        float c = Math.min(Math.max(in, 0f), 1f);
         return c <= 0.04045f ? c / 12.92f : (float) Math.pow((c + 0.055) / 1.055, 2.4);
     }
 

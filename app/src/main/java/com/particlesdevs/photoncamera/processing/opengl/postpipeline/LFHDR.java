@@ -10,6 +10,7 @@ import com.particlesdevs.photoncamera.processing.opengl.GLProg;
 import com.particlesdevs.photoncamera.processing.opengl.GLTexture;
 import com.particlesdevs.photoncamera.processing.opengl.nodes.Node;
 import com.particlesdevs.photoncamera.processing.render.Parameters;
+import java.nio.Buffer;
 
 public class LFHDR extends Node {
     GLProg glProg;
@@ -27,7 +28,7 @@ public class LFHDR extends Node {
         glProg.setTexture("InputBuffer", input);
         glProg.setVar("size", 1.7f);
         Log.d(Name, "Sharp mFormat:" + input.mFormat.toString());
-        GLTexture output = new GLTexture(new Point(input.mSize.x, input.mSize.y), input.mFormat, null);
+        GLTexture output = new GLTexture(new Point(input.mSize.x, input.mSize.y), input.mFormat, (Buffer) null);
         glProg.drawBlocks(output);
         glProg.close();
         return output;
@@ -37,7 +38,7 @@ public class LFHDR extends Node {
         glProg.useAssetProgram("gaussblur554");
         glProg.setTexture("InputBuffer", input);
         glProg.setVar("size", 1.7f);
-        GLTexture output = new GLTexture(new Point(input.mSize.x, input.mSize.y), input.mFormat, null);
+        GLTexture output = new GLTexture(new Point(input.mSize.x, input.mSize.y), input.mFormat, (Buffer) null);
         glProg.drawBlocks(output);
         glProg.close();
         return output;
@@ -47,7 +48,7 @@ public class LFHDR extends Node {
         glProg.useAssetProgram("LFHDR/add4");
         glProg.setTexture("InputBuffer", input);
         glProg.setTexture("InputBuffer2", mask);
-        GLTexture output = new GLTexture(new Point(input.mSize.x, input.mSize.y), input.mFormat, null);
+        GLTexture output = new GLTexture(new Point(input.mSize.x, input.mSize.y), input.mFormat, (Buffer) null);
         glProg.drawBlocks(output);
         glProg.close();
         return output;
@@ -57,7 +58,7 @@ public class LFHDR extends Node {
         glProg.useAssetProgram("LFHDR/mergehdr");
         glProg.setTexture("InputBufferLow", inputLow);
         glProg.setTexture("InputBufferHigh", inputHigh);
-        GLTexture output = new GLTexture(inputLow.mSize, inputLow.mFormat, null);
+        GLTexture output = new GLTexture(inputLow.mSize, inputLow.mFormat, (Buffer) null);
         glProg.drawBlocks(output);
         glProg.close();
         return output;
@@ -71,16 +72,16 @@ public class LFHDR extends Node {
         glProg.setTexture("RawBuffer", input);
         glProg.setVar("WhiteLevel", params.whiteLevel);
         glProg.setVar("CfaPattern", params.cfaPattern);
-        GLTexture Output = new GLTexture(params.rawSize, new GLFormat(GLFormat.DataType.FLOAT_16), null);
-        glProg.drawBlocks(Output);
+        GLTexture greenOutput = new GLTexture(params.rawSize, new GLFormat(GLFormat.DataType.FLOAT_16), (Buffer) null);
+        glProg.drawBlocks(greenOutput);
         glProg.close();
 
         glProg.useAssetProgram("demosaicp2");
         glProg.setTexture("RawBuffer", input);
-        glProg.setTexture("GreenBuffer", Output);
+        glProg.setTexture("GreenBuffer", greenOutput);
         glProg.setVar("WhiteLevel", params.whiteLevel);
         glProg.setVar("CfaPattern", params.cfaPattern);
-        GLTexture output = new GLTexture(params.rawSize, new GLFormat(GLFormat.DataType.FLOAT_16, 4), null);
+        GLTexture output = new GLTexture(params.rawSize, new GLFormat(GLFormat.DataType.FLOAT_16, 4), (Buffer) null);
         glProg.drawBlocks(output);
         glProg.close();
 
@@ -99,7 +100,7 @@ public class LFHDR extends Node {
         inputhdrhigh.loadRawHalf(postPipeline.highFrame);
         GLTexture MaskStacking = SharpMask(Debayer(inputstacking));
         GLTexture BlurredHDR = Blur(MergeHDR(Debayer(inputhdrlow), Debayer(inputhdrhigh)));
-        WorkingTexture = ApplyMask(BlurredHDR, MaskStacking);
+        workingTexture = ApplyMask(BlurredHDR, MaskStacking);
         //WorkingTexture = MaskStacking;
         //WorkingTexture = SharpMask(Debayer(inputstacking));
     }

@@ -26,6 +26,7 @@ import com.particlesdevs.photoncamera.util.Allocator;
 import com.particlesdevs.photoncamera.util.BufferUtils;
 import com.particlesdevs.photoncamera.util.Math2;
 
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -468,8 +469,10 @@ public class ESD4D extends GLOneScript {
         }
         // Borrowed baseDiff must survive (see above); nothing to free here.
         if (tempRaw != null) tempRaw.close();
+        double weightSq = 0.0;
+        for (double w : weights) weightSq += w * w;
         Log.d(Name, "Noise blend: " + frameCnt + " frame(s), sum(w^2)="
-                + String.format(java.util.Locale.ROOT, "%.4f", java.util.stream.DoubleStream.of(weights).map(w -> w * w).sum()));
+                + String.format(java.util.Locale.ROOT, "%.4f", weightSq));
         return blendCurrent;
     }
 
@@ -532,7 +535,7 @@ public class ESD4D extends GLOneScript {
         int lowCnt = 0;
         for (int i = 1; i < images.size(); i++) {
             ImageFrame frame = images.get(i);
-            float exposure = 1.f/frame.pair.layerMpy;
+            float exposure = 1.0f/frame.pair.layerMpy;
             Log.d("ESD4D", "exposure: " + exposure);
             if(exposure < 0.95f) {
                 lowCnt++;
@@ -622,8 +625,8 @@ public class ESD4D extends GLOneScript {
         noiseO = modeler.baseModel[0].second.floatValue() +
                 modeler.baseModel[1].second.floatValue() +
                 modeler.baseModel[2].second.floatValue();
-        noiseS /= 3.f;
-        noiseO /= 3.f;
+        noiseS /= 3.0f;
+        noiseO /= 3.0f;
         //GLUtils glUtils = new GLUtils(glOne.glProcessing);
         int tile = 8;
         glProg.setLayout(tile,tile,1);
@@ -679,7 +682,7 @@ public class ESD4D extends GLOneScript {
             noiseHist.exposure[1] = 1.0f;
             noiseHist.exposure[2] = 1.0f;
             noiseHist.exposure[3] = 1.0f;
-            noiseHist.CustomShader = "merge/noisehist";
+            noiseHist.customShader = "merge/noisehist";
             noiseHist.input1 = brightnessScale;
             noiseHist.input2 = varianceScale;
             noiseHist.resize = noiseScanSubsample;
@@ -841,7 +844,7 @@ public class ESD4D extends GLOneScript {
                     if (sumWeightedCount > 0) {
                         double observedSigma = sumWeightedSigma / sumWeightedCount;
                         adaptiveNMpy = observedSigma / modelSigmaMid;
-                        adaptiveNMpy = Math2.clamp(adaptiveNMpy, adaptiveFallbackMin, adaptiveFallbackMax);
+                        adaptiveNMpy = Math2.clamp(adaptiveNMpy, (double) adaptiveFallbackMin, (double) adaptiveFallbackMax);
                     }
                 }
                 Log.d("DynamicNoise", "Adaptive Mpy (fallback): " + adaptiveNMpy + " (insufficient points=" + points + ")");
@@ -996,7 +999,7 @@ public class ESD4D extends GLOneScript {
                 ind = minExpIdx;
             }
             ImageFrame frame = images.get(ind);
-            float exposure = 1.f/frame.pair.layerMpy;
+            float exposure = 1.0f/frame.pair.layerMpy;
             Point shift = PyramidAlignment.alignmentShift(parameters, ind);
             //int f = 1;
             Log.d("ESD4D", "load:"+frame.pair.curlayer.name() + " " + frame.pair.layerMpy);
@@ -1154,7 +1157,7 @@ public class ESD4D extends GLOneScript {
         glProg.setTexture("alignmentTexture", alignmentTex);
         result.BufferLoad();
         glOne.glProcessing.drawBlocksToOutput();
-        Output = glOne.glProcessing.mOutBuffer;
+        output = glOne.glProcessing.mOutBuffer;
         // The tiled glReadPixels inside drawBlocksToOutput drains every
         // compute dispatch the merge loop queued asynchronously, so this
         // stage carries the loop's real GPU execution time on top of the

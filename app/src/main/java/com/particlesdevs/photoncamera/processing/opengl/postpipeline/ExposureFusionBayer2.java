@@ -54,7 +54,7 @@ public class ExposureFusionBayer2 extends Node {
         glProg.setTexture("GainMap", ((PostPipeline)basePipeline).GainMap);
         glProg.setVar("neutral", basePipeline.mParameters.whitePoint);
         //glProg.setVar("factor", str);
-        GLTexture outp = new GLTexture(WorkSize,new GLFormat(GLFormat.DataType.FLOAT_16,4),null,GL_LINEAR,GL_CLAMP_TO_EDGE);
+        GLTexture outp = new GLTexture(workSize,new GLFormat(GLFormat.DataType.FLOAT_16,4),null,GL_LINEAR,GL_CLAMP_TO_EDGE);
         glProg.drawBlocks(outp);
         return outp;
     }
@@ -89,22 +89,22 @@ public class ExposureFusionBayer2 extends Node {
     }
 
     float autoExposureHigh(){
-        float avr = 0.f;
+        float avr = 0.0f;
         float w = 0.01f;
-        float full = 1.f;
+        float full = 1.0f;
         for(int i = 0; i < 255; i++){
             full += glHistogram.outputArr[0][i];
         }
         for(int i = 5; i < 255; i++){
-            float line = (i-5)/255.f;
+            float line = (i-5)/255.0f;
             float cnt = glHistogram.outputArr[0][i]*Math.max(1.0f-line*1.6f, 0.0f)/full;
-            float ind = (float)(Math.pow(line, 1./ gammaKShadowSearch))*256.f;
+            float ind = (float)(Math.pow(line, 1./ gammaKShadowSearch))*256.0f;
             float mpy = cnt*(ind);
             avr+=mpy;
             w+=cnt;
             //Log.d(Name,"Overexp pos:"+ind+" val:"+cnt);
         }
-        var gain =  Math.max(128/(avr/w + 1),1.f);
+        var gain =  Math.max(128/(avr/w + 1),1.0f);
         Log.d(Name,"Overexp pos:"+avr/w);
         float gainNoiseMax = Math.max((float) (noiseMax / Math.sqrt(basePipeline.noiseS * 0.5 + basePipeline.noiseO)), 1.0f);
         if(gain > gainNoiseMax) {
@@ -115,18 +115,18 @@ public class ExposureFusionBayer2 extends Node {
         //return mix(avr/w,max, overExposeMaxFusion);
     }
     float autoExposureLow(){
-        float avr = 0.f;
-        float w = 1.f;
+        float avr = 0.0f;
+        float w = 1.0f;
         for(int i = 128; i<240;i++){
-            float line = i/255.f;
-            float ind = (float)(Math.pow(line, 1./ gammaKSearch))*256.f;
+            float line = i/255.0f;
+            float ind = (float)(Math.pow(line, 1./ gammaKSearch))*256.0f;
             float mpy = glHistogram.outputArr[0][i]*(ind);
             avr+=mpy;
             w+=glHistogram.outputArr[0][i];
         }
         Log.d(Name,"Underexp pos:"+avr/w);
         //return (256 - avr/w)/256;
-        return Math.min(0.7f*256/(avr/w + 1),1.f);
+        return Math.min(0.7f*256/(avr/w + 1),1.0f);
         //return mix(avr/w,min,underExposeMinFusion);
     }
 
@@ -150,7 +150,7 @@ public class ExposureFusionBayer2 extends Node {
     }
     GLHistogram glHistogram;
     Point initialSize;
-    Point WorkSize;
+    Point workSize;
     
     @Tunable(
         title = "Over Expose Multiplier",
@@ -290,23 +290,23 @@ public class ExposureFusionBayer2 extends Node {
         title = "Fusion Expo Low Limit",
         description = "Lower limit for fusion exposure",
         category = "Exposure Fusion",
-        defaultValue = 1.f/16.f,
+        defaultValue = 1.0f/16.0f,
         min = 0.001f,
         max = 1.0f,
         step = 0.001f
     )
-    float fusionExpoLowLimit = 1.f/16.f;
+    float fusionExpoLowLimit = 1.0f/16.0f;
     
     @Tunable(
         title = "Fusion Expo High Limit",
         description = "Upper limit for fusion exposure",
         category = "Exposure Fusion",
-        defaultValue = 64.f,
+        defaultValue = 64.0f,
         min = 1.0f,
         max = 100.0f,
         step = 0.1f
     )
-    float fusionExpoHighLimit = 64.f;
+    float fusionExpoHighLimit = 64.0f;
     
     @Tunable(
         title = "Overexposed Upper Limit",
@@ -381,7 +381,7 @@ public class ExposureFusionBayer2 extends Node {
     @Override
     public void Run() {
         if (!enable) {
-            WorkingTexture = previousNode.WorkingTexture;
+            workingTexture = previousNode.workingTexture;
             glProg.closed = true;
             return;
         }
@@ -390,7 +390,7 @@ public class ExposureFusionBayer2 extends Node {
         shadowCurveX = new float[curvePointsCount];
         shadowCurveY = new float[curvePointsCount];
         for(int i = 0; i<curvePointsCount;i++){
-            float line = i/((float)(curvePointsCount-1.f));
+            float line = i/((float)(curvePointsCount-1.0f));
             toneCurveX[i] = line;
             toneCurveY[i] = 1.0f;
             shadowCurveX[i] = line;
@@ -429,7 +429,7 @@ public class ExposureFusionBayer2 extends Node {
         // They are initialized based on curvePointsCount above
         ArrayList<Float> curveX = new ArrayList<>();
         ArrayList<Float> curveY = new ArrayList<>();
-        float maxC = 0.f;
+        float maxC = 0.0f;
         for(int i =0; i<curvePointsCount;i++){
             curveX.add(toneCurveX[i]);
             curveY.add(toneCurveY[i]);
@@ -442,7 +442,7 @@ public class ExposureFusionBayer2 extends Node {
         float[] interpolatedCurveArr = new float[1024];
         float[] interpolatedCurveShadowsArr = new float[1024];
         for(int i =0 ;i<interpolatedCurveArr.length;i++){
-            float line = i/((float)(interpolatedCurveArr.length-1.f));
+            float line = i/((float)(interpolatedCurveArr.length-1.0f));
             interpolatedCurveArr[i] = splineInterpolator.interpolate(line);
             interpolatedCurveShadowsArr[i] = splineInterpolatorShadows.interpolate(line);
         }
@@ -451,19 +451,19 @@ public class ExposureFusionBayer2 extends Node {
         shadowMap = new GLTexture(new Point(interpolatedCurveShadowsArr.length,1),
                 new GLFormat(GLFormat.DataType.FLOAT_16), BufferUtils.getFrom(interpolatedCurveShadowsArr),GL_LINEAR,GL_CLAMP_TO_EDGE);
 
-        GLTexture in = previousNode.WorkingTexture;
-        initialSize = new Point(previousNode.WorkingTexture.mSize);
-        WorkSize = new Point(initialSize.x/2,initialSize.y/2);
+        GLTexture in = previousNode.workingTexture;
+        initialSize = new Point(previousNode.workingTexture.mSize);
+        workSize = new Point(initialSize.x/2,initialSize.y/2);
         //Size override
-        basePipeline.main1.mSize.x = WorkSize.x;
-        basePipeline.main1.mSize.y = WorkSize.y;
-        basePipeline.main2.mSize.x = WorkSize.x;
-        basePipeline.main2.mSize.y = WorkSize.y;
-        basePipeline.getMain3().mSize.x = WorkSize.x;
-        basePipeline.getMain3().mSize.y = WorkSize.y;
+        basePipeline.main1.mSize.x = workSize.x;
+        basePipeline.main1.mSize.y = workSize.y;
+        basePipeline.main2.mSize.x = workSize.x;
+        basePipeline.main2.mSize.y = workSize.y;
+        basePipeline.getMain3().mSize.x = workSize.x;
+        basePipeline.getMain3().mSize.y = workSize.y;
         //if(PhotonCamera.getManualMode().getCurrentExposureValue() != 0 && PhotonCamera.getManualMode().getCurrentISOValue() != 0) compressor = 1.f;
         float perlevel = downScalePerLevel;
-        int levelcount = (int)(Math.log10(WorkSize.x)/Math.log10(perlevel));
+        int levelcount = (int)(Math.log10(workSize.x)/Math.log10(perlevel));
         if(levelcount <= 0) levelcount = 2;
         Log.d(Name,"levelCount:"+levelcount);
 
@@ -472,12 +472,12 @@ public class ExposureFusionBayer2 extends Node {
         getHistogram(exposureBase);
         float overexposure = autoExposureHigh();
         float underexposure = autoExposureLow();
-        ((PostPipeline)basePipeline).softLight = Math2.smoothstep(softLoverLevel, softUpperLevel,((1.f/overexposure)+underexposure)/2.f);
+        ((PostPipeline)basePipeline).softLight = Math2.smoothstep(softLoverLevel, softUpperLevel,((1.0f/overexposure)+underexposure)/2.0f);
         Log.d(Name,"SoftLightk:"+((PostPipeline)basePipeline).softLight);
 
 
-        overexposure = Math.min(256.f,overexposure);
-        underexposure = Math.max(1.f/256.f,underexposure);
+        overexposure = Math.min(256.0f,overexposure);
+        underexposure = Math.max(1.0f/256.0f,underexposure);
 
 
         if(useSymmetricExposureFork){
@@ -487,16 +487,16 @@ public class ExposureFusionBayer2 extends Node {
         }
 
         //overexposure*=overExposeMpy;
-        overexposure = Math2.mix(1.f,overexposure,overExposeMpy);
+        overexposure = Math2.mix(1.0f,overexposure,overExposeMpy);
         underexposure*=underExposeMpy;
         overexposure = Math.min(fusionExpoHighLimit,overexposure);
         underexposure = Math.max(fusionExpoLowLimit,underexposure);
 
-        ((PostPipeline)basePipeline).fusionGain = mix(1.f,overexposure,maxC);
+        ((PostPipeline)basePipeline).fusionGain = mix(1.0f,overexposure,maxC);
         ((PostPipeline)basePipeline).totalGain *= overexposure;
 
         Log.d(Name,"TotalGain:"+((PostPipeline)basePipeline).totalGain);
-        //overexposure = Math.min(10.f,overexposure);
+        //overexposure = Math.min(10.0f,overexposure);
         //underexposure = Math.max(underexposure,0.0008f);
         Log.d(Name,"Overexp:"+overexposure+" , Underexp:"+underexposure);
 
@@ -523,7 +523,7 @@ public class ExposureFusionBayer2 extends Node {
         glProg.setTexture("normalExpoDiff",normalExpo.gauss[ind]);
         //glProg.setTexture("highExpoDiff",highExpo.gauss[ind]);
         glProg.setVar("upscaleIn",1.0f/binnedFuse.mSize.x,1.0f/binnedFuse.mSize.y);
-        glProg.setVar("blendMpy",1.f);
+        glProg.setVar("blendMpy",1.0f);
 
         glProg.drawBlocks(binnedFuse,normalExpo.sizes[ind]);
         normalExpo.gauss[ind].close();
@@ -539,7 +539,7 @@ public class ExposureFusionBayer2 extends Node {
 
             glProg.setTexture("upsampled", upsampleWip);
             glProg.setVar("useUpsampled", 1);
-            glProg.setVar("blendMpy",1.0f+dehazing-dehazing*((float)i)/(normalExpo.laplace.length-1.f));
+            glProg.setVar("blendMpy",1.0f+dehazing-dehazing*((float)i)/(normalExpo.laplace.length-1.0f));
             glProg.setVar("level",i);
             glProg.setVar("upscaleIn",1.0f/normalExpo.sizes[i].x, 1.0f/normalExpo.sizes[i].y);
             // We can discard the previous work in progress merge.
@@ -577,7 +577,7 @@ public class ExposureFusionBayer2 extends Node {
         basePipeline.main2.mSize.y = initialSize.y;
         basePipeline.getMain3().mSize.x = initialSize.x;
         basePipeline.getMain3().mSize.y = initialSize.y;
-        ((PostPipeline)basePipeline).FusionMap =
+        ((PostPipeline)basePipeline).fusionMap =
                 fusionMap(binnedFuse,exposureBase, (float)((PostPipeline)basePipeline).AecCorr/2.f);
         //Use EDI to interpolate fusionmap
 
@@ -592,8 +592,8 @@ public class ExposureFusionBayer2 extends Node {
         binnedFuse.close();
         interpolatedCurve.close();
         shadowMap.close();
-        //WorkingTexture = unexpose(binnedFuse,normalExpo.gauss[0], (float)basePipeline.mSettings.gain*((PostPipeline)basePipeline).AecCorr/2.f);
-        WorkingTexture = previousNode.WorkingTexture;
+        //WorkingTexture = unexpose(binnedFuse,normalExpo.gauss[0], (float)basePipeline.mSettings.gain*((PostPipeline)basePipeline).AecCorr/2.0f);
+        workingTexture = previousNode.workingTexture;
         Log.d(Name,"Output Size:"+binnedFuse.mSize);
         glProg.closed = true;
 

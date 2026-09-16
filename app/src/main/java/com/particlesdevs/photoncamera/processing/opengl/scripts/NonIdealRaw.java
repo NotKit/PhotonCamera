@@ -27,7 +27,7 @@ public class NonIdealRaw extends GLOneScript {
     @Override
     public void Run() {
         Compile();
-        float maxmap = 0.f;
+        float maxmap = 0.0f;
         for(int i =0; i<parameters.gainMap.length;i++){
             if(maxmap < parameters.gainMap[i]) maxmap = parameters.gainMap[i];
         }
@@ -41,6 +41,6 @@ public class NonIdealRaw extends GLOneScript {
         glOne.glProcessing.drawBlocksToOutput();
         inpb.close();
         input.close();
-        Output = glOne.glProcessing.mOutBuffer;
+        output = glOne.glProcessing.mOutBuffer;
     }
 }

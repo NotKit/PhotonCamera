@@ -43,7 +43,7 @@ public class BilateralSeparable extends Node {
     @Override
     public void Run() {
         if (!enable) {
-            WorkingTexture = previousNode.WorkingTexture;
+            workingTexture = previousNode.workingTexture;
             return;
         }
 
@@ -55,8 +55,8 @@ public class BilateralSeparable extends Node {
         float noiseO = modeler.computeModel[0].second.floatValue() +
                 modeler.computeModel[1].second.floatValue() +
                 modeler.computeModel[2].second.floatValue();
-        noiseS /= 3.f;
-        noiseO /= 3.f;
+        noiseS /= 3.0f;
+        noiseO /= 3.0f;
 
         Log.d(Name, "NoiseS:" + noiseS + ", NoiseO:" + noiseO);
         Log.d(Name, "KernelSize:" + kernelSize + ", SpatialSigma:" + spatialSigma);
@@ -84,8 +84,8 @@ public class BilateralSeparable extends Node {
         glProg.setDefine("LAST_PASS", 0); // 0 = not last pass
         
         glProg.useAssetProgram("denoise/bilateralsep");
-        glProg.setTexture("InputBuffer", previousNode.WorkingTexture);
-        glProg.setTexture("OriginalBuffer", previousNode.WorkingTexture);
+        glProg.setTexture("InputBuffer", previousNode.workingTexture);
+        glProg.setTexture("OriginalBuffer", previousNode.workingTexture);
         glProg.drawBlocks(tempTexture);
         glProg.closed = true;
 
@@ -105,9 +105,9 @@ public class BilateralSeparable extends Node {
         
         glProg.useAssetProgram("denoise/bilateralsep");
         glProg.setTexture("InputBuffer", tempTexture);
-        glProg.setTexture("OriginalBuffer", previousNode.WorkingTexture);
-        WorkingTexture = basePipeline.getMain();
-        glProg.drawBlocks(WorkingTexture);
+        glProg.setTexture("OriginalBuffer", previousNode.workingTexture);
+        workingTexture = basePipeline.getMain();
+        glProg.drawBlocks(workingTexture);
         glProg.closed = true;
 
         Log.d(Name, "Horizontal pass complete");

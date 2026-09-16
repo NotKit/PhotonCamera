@@ -65,9 +65,9 @@ public class Sharpen2 extends Node {
             // rendered and assembled; nothing left to draw here.
             return;
         }
-        bindShot(previousNode.WorkingTexture.mSize);
-        WorkingTexture = tileActive() ? tileOut : basePipeline.getMain();
-        renderTile(previousNode.WorkingTexture, WorkingTexture);
+        bindShot(previousNode.workingTexture.mSize);
+        workingTexture = tileActive() ? tileOut : basePipeline.getMain();
+        renderTile(previousNode.workingTexture, workingTexture);
         glProg.closed = true;
         GLTexture.logLive("TiledHarness", "tail-legacy-peak");
         if (pp.debugTiledCompare) {
@@ -125,7 +125,7 @@ public class Sharpen2 extends Node {
         glProg.setVar("strength", appliedStrength);
         glProg.setTexture("InputBuffer", inTile);
         glProg.setTexture("BlurBuffer", inTile);
-        WorkingTexture = outTile;
+        workingTexture = outTile;
         glProg.drawBlocks(outTile);
     }
 
@@ -139,8 +139,8 @@ public class Sharpen2 extends Node {
      * band, no program rebind (see Initial.renderInitialBinds).
      */
     private void verifySharpenRegions() {
-        GLTexture fullOut = WorkingTexture;
-        GLTexture fullIn = previousNode.WorkingTexture;
+        GLTexture fullOut = workingTexture;
+        GLTexture fullIn = previousNode.workingTexture;
         int imgW = fullOut.mSize.x;
         int imgH = fullOut.mSize.y;
         int halo = halo();
@@ -251,7 +251,7 @@ public class Sharpen2 extends Node {
         tileY0 = 0;
         tileY1 = -1;
         tileOut = null;
-        WorkingTexture = fullOut;
+        workingTexture = fullOut;
         glProg.setTexture("InputBuffer", fullIn);
         glProg.setTexture("BlurBuffer", fullIn);
     }
@@ -270,10 +270,10 @@ public class Sharpen2 extends Node {
             }
             // A/B assembly scratch (freed below after the assembly proof).
             GLTexture assembly = new GLTexture(
-                    new android.graphics.Point(WorkingTexture.mSize), WorkingTexture.mFormat);
+                    new android.graphics.Point(workingTexture.mSize), workingTexture.mFormat);
             try {
                 TileDriver.runTailTiled(cap, captureActive, this, pp.tailEntryCopy,
-                        WorkingTexture, assembly, true);
+                        workingTexture, assembly, true);
             } finally {
                 assembly.close();
             }

@@ -13,7 +13,7 @@ import java.util.Arrays;
 import java.util.Properties;
 
 public class Node {
-    public GLTexture WorkingTexture;
+    public GLTexture workingTexture;
     public String Name = "Node";
     public Node previousNode;
     public String Rid;
@@ -134,6 +134,6 @@ public class Node {
     }
 
     public GLTexture GetProgTex() {
-        return WorkingTexture;
+        return workingTexture;
     }
 }

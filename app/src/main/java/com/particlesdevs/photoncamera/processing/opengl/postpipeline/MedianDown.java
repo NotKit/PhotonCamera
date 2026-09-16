@@ -15,9 +15,9 @@ public class MedianDown extends Node {
 
     @Override
     public void Run() {
-        WorkingTexture = basePipeline.getMain();
-        glUtils.medianDown(previousNode.WorkingTexture,WorkingTexture,2);
-        basePipeline.workSize = new Point(WorkingTexture.mSize.x/2,WorkingTexture.mSize.y/2);
+        workingTexture = basePipeline.getMain();
+        glUtils.medianDown(previousNode.workingTexture,workingTexture,2);
+        basePipeline.workSize = new Point(workingTexture.mSize.x/2,workingTexture.mSize.y/2);
         glProg.closed = true;
     }
 }

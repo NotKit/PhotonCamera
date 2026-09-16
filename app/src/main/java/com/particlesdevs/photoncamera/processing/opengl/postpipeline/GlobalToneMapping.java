@@ -14,12 +14,12 @@ public class GlobalToneMapping extends Node {
     public void Compile() {}
     @Override
     public void Run() {
-        GLTexture lowRes0 = glUtils.interpolate(previousNode.WorkingTexture,1.0/8.0);
+        GLTexture lowRes0 = glUtils.interpolate(previousNode.workingTexture,1.0/8.0);
         GLTexture lowRes = glUtils.interpolate(lowRes0,1.0/8.0);
         glProg.useAssetProgram("globaltonemaping");
-        glProg.setTexture("InputBuffer",previousNode.WorkingTexture);
+        glProg.setTexture("InputBuffer",previousNode.workingTexture);
         glProg.setTexture("LowRes",lowRes);
-        glProg.setVar("insize",previousNode.WorkingTexture.mSize);
+        glProg.setVar("insize",previousNode.workingTexture.mSize);
         glProg.setVar("lowsize",lowRes.mSize.x,lowRes.mSize.y);
         glProg.setVar("str",intenseHigher);
         GLTexture out1 = basePipeline.getMain();
@@ -28,14 +28,14 @@ public class GlobalToneMapping extends Node {
         GLTexture lowRes2 = glUtils.interpolate(lowRes,1.0/8.0);
         lowRes.close();
         lowRes0.close();
-        WorkingTexture = basePipeline.getMain();
+        workingTexture = basePipeline.getMain();
         glProg.useAssetProgram("globaltonemaping");
         glProg.setTexture("InputBuffer",out1);
         glProg.setTexture("LowRes",lowRes2);
-        glProg.setVar("insize",previousNode.WorkingTexture.mSize);
+        glProg.setVar("insize",previousNode.workingTexture.mSize);
         glProg.setVar("lowsize",lowRes2.mSize.x,lowRes2.mSize.y);
         glProg.setVar("str",intenseLower);
-        glProg.drawBlocks(WorkingTexture);
+        glProg.drawBlocks(workingTexture);
         glProg.closed = true;
         lowRes2.close();
     }

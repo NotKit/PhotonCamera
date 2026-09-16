@@ -85,10 +85,6 @@ public class GLFormat {
             mID = id;
             mSize = size;
         }
-        DataType(DataType in) {
-            mID = in.mID;
-            mSize = in.mSize;
-        }
     }
     public GLFormat(GLFormat in){
         mFormat = in.mFormat;
@@ -100,8 +96,6 @@ public class GLFormat {
     }
     public Bitmap.Config getBufferedImageConfig() {
         switch (mFormat) {
-            case NONE:
-                break;
             case FLOAT_16:
             case FLOAT_32:
             case UNSIGNED_16:
@@ -109,6 +103,8 @@ public class GLFormat {
             case SIGNED_8:
             case SIMPLE_8:
                 return Bitmap.Config.ARGB_8888;
+            default:
+                break;
         }
         return Bitmap.Config.ARGB_8888;
     }
@@ -121,9 +117,8 @@ public class GLFormat {
         }
     }
     public int getGLFormatInternal() {
+        if (mFormat == DataType.NONE) return -1;
         switch (mFormat) {
-            case NONE:
-                return -1;
             case FLOAT_16:
                 switch (mChannels) {
                     case 1:
@@ -223,6 +218,8 @@ public class GLFormat {
                     case 4:
                         return GL_RGBA32I;
                 }
+            default:
+                break;
         }
         return 0;
     }
@@ -230,8 +227,6 @@ public class GLFormat {
 
     public int getGLFormatExternal() {
         switch (mFormat) {
-            case NONE:
-                break;
             case FLOAT_16:
             case FLOAT_32:
             case FLOAT_64:
@@ -264,6 +259,8 @@ public class GLFormat {
                     case 4:
                         return GL_RGBA_INTEGER;
                 }
+            default:
+                break;
         }
         return 0;
     }
@@ -288,14 +285,14 @@ public class GLFormat {
                 return GL_SHORT;
             case SIGNED_32:
                 return GL_INT;
+            default:
+                break;
         }
         return 0;
     }
 
     public String getTemVar() {
         switch (mFormat) {
-            case NONE:
-                break;
             // SIMPLE_8 is GL_R8/GL_RGBA8 (normalized unorm): sampled as float
             // via sampler2D, unlike UNSIGNED_8 which is GL_*8UI integer-only.
             case SIMPLE_8:
@@ -341,6 +338,8 @@ public class GLFormat {
                     case 4:
                         return "ivec4";
                 }
+            default:
+                break;
         }
         return "vec4";
     }
@@ -364,8 +363,6 @@ public class GLFormat {
     }
     public String getScalar() {
         switch (mFormat) {
-            case NONE:
-                break;
             case SIMPLE_8: // normalized unorm, not integer
             case FLOAT_16:
             case FLOAT_32:
@@ -381,6 +378,8 @@ public class GLFormat {
             case SIGNED_32:
             case SIGNED_64:
                 return "int";
+            default:
+                break;
         }
         return "float";
     }
@@ -402,6 +401,8 @@ public class GLFormat {
             case UNSIGNED_32:
             case UNSIGNED_64:
                 return "usampler2D";
+            default:
+                break;
         }
         return "sampler2D";
     }

@@ -54,7 +54,7 @@ public class CaptureSharpening extends Node {
             // (legacy fallback needs intact mains). A failed produce
             // reallocs before falling back to legacy.
             int freedMask = 0;
-            GLTexture entry0 = previousNode != null ? previousNode.WorkingTexture : null;
+            GLTexture entry0 = previousNode != null ? previousNode.workingTexture : null;
             if (!pp.debugTiledCompare && entry0 != null && entry0.mSize != null) {
                 freedMask = freeIdleMains(pp, entry0);
             }
@@ -76,7 +76,7 @@ public class CaptureSharpening extends Node {
             }
         }
         if(basePipeline.mParameters.sensorSpecifics == null){
-            WorkingTexture = previousNode.WorkingTexture;
+            workingTexture = previousNode.workingTexture;
             glProg.closed = true;
             return;
         }
@@ -148,8 +148,8 @@ public class CaptureSharpening extends Node {
 
     /** Legacy full-frame path (also the T4 fallback): draws once into a main. */
     private void legacyBody() {        bindShot();
-        WorkingTexture = basePipeline.getMain();
-        renderTile(previousNode.WorkingTexture, WorkingTexture);
+        workingTexture = basePipeline.getMain();
+        renderTile(previousNode.workingTexture, workingTexture);
 
         glProg.closed = true;
         csActive = true;
@@ -186,7 +186,7 @@ public class CaptureSharpening extends Node {
     private void runTailTiled(PostPipeline pp) {
         Sharpen2 shp = null;
         RotateWatermark rot = null;
-        java.util.List<Node> nodes = pp.Nodes;
+        java.util.List<Node> nodes = pp.nodes;
         int self = nodes.indexOf(this);
         for (int k = self + 1; k < nodes.size(); k++) {
             if (shp == null && nodes.get(k) instanceof Sharpen2) {
@@ -199,7 +199,7 @@ public class CaptureSharpening extends Node {
         if (shp == null || rot == null) {
             throw new IllegalStateException("tail segment without Sharpen2/Rotate");
         }
-        GLTexture entry = previousNode.WorkingTexture;
+        GLTexture entry = previousNode.workingTexture;
         if (entry == null || entry.mSize == null) {
             throw new IllegalStateException("tail produce without entry");
         }
@@ -259,7 +259,7 @@ public class CaptureSharpening extends Node {
      * Run(), never per band. */
     void renderTile(GLTexture inTile, GLTexture outTile) {
         glProg.setTexture("InputBuffer", inTile);
-        WorkingTexture = outTile;
+        workingTexture = outTile;
         glProg.drawBlocks(outTile);
     }
 
@@ -271,7 +271,7 @@ public class CaptureSharpening extends Node {
             pp.tailEntryCopy.close();
             pp.tailEntryCopy = null;
         }
-        GLTexture entry = previousNode.WorkingTexture;
+        GLTexture entry = previousNode.workingTexture;
         if (entry == null || entry.mSize == null) {
             return;
         }
@@ -305,8 +305,8 @@ public class CaptureSharpening extends Node {
             Log.d("TiledHarness", "capture strips skipped (passthrough)");
             return;
         }
-        GLTexture fullOut = WorkingTexture;
-        GLTexture fullIn = previousNode.WorkingTexture;
+        GLTexture fullOut = workingTexture;
+        GLTexture fullIn = previousNode.workingTexture;
         int imgW = fullOut.mSize.x;
         int imgH = fullOut.mSize.y;
         int halo = halo();
@@ -419,7 +419,7 @@ public class CaptureSharpening extends Node {
         tileY0 = 0;
         tileY1 = -1;
         tileOut = null;
-        WorkingTexture = fullOut;
+        workingTexture = fullOut;
         glProg.setTexture("InputBuffer", fullIn);
     }
 }

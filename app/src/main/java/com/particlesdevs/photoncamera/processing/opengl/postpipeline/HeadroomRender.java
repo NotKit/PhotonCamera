@@ -52,8 +52,8 @@ public class HeadroomRender extends Node {
     @Override
     public void AfterRun() {
         // Last consumer of the fusion map (was Initial's duty).
-        if (((PostPipeline) basePipeline).FusionMap != null) {
-            ((PostPipeline) basePipeline).FusionMap.close();
+        if (((PostPipeline) basePipeline).fusionMap != null) {
+            ((PostPipeline) basePipeline).fusionMap.close();
         }
         if (fallbackGainMap != null) {
             fallbackGainMap.close();
@@ -74,7 +74,7 @@ public class HeadroomRender extends Node {
      */
     private void renderHeadroomDefines() {
         PostPipeline pipeline = (PostPipeline) basePipeline;
-        glProg.setDefine("FUSION", pipeline.FusionMap != null);
+        glProg.setDefine("FUSION", pipeline.fusionMap != null);
         glProg.setDefine("NEUTRALPOINT", basePipeline.mParameters.whitePoint);
     }
 
@@ -88,9 +88,9 @@ public class HeadroomRender extends Node {
         PostPipeline pipeline = (PostPipeline) basePipeline;
         glProg.setTexture("InputBuffer", input);
         glProg.setVar("u_tileOrigin", 0, tileActive() ? tileY0 : 0);
-        android.graphics.Point fullSize = super.previousNode.WorkingTexture.mSize;
+        android.graphics.Point fullSize = super.previousNode.workingTexture.mSize;
         glProg.setVar("u_fullSize", (float) fullSize.x, (float) fullSize.y);
-        if (pipeline.FusionMap != null) glProg.setTexture("FusionMap", pipeline.FusionMap);
+        if (pipeline.fusionMap != null) glProg.setTexture("FusionMap", pipeline.fusionMap);
         glProg.setTexture("GainMap", pipeline.GainMap != null ? pipeline.GainMap : fallbackGainMap);
         glProg.setVar("sensorToIntermediate", basePipeline.mParameters.sensorToProPhoto);
         glProg.setVar("intermediateToSRGB", headroomMatrix);
@@ -104,7 +104,7 @@ public class HeadroomRender extends Node {
                 + " outputExposureScale:" + outputExposureScale
                 + " intermediateToSRGB:" + Arrays.toString(headroomMatrix));
 
-        WorkingTexture = tileActive() ? tileOut : basePipeline.getMain();
+        workingTexture = tileActive() ? tileOut : basePipeline.getMain();
     }
 
     public void Run() {
@@ -137,7 +137,7 @@ public class HeadroomRender extends Node {
 
         renderHeadroomDefines();
         glProg.useAssetProgram("headroom/render");
-        renderHeadroomBinds(super.previousNode.WorkingTexture);
+        renderHeadroomBinds(super.previousNode.workingTexture);
     }
 
     @Override
@@ -155,12 +155,12 @@ public class HeadroomRender extends Node {
      * the Fusion path (same +-2 bound, but untested combination).
      */
     private void verifyRegions() {
-        if (((PostPipeline) basePipeline).FusionMap != null) {
+        if (((PostPipeline) basePipeline).fusionMap != null) {
             Log.d("TiledHarness", "headroom strips skipped (fusion path)");
             return;
         }
-        GLTexture fullOut = WorkingTexture;
-        GLTexture fullIn = super.previousNode.WorkingTexture;
+        GLTexture fullOut = workingTexture;
+        GLTexture fullIn = super.previousNode.workingTexture;
         int imgW = fullOut.mSize.x;
         int imgH = fullOut.mSize.y;
         int halo = halo();
@@ -209,7 +209,7 @@ public class HeadroomRender extends Node {
         tileY0 = 0;
         tileY1 = -1;
         tileOut = null;
-        WorkingTexture = fullOut;
+        workingTexture = fullOut;
         // This node never sets closed=true, so runAllInternal redraws it
         // after Run returns: restore the legacy origin and input binding or
         // the final draw shifts.

@@ -20,6 +20,7 @@ import static android.opengl.GLES20.GL_CLAMP_TO_EDGE;
 import static android.opengl.GLES20.GL_LINEAR;
 import static android.opengl.GLES20.GL_NEAREST;
 import static android.opengl.GLES20.GL_REPEAT;
+import java.nio.Buffer;
 
 public class RotateWatermark extends Node {
     private int rotate;
@@ -63,7 +64,7 @@ public class RotateWatermark extends Node {
             // sink; nothing left to bind here.
             return;
         }
-        bindShot(previousNode.WorkingTexture.mSize);
+        bindShot(previousNode.workingTexture.mSize);
         if (((PostPipeline) basePipeline).debugTiledCompare) {
             verifyRotateRegions();
         }
@@ -98,24 +99,24 @@ public class RotateWatermark extends Node {
             Log.d(Name,"Failed to load watermark or noise texture:" + Log.getStackTraceString(e));
         }
 
-        glProg.setTexture("InputBuffer", previousNode.WorkingTexture);
+        glProg.setTexture("InputBuffer", previousNode.workingTexture);
         int rot = -1;
         Log.d(Name,"Rotation:"+rotate);
         switch (rotate){
             case 0:
-                //WorkingTexture = new GLTexture(size.x,size.y, previousNode.WorkingTexture.mFormat, null);
+                //WorkingTexture = new GLTexture(size.x,size.y, previousNode.WorkingTexture.mFormat, (Buffer) null);
                 rot = 0;
                 break;
             case 90:
-                //WorkingTexture = new GLTexture(size.y,size.x, previousNode.WorkingTexture.mFormat, null);
+                //WorkingTexture = new GLTexture(size.y,size.x, previousNode.WorkingTexture.mFormat, (Buffer) null);
                 rot = 3;
                 break;
             case 180:
-                //WorkingTexture = new GLTexture(size, previousNode.WorkingTexture.mFormat, null);
+                //WorkingTexture = new GLTexture(size, previousNode.WorkingTexture.mFormat, (Buffer) null);
                 rot = 2;
                 break;
             case 270:
-                //WorkingTexture = new GLTexture(size.y,size.x, previousNode.WorkingTexture.mFormat, null);
+                //WorkingTexture = new GLTexture(size.y,size.x, previousNode.WorkingTexture.mFormat, (Buffer) null);
                 rot = 1;
                 break;
         }
@@ -151,7 +152,7 @@ public class RotateWatermark extends Node {
      * replays).
      */
     private void verifyRotateRegions() {
-        GLTexture fullIn = previousNode.WorkingTexture;
+        GLTexture fullIn = previousNode.workingTexture;
         int inW = fullIn.mSize.x;
         int inH = fullIn.mSize.y;
         boolean transposed = rotate == 90 || rotate == 270;

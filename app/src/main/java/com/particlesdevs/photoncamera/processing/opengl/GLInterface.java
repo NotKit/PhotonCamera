@@ -1,5 +1,6 @@
 package com.particlesdevs.photoncamera.processing.opengl;
 
+import com.particlesdevs.photoncamera.util.AssetLoader;
 import com.particlesdevs.photoncamera.util.Log;
 
 import com.particlesdevs.photoncamera.app.PhotonCamera;
@@ -94,6 +95,11 @@ public class GLInterface {
         }
         return layoutsMap;
     }
+    private static String readUtilShader(String importName) {
+        AssetLoader loader = PhotonCamera.getAssetLoader();
+        return loader.getString("shaders/utils/" + importName + ".glsl");
+    }
+
     public static String readProgram(BufferedReader reader, ArrayList<String[]> defines) {
         StringBuilder source = new StringBuilder();
         int linecnt = 0;
@@ -101,18 +107,14 @@ public class GLInterface {
         for (Object line : reader.lines().toArray()) {
             linecnt++;
             String val = String.valueOf(line);
+            String out = val;
             if(val.contains("#version"))
                 versioned = true;
             if(val.contains("#import")){
                 String imported = "";
                 if(!val.contains("//")) {
-                    imported = PhotonCamera.getAssetLoader().getString(
-                            "shaders/utils/" +
-                                    val
-                                            .replace("#", "")
-                                            .replace(" ", "_")
-                                            .replace("\n", "")
-                                    + ".glsl");
+                    String importName = val.replace("#", "").replace(" ", "_").replace("\n", "");
+                    imported = readUtilShader(importName);
                 }
                 if(!imported.equals("")){
                     source.append("#line 1\n");
@@ -126,13 +128,13 @@ public class GLInterface {
             if(val.contains("#define") && defines != null){
                 for(String[] define : defines){
                     if(val.contains(" "+define[0]+" ")){
-                        line = "#define "+define[0]+" "+define[1];
-                        //Log.d("GLInterface","Overwrite:"+line);
+                        out = "#define "+define[0]+" "+define[1];
+                        //Log.d("GLInterface","Overwrite:"+out);
                         break;
                     }
                 }
             }
-            source.append(line).append("\n");
+            source.append(out).append("\n");
         }
         String addVersion = glVersion+"\n"+"#line 1\n";
         if(versioned) addVersion = "";

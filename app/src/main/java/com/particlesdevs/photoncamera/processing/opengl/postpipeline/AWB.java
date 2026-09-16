@@ -141,9 +141,9 @@ public class AWB extends Node {
         output[0] = blueVector / mean;
         output[1] = greenVector / mean;
         output[2] = redVector / mean;
-        output[0] = 1.f / output[0];
-        output[1] = 1.f / output[1];
-        output[2] = 1.f / output[2];
+        output[0] = 1.0f / output[0];
+        output[1] = 1.0f / output[1];
+        output[2] = 1.0f / output[2];
         mean = (float) (output[0] + output[1] + output[2]) / 3;
         output[0] /= mean;
         output[1] /= mean;
@@ -168,18 +168,18 @@ public class AWB extends Node {
         double maxmpy = 0;
         //short minC = 0;
 
-        for (short i = (short) startR; i < endR; i++) {
-            for (short j = (short) startG; j < endG; j++) {
-                for (short k = (short) startB; k < endB; k++) {
+        for (int i = startR; i < endR; i++) {
+            for (int j = startG; j < endG; j++) {
+                for (int k = startB; k < endB; k++) {
                     //for (short i = 20; i < 200; i++) {
                     //    for (short j = 20; j < 200; j++) {
                     //        for (short k = 20; k < 200; k++) {
-                    int min = (short) Math.min(Math.min(input[0][i], input[1][j]), input[2][k]);
+                    int min = (short) Math.min(Math.min((int) input[0][i], (int) input[1][j]), (int) input[2][k]);
                     if (min > maxHistH) {
                         maxHistH = min;
-                        redVector = i;
-                        greenVector = j;
-                        blueVector = k;
+                        redVector = (short) i;
+                        greenVector = (short) j;
+                        blueVector = (short) k;
                         //maxmpy = (double)Math.max(Math.max(redVector,greenVector),blueVector)/Math.min(Math.min(redVector,greenVector),blueVector);
                         //minC = (short)Math.max(Math.max(redVector,greenVector),blueVector);
                     }
@@ -195,10 +195,10 @@ public class AWB extends Node {
             short rb = redVector;
             short gb = greenVector;
             short bb = blueVector;
-            for (short i = 160; i < 254; i++) {
-                for (short j = 160; j < 254; j++) {
-                    for (short k = 160; k < 254; k++) {
-                        int min = (short) Math.min(Math.min(input[0][i], input[1][j]), input[2][k]);
+            for (int i = 160; i < 254; i++) {
+                for (int j = 160; j < 254; j++) {
+                    for (int k = 160; k < 254; k++) {
+                        int min = (short) Math.min(Math.min((int) input[0][i], (int) input[1][j]), (int) input[2][k]);
                         //for(short c = (short) (-5); c<5; c++){
                         //min+=(short) Math.min(Math.min(input[0][Math.min(Math.max(i-c,0),SIZE-1)], input[1][Math.min(Math.max(j-c,0),SIZE-1)]), input[2][Math.min(Math.max(k-c,0),SIZE-1)]);
                         //}
@@ -272,18 +272,18 @@ public class AWB extends Node {
         Log.d(Name, "WP start:" + starts[0] + " WP end:" + ends[0]);
         Log.d(Name, "WP start:" + starts[1] + " WP end:" + ends[1]);
         Log.d(Name, "WP start:" + starts[2] + " WP end:" + ends[2]);
-        for (short i = starts[2]; i < ends[2]; i++) {
-            for (short j = starts[1]; j < ends[1]; j++) {
-                for (short k = starts[0]; k < ends[0]; k++) {
+        for (int i = (int) starts[2]; i < ends[2]; i++) {
+            for (int j = (int) starts[1]; j < ends[1]; j++) {
+                for (int k = (int) starts[0]; k < ends[0]; k++) {
                     //for (short i = 20; i < 200; i++) {
                     //    for (short j = 20; j < 200; j++) {
                     //        for (short k = 20; k < 200; k++) {
-                    int min = (short) Math.min(Math.min(input[0][i], input[1][j]), input[2][k]);
+                    int min = (short) Math.min(Math.min((int) input[0][i], (int) input[1][j]), (int) input[2][k]);
                     if (min > maxHistH) {
                         maxHistH = min;
-                        redVector = i;
-                        greenVector = j;
-                        blueVector = k;
+                        redVector = (short) i;
+                        greenVector = (short) j;
+                        blueVector = (short) k;
                         maxmpy = (double) Math.max(Math.max(redVector, greenVector), blueVector) / Math.min(Math.min(redVector, greenVector), blueVector);
                         minC = (short) Math.max(Math.max(redVector, greenVector), blueVector);
                     }
@@ -298,9 +298,9 @@ public class AWB extends Node {
         output[0] = blueVector / mean;
         output[1] = greenVector / mean;
         output[2] = redVector / mean;
-        output[0] = 1.f / output[0];
-        output[1] = 1.f / output[1];
-        output[2] = 1.f / output[2];
+        output[0] = 1.0f / output[0];
+        output[1] = 1.0f / output[1];
+        output[2] = 1.0f / output[2];
         float max = Math.max(output[0], Math.max(output[1], output[2]));
         output[0] /= max;
         output[1] /= max;
@@ -359,7 +359,7 @@ public class AWB extends Node {
     public void Run() {
         enableAWB = getTuning("EnableAWB", enableAWB);
         if (!enableAWB) {
-            WorkingTexture = previousNode.WorkingTexture;
+            workingTexture = previousNode.workingTexture;
             glProg.closed = true;
             return;
         }
@@ -370,7 +370,7 @@ public class AWB extends Node {
         endG = getTuning("EndG", endG);
         endB = getTuning("EndB", endB);
         //GLTexture r1 = glUtils.medianpatch(previousNode.WorkingTexture,new Point(400,300));
-        GLTexture r1 = glUtils.medianDown(previousNode.WorkingTexture, 5);
+        GLTexture r1 = glUtils.medianDown(previousNode.workingTexture, 5);
         //GLTexture r1 = glUtils.patch(r0,new Point(80,80));
         //GLTexture r2 = glUtils.blursmall(r1,3,1.8);
         /*Bitmap preview = Bitmap.createBitmap(r1.mSize.x, r1.mSize.y, bitmapF.getBitmapConfig());
@@ -392,7 +392,7 @@ public class AWB extends Node {
         glProg.drawBlocks(basePipeline.getMain3(), r1.mSize);
         GLImage preview = glUtils.GenerateGLImage(r1.mSize);
         //r0.close();
-        int[][] ChromaHist = new int[16][16];// = ChromaHistogram(preview);
+        int[][] chromaHist = new int[16][16];// = ChromaHistogram(preview);
         r1.close();
         /*int[][] temp = new int[3][];
         temp[0] = ChromaHist[2];
@@ -414,16 +414,16 @@ public class AWB extends Node {
             ChromaHist[j][i] = (int)((ChromaHist[j][i-1]*0.5f+ChromaHist[j][i]*1.2f+ChromaHist[j][i+1]*0.5f)/(0.5f+1.2f+0.5f));
         }*/
         if (basePipeline.mSettings.DebugData) {
-            GenerateCurveBitm(ChromaHist[0], ChromaHist[1], ChromaHist[2]);
+            GenerateCurveBitm(chromaHist[0], chromaHist[1], chromaHist[2]);
         }
-        float[] CCV = CCV(ChromaHist);
+        float[] CCV = CCV(chromaHist);
 
         //CCV = CCVAEC(Histogram(preview),CCV);
         //preview.recycle();
 
         //WorkingTexture = glUtils.mpy(previousNode.WorkingTexture,CCV,basePipeline.getMain());
         PatchPoint(CCV);
-        WorkingTexture = previousNode.WorkingTexture;
+        workingTexture = previousNode.workingTexture;
         glProg.closed = true;
         preview.close();
         if (awb_lut != null) awb_lut.close();
@@ -435,9 +435,9 @@ public class AWB extends Node {
         for (int i = 0; i < 3; i++)
             Log.d(Name, "Before Patch:" + basePipeline.mParameters.whitePoint[i]);
         //float mpy = ccv[1];
-        //neutral[0] = new Rational((int)(mpy*1.f/ccv[0])*1024,1024);
-        //neutral[1] = new Rational((int)(mpy*1.f/ccv[1])*1024,1024);
-        //neutral[2] = new Rational((int)(mpy*1.f/ccv[2])*1024,1024);
+        //neutral[0] = new Rational((int)(mpy*1.0f/ccv[0])*1024,1024);
+        //neutral[1] = new Rational((int)(mpy*1.0f/ccv[1])*1024,1024);
+        //neutral[2] = new Rational((int)(mpy*1.0f/ccv[2])*1024,1024);
         parameters.customNeutral = new float[ccv.length];
         for (int i = 0; i < ccv.length; i++) parameters.customNeutral[i] = ccv[i];
         parameters.ReCalcColor(true, CaptureController.mCaptureResult);

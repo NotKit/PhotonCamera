@@ -17,6 +17,6 @@ public class Debug3 extends Node {
         GLInterface glint = rawPipeline.glint;
         GLProg glProg = glint.glProgram;
         Parameters params = glint.parameters;
-        glProg.setTexture("InputBuffer", previousNode.WorkingTexture);
+        glProg.setTexture("InputBuffer", previousNode.workingTexture);
     }
 }

@@ -177,7 +177,7 @@ public final class FlowNetNcnnProcessor {
             if (sInstance == this) sInstance = null;
         }
         long h = nativeHandle;
-        if (h != 0) {
+        if (h != 0L) {
             nativeHandle = 0;
             ready = false;
             nativeDestroy(h);

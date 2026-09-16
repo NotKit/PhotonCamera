@@ -6,6 +6,7 @@ import com.particlesdevs.photoncamera.processing.ImagePath;
 import com.particlesdevs.photoncamera.util.Utilities;
 import java.io.File;
 import java.io.IOException;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
 import static android.opengl.GLES20.GL_CLAMP_TO_EDGE;
@@ -193,7 +194,7 @@ public class GLUtils {
                         "    Output = mask;\n" +
                         "}\n");
         glProg.setTexture("InputBuffer",in);
-        GLTexture out = new GLTexture(in.mSize.x,in.mSize.y/2,in.mFormat,null);
+        GLTexture out = new GLTexture(in.mSize.x,in.mSize.y/2,in.mFormat,(Buffer) null);
         glProg.drawBlocks(out);
         glProg.closed = true;
         glProg.useProgram(
@@ -228,7 +229,7 @@ public class GLUtils {
                         "    Output = mask;\n" +
                         "}\n");
         glProg.setTexture("InputBuffer",out);
-        GLTexture out2 = new GLTexture(in.mSize.x/2,in.mSize.y/2,in.mFormat,null);
+        GLTexture out2 = new GLTexture(in.mSize.x/2,in.mSize.y/2,in.mFormat,(Buffer) null);
         glProg.drawBlocks(out2);
         out.close();
         glProg.closed = true;
@@ -409,8 +410,8 @@ public class GLUtils {
         return out;
     }
     public GLTexture interpolate(GLTexture in, int k){
-        GLTexture out = new GLTexture((int)(in.mSize.x*k),(int)(in.mSize.y*k),in.mFormat);
-        return interpolate(in,out,k);
+        GLTexture out = new GLTexture(in.mSize.x*k,in.mSize.y*k,in.mFormat);
+        return interpolate(in,out,(double)k);
     }
     public GLTexture interpolate(GLTexture in, Point nsize){
         GLTexture out = new GLTexture(nsize,in.mFormat);
@@ -577,7 +578,8 @@ public class GLUtils {
     }
     public GLTexture mpy(GLTexture in, float[] vecmat,GLTexture out){
         String vecext = "vec3";
-        if(vecmat.length == 9) vecext = "mat3";
+        int vecmatLength = vecmat.length;
+        if(vecmatLength == 9) vecext = "mat3";
         glProg.useProgram(
                 "precision highp "+in.mFormat.getTemSamp()+";\n" +
                         "precision highp float;\n" +
@@ -791,11 +793,11 @@ public class GLUtils {
         public void fillPyramid(GLTexture input){
             gauss[0] = input;
             GLTexture[] upscale = new GLTexture[gauss.length - 1];
-            boolean autostep = step == 0;
+            boolean autostep = step == 0.0;
             for (int i = 1; i < gauss.length; i++) {
-                if(autostep && i < 2) step = 2; else step = 4;
+                if(autostep && i < 2) step = 2.0; else step = 4.0;
                 Point insize = gauss[i-1].mSize;
-                if(insize.x <= step+2 || insize.y <= step+2) step = 2;
+                if(insize.x <= step+2 || insize.y <= step+2) step = 2.0;
                 glUtils.interpolate(gauss[i - 1],gauss[i]);
             }
             System.arraycopy(gauss, 1, upscale, 0, upscale.length);
@@ -834,12 +836,13 @@ public class GLUtils {
         }
     }
     public Pyramid createPyramid(int levels, GLTexture input){
-        return createPyramid(levels,2,input);
+        return createPyramid(levels,2.0,input);
     }
     public Pyramid createPyramidTex(int levels, int step, GLTexture input){
+        int stepSize = step;
         Pyramid pyramid = new Pyramid();
         pyramid.levels = levels;
-        pyramid.step = step;
+        pyramid.step = (double) stepSize;
         pyramid.glProg = glProg;
         pyramid.glUtils = this;
         GLTexture[] downscaled = new GLTexture[levels];
@@ -848,13 +851,13 @@ public class GLUtils {
         GLTexture[] upscale = new GLTexture[downscaled.length - 1];
         pyramid.sizes = new Point[downscaled.length];
         pyramid.sizes[0] = new Point(input.mSize);
-        boolean autostep = step == 0;
+        boolean autostep = stepSize == 0;
         for (int i = 1; i < downscaled.length; i++) {
-            if(autostep && i < 2) step = 2; else step = 4;
+            if(autostep && i < 2) stepSize = 2; else stepSize = 4;
             Point insize = downscaled[i-1].mSize;
-            if(insize.x <= step+2 || insize.y <= step+2) step = 2;
-            downscaled[i] = new GLTexture(new Point(insize.x/step,insize.y/step),input.mFormat);
-            pyramid.sizes[i] = new Point(pyramid.sizes[i-1].x/step,pyramid.sizes[i-1].y/step);
+            if(insize.x <= stepSize+2 || insize.y <= stepSize+2) stepSize = 2;
+            downscaled[i] = new GLTexture(new Point(insize.x/stepSize,insize.y/stepSize),input.mFormat);
+            pyramid.sizes[i] = new Point(pyramid.sizes[i-1].x/stepSize,pyramid.sizes[i-1].y/stepSize);
             //Log.d("Pyramid","downscale:"+pyramid.sizes[i]);
         }
         for (int i = 0; i < upscale.length; i++) {
@@ -870,29 +873,30 @@ public class GLUtils {
         return pyramid;
     }
     public Pyramid createPyramid(int levels, double step, GLTexture input){
+        double stepSize = step;
         Pyramid pyramid = new Pyramid();
         pyramid.glProg = glProg;
         pyramid.glUtils = this;
         pyramid.levels = levels;
-        pyramid.step = step;
+        pyramid.step = stepSize;
         pyramid.gauss = new GLTexture[levels];
         pyramid.gauss[0] = input;
 
         pyramid.sizes = new Point[pyramid.gauss.length];
         pyramid.sizes[0] = new Point(input.mSize);
-        boolean autostep = step == 0;
+        boolean autostep = stepSize == 0.0;
         for (int i = 1; i < pyramid.gauss.length; i++) {
-            //if(autostep && i < 2) step = 2; else step = 4;
+            //if(autostep && i < 2) stepSize = 2; else stepSize = 4;
             Point insize = pyramid.gauss[i-1].mSize;
-            if(autostep && (insize.x <= step+2 || insize.y <= step+2)) step = 2;
-            int sizex = (int)(insize.x/step);
-            int sizey = (int)(insize.y/step);
+            if(autostep && (insize.x <= stepSize+2 || insize.y <= stepSize+2)) stepSize = 2.0;
+            int sizex = (int)(insize.x/stepSize);
+            int sizey = (int)(insize.y/stepSize);
             sizex = Math.max(1,sizex);
             sizey = Math.max(1,sizey);
             // Use Gaussian downsample instead of simple interpolation
             // This properly blurs before downsampling to avoid aliasing
             pyramid.gauss[i] = gaussianDownsample(pyramid.gauss[i - 1], new Point(sizex,sizey));
-            pyramid.sizes[i] = new Point((int)(pyramid.sizes[i-1].x/step),(int)(pyramid.sizes[i-1].y/step));
+            pyramid.sizes[i] = new Point((int)(pyramid.sizes[i-1].x/stepSize),(int)(pyramid.sizes[i-1].y/stepSize));
             Log.d("Pyramid","downscale:"+pyramid.sizes[i]);
         }
 

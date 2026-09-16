@@ -26,7 +26,7 @@ public class BoxDown extends GLOneScript {
         GLProg glProg = glOne.glProgram;
         GLTexture input = new GLTexture(sizeIn,new GLFormat(GLFormat.DataType.UNSIGNED_16),inputB);
         glProg.setTexture("InputBuffer", input);
-        WorkingTexture = new GLTexture(new Point(sizeIn.x / 2, sizeIn.y / 2), new GLFormat(GLFormat.DataType.FLOAT_16));
+        workingTexture = new GLTexture(new Point(sizeIn.x / 2, sizeIn.y / 2), new GLFormat(GLFormat.DataType.FLOAT_16));
     }
 
     @Override
@@ -34,10 +34,10 @@ public class BoxDown extends GLOneScript {
         Compile();
         startT();
         StartScript();
-        WorkingTexture.BufferLoad();
-        glOne.glProcessing.drawBlocksToOutput(WorkingTexture.mSize,WorkingTexture.mFormat,Output);
+        workingTexture.BufferLoad();
+        glOne.glProcessing.drawBlocksToOutput(workingTexture.mSize,workingTexture.mFormat,output);
         AfterRun();
         endT();
-        WorkingTexture.close();
+        workingTexture.close();
     }
 }

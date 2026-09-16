@@ -7,7 +7,17 @@ import java.nio.IntBuffer;
 import java.util.Arrays;
 
 
-import static android.opengl.GLES31.*;
+import static android.opengl.GLES31.GL_MAP_READ_BIT;
+import static android.opengl.GLES31.GL_MAP_WRITE_BIT;
+import static android.opengl.GLES31.GL_SHADER_STORAGE_BUFFER;
+import static android.opengl.GLES31.GL_STATIC_DRAW;
+import static android.opengl.GLES31.glBindBuffer;
+import static android.opengl.GLES31.glBindBufferBase;
+import static android.opengl.GLES31.glBufferData;
+import static android.opengl.GLES31.glDeleteBuffers;
+import static android.opengl.GLES31.glGenBuffers;
+import static android.opengl.GLES31.glMapBufferRange;
+import static android.opengl.GLES31.glUnmapBuffer;
 import static com.particlesdevs.photoncamera.processing.opengl.GLCoreBlockProcessing.checkEglError;
 
 public class GLBuffer implements AutoCloseable {

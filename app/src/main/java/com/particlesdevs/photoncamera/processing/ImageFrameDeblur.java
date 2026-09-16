@@ -59,10 +59,9 @@ public class ImageFrameDeblur {
             Utilities.saveBitmap(kernels,"kernels");
 
          */
-        double xf, yf, zf;
-        xf = in.frameGyro.integrated[0];
-        yf = in.frameGyro.integrated[1];
-        zf = in.frameGyro.integrated[2];
+        double xf = (double) in.frameGyro.integrated[0];
+        double yf = (double) in.frameGyro.integrated[1];
+        double zf = (double) in.frameGyro.integrated[2];
 
         in.rX = xf;
         in.rY = yf;

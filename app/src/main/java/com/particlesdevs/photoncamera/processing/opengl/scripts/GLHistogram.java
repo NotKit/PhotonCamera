@@ -27,7 +27,7 @@ public class GLHistogram implements AutoCloseable{
     public int resize = 3;
     public float[] exposure = new float[4];
     public String CustomProgram = "";
-    public String CustomShader = "";
+    public String customShader = "";
     public float input1, input2;
     /** Optional row-major 3x3 kernel pre-filter for custom shaders that
      * support it (merge/noisehist with SPATIAL_KERNEL): null = identity. */
@@ -95,10 +95,10 @@ public class GLHistogram implements AutoCloseable{
         glProg.setDefine("SPATIAL_KERNEL", customKernel != null);
 
         glProg.setLayout(tile,tile,1);
-        if(CustomShader.isEmpty())
+        if(customShader.isEmpty())
             glProg.useAssetProgram("GLHistogram/histogram",true);
         else {
-            glProg.useAssetProgram(CustomShader, true);
+            glProg.useAssetProgram(customShader, true);
         }
         if (customKernel != null)
             glProg.setVarFloats("spatialKernel", customKernel);

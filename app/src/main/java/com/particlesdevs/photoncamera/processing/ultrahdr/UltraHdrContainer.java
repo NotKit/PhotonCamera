@@ -54,10 +54,12 @@ public final class UltraHdrContainer {
         // Locate insertion point: right before the first non APPn/COM marker.
         int insertPos = 2; // skip SOI
         while (insertPos + 4 <= sdrJpeg.length) {
-            if ((sdrJpeg[insertPos] & 0xFF) != 0xFF) break;
-            final int marker = sdrJpeg[insertPos + 1] & 0xFF;
+            if (sdrJpeg[insertPos] != (byte) 0xFF) break;
+            final int marker = (int) sdrJpeg[insertPos + 1] & 0xFF;
             if ((marker >= 0xE0 && marker <= 0xEF) || marker == 0xFE) {
-                final int len = ((sdrJpeg[insertPos + 2] & 0xFF) << 8) | (sdrJpeg[insertPos + 3] & 0xFF);
+                final int lenHi = (int) sdrJpeg[insertPos + 2] & 0xFF;
+                final int lenLo = (int) sdrJpeg[insertPos + 3] & 0xFF;
+                final int len = (lenHi << 8) | lenLo;
                 insertPos += 2 + len;
             } else {
                 break;
@@ -139,8 +141,8 @@ public final class UltraHdrContainer {
         return xml.getBytes(StandardCharsets.UTF_8);
     }
 
-    private static String fmt(float v) {
-        if (!Float.isFinite(v)) v = 0f;
+    private static String fmt(float in) {
+        float v = Float.isFinite(in) ? in : 0f;
         // Fixed decimal: %.6g can emit scientific notation ("1.2345e-05"),
         // which some XMP consumers fail to parse.
         return String.format(java.util.Locale.US, "%.6f", v);

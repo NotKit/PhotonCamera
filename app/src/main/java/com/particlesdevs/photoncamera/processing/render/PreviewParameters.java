@@ -10,16 +10,16 @@ import com.particlesdevs.photoncamera.app.PhotonCamera;
 public class PreviewParameters {
     public NoiseModeler noiseModeler;
     private int analogIso;
-    public byte cfaPattern;
+    public int cfaPattern;
     public void FillParameters(CaptureResult result, CameraCharacteristics characteristics) {
         Integer analogue = characteristics.get(CameraCharacteristics.SENSOR_MAX_ANALOG_SENSITIVITY);
         if(analogue != null){
             analogIso = analogue;
         } else analogIso = 100;
-        Object ptr = characteristics.get(CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT);
-        if (ptr != null) cfaPattern = (byte) (int) ptr;
+        Integer ptr = characteristics.get(CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT);
+        if (ptr != null) cfaPattern = ptr;
         if (PhotonCamera.getSettings().cfaPattern >= 0) {
-            cfaPattern = (byte) PhotonCamera.getSettings().cfaPattern;
+            cfaPattern = PhotonCamera.getSettings().cfaPattern;
         }
     }
     public void FillDynamicParameters(CaptureResult result) {

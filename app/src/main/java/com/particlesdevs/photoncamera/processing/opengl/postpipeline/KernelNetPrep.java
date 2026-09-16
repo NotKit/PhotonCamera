@@ -51,7 +51,7 @@ public final class KernelNetPrep extends Node {
 
     @Override
     public void Run() {
-        WorkingTexture = previousNode.WorkingTexture;
+        workingTexture = previousNode.workingTexture;
         PostPipeline pp = (PostPipeline) basePipeline;
         try {
             if (pp.kernelParams != null || pp.kernelNetSingleThread != null) return;

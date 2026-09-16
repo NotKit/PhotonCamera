@@ -100,12 +100,12 @@ public class Amaze extends Node {
     }
 
     public void Run() {
-        inTex = previousNode.WorkingTexture;
+        inTex = previousNode.workingTexture;
         imgW = inTex.mSize.x;
         imgH = inTex.mSize.y;
         window = new Point(TILE + 2 * BORDER + 2 * PAD, TILE + 2 * BORDER + 2 * PAD);
         inner = new Point(PAD + BORDER, PAD + BORDER);
-        WorkingTexture = basePipeline.getMain3();
+        workingTexture = basePipeline.getMain3();
 
         cfa = alloc(window, 1);
         grad = alloc(window, 4);
@@ -151,7 +151,7 @@ public class Amaze extends Node {
         dgrb01.close();
 
         if (!tileActive()) {
-            WorkingTexture = basePipeline.swap3();
+            workingTexture = basePipeline.swap3();
             // swap3 left the stale demosaic input in main3; it is dead now.
             PostPipeline pp = (PostPipeline) basePipeline;
             if (pp.canReleaseDemosaicScratch() && basePipeline.main3 != null) {
@@ -180,7 +180,7 @@ public class Amaze extends Node {
      * full render. Restores all region state before returning.
      */
     private void verifyTiledRegions() {
-        GLTexture fullOut = WorkingTexture;
+        GLTexture fullOut = workingTexture;
         float worst = TileDriver.verifyNodeBands(fullOut, imgW, imgH, TILE,
                 "TiledHarness", (b0, rows) -> {
                     GLTexture reg = new GLTexture(new Point(imgW, rows),
@@ -189,7 +189,7 @@ public class Amaze extends Node {
                     tileY0 = b0;
                     tileY1 = b0 + rows;
                     tileOut = reg;
-                    WorkingTexture = reg;
+                    workingTexture = reg;
                     runTileLoop();
                     return reg;
                 });
@@ -197,7 +197,7 @@ public class Amaze extends Node {
         tileY0 = 0;
         tileY1 = -1;
         tileOut = null;
-        WorkingTexture = fullOut;
+        workingTexture = fullOut;
     }
 
     private void runTile(int ox, int oy) {
@@ -332,7 +332,7 @@ public class Amaze extends Node {
         glProg.setVar("u_outoff", ox, storeOY);
         glProg.setTexture("u_chroma", dgrb01);
         glProg.setTexture("u_hvwt", hvwt3);
-        glProg.setTextureCompute("img_out", WorkingTexture, true);
+        glProg.setTextureCompute("img_out", workingTexture, true);
         dispatch(new Point(tw, th));
     }
 }

@@ -39,7 +39,7 @@ public class Parameters {
     private int analogIso;
     public int iso;
     public double exposureTime = 1.0/30.0; // Default to 1/30s if not available
-    public byte cfaPattern;
+    public int cfaPattern;
     public Point rawSize;
     public boolean usedDynamic = false;
     public float[] blackLevel = new float[4];
@@ -76,27 +76,27 @@ public class Parameters {
     public double YPerMm;
     public double[] cameraIntrinsic = new double[9];
     public double[] cameraIntrinsicRev = new double[9];
-    public float[][] tonemapCurves = new float[3][];
+    public float[][] tonemapCurves = new float[3][0];
     public float gammaCurve = 2.0f;
     public SpecificSettingSensor sensorSpecifics;
 
     public int tile = 16;
     public int tilesX = 0;
     public Point alignmentSize = new Point(0, 0);
-    public float[] HSVMap = null;
-    public float[] LookMap = null;
-    public int[] HSVMapSize = new int[2];
-    public int[] LookMapSize = new int[3];
+    public float[] hsvMap = null;
+    public float[] lookMap = null;
+    public int[] hsvMapSize = new int[2];
+    public int[] lookMapSize = new int[3];
 
     public int calibrationIlluminant1 = -1;
     public int calibrationIlluminant2 = -1;
 
     public float[] calibrationTransform1 = new float[9];
-    public float[] ForwardTransform1 = new float[9];
-    public float[] ColorMatrix1 = new float[9];
-    public float[] ColorMatrix2 = new float[9];
+    public float[] forwardTransform1 = new float[9];
+    public float[] colorMatrix1 = new float[9];
+    public float[] colorMatrix2 = new float[9];
     public float[] calibrationTransform2 = new float[9];
-    public float[] ForwardTransform2 = new float[9];
+    public float[] forwardTransform2 = new float[9];
 
     public boolean mirror = false;
     public String cameraID = PhotonCamera.getSettings().mCameraID;
@@ -156,12 +156,12 @@ public class Parameters {
         if (analogue != null) {
             analogIso = analogue;
         } else analogIso = 100;
-        for (int i = 0; i < 4; i++) blackLevel[i] = 64;
+        for (int i = 0; i < 4; i++) blackLevel[i] = 64.0f;
         tonemapStrength = (float) PhotonCamera.getSettings().compressor;
-        Object ptr = characteristics.get(CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT);
-        if (ptr != null) cfaPattern = (byte) (int) ptr;
+        Integer ptr = characteristics.get(CameraCharacteristics.SENSOR_INFO_COLOR_FILTER_ARRANGEMENT);
+        if (ptr != null) cfaPattern = ptr;
         if (PhotonCamera.getSettings().cfaPattern >= 0) {
-            cfaPattern = (byte) PhotonCamera.getSettings().cfaPattern;
+            cfaPattern = PhotonCamera.getSettings().cfaPattern;
         }
         float[] flen = characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS);
         if (flen == null || flen.length <= 0) {
@@ -169,16 +169,16 @@ public class Parameters {
             flen[0] = 4.75f;
         }
         sensorSize = characteristics.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE);
-        XPerMm = rawSize.x / sensorSize.getWidth();
-        YPerMm = rawSize.y / sensorSize.getHeight();
+        XPerMm = (double) (rawSize.x / sensorSize.getWidth());
+        YPerMm = (double) (rawSize.y / sensorSize.getHeight());
 
 
         double[] cameraIntrinsic = this.cameraIntrinsic;
-        cameraIntrinsic[0] = flen[0];
+        cameraIntrinsic[0] = (double) flen[0];
         cameraIntrinsic[1] = 0.0;
         cameraIntrinsic[2] = rawSize.x / 2.0;
         cameraIntrinsic[3] = 0.0;
-        cameraIntrinsic[4] = flen[0];
+        cameraIntrinsic[4] = (double) flen[0];
         cameraIntrinsic[5] = rawSize.y / 2.0;
         cameraIntrinsic[6] = 0.0;
         cameraIntrinsic[7] = 0.0;
@@ -192,7 +192,7 @@ public class Parameters {
         cameraIntrinsicRev[5] = -rawSize.y / 2.0;
         cameraIntrinsicRev[6] = 0.0;
         cameraIntrinsicRev[7] = 0.0;
-        cameraIntrinsicRev[8] = flen[0];
+        cameraIntrinsicRev[8] = (double) flen[0];
 
         Log.d(TAG, "IntrinsicMatrix:\n"
                 + cameraIntrinsic[0] + "," + cameraIntrinsic[1] + "," + cameraIntrinsic[2] + ",\n"
@@ -213,15 +213,15 @@ public class Parameters {
         Log.d(TAG, "Aperture:" + aperture[0]);
         this.aperture = aperture[0];
 
-        Object whiteLevel = characteristics.get(CameraCharacteristics.SENSOR_INFO_WHITE_LEVEL);
+        Integer whiteLevel = characteristics.get(CameraCharacteristics.SENSOR_INFO_WHITE_LEVEL);
         if (whiteLevel != null) this.whiteLevel = ((int) whiteLevel);
         hasGainMap = false;
         mapSize = new Point(1, 1);
         gainMap = new float[4];
-        gainMap[0] = 1.f;
-        gainMap[1] = 1.f;
-        gainMap[2] = 1.f;
-        gainMap[3] = 1.f;
+        gainMap[0] = 1.0f;
+        gainMap[1] = 1.0f;
+        gainMap[2] = 1.0f;
+        gainMap[3] = 1.0f;
         sensorPix = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
         if (sensorPix == null) {
             sensorPix = new Rect(0, 0, rawSize.x, rawSize.y);
@@ -302,16 +302,16 @@ public class Parameters {
                     usedDynamic = true;
                 }
             }
-            Object white = result.get(CaptureResult.SENSOR_DYNAMIC_WHITE_LEVEL);
+            Integer white = result.get(CaptureResult.SENSOR_DYNAMIC_WHITE_LEVEL);
             if (white != null && useDynamicWhiteLevel) {
-                whiteLevel = (int) white;
+                whiteLevel = white;
             }
 
             if(whiteLevelOverride >= 0) {
                 whiteLevel = (int) whiteLevelOverride;
             }
             try {
-                gainMap = new float[]{1.f, 1.f, 1.f, 1.f};
+                gainMap = new float[]{1.0f, 1.0f, 1.0f, 1.0f};
                 mapSize = new Point(1, 1);
                 LensShadingMap lensMap = result.get(CaptureResult.STATISTICS_LENS_SHADING_CORRECTION_MAP);
                 if (lensMap != null) {
@@ -319,16 +319,16 @@ public class Parameters {
                     mapSize = new Point(lensMap.getColumnCount(), lensMap.getRowCount());
                     lensMap.copyGainFactors(gainMap, 0);
                     hasGainMap = true;
-                    if ((gainMap[(gainMap.length / 8) - (gainMap.length / 8) % 4]) == 1.0 &&
-                            (gainMap[(gainMap.length / 2) - (gainMap.length / 2) % 4]) == 1.0 &&
-                            (gainMap[(gainMap.length / 2 + gainMap.length / 8) - (gainMap.length / 2 + gainMap.length / 8) % 4]) == 1.0) {
+                    if ((gainMap[(gainMap.length / 8) - (gainMap.length / 8) % 4]) == 1.0f &&
+                            (gainMap[(gainMap.length / 2) - (gainMap.length / 2) % 4]) == 1.0f &&
+                            (gainMap[(gainMap.length / 2 + gainMap.length / 8) - (gainMap.length / 2 + gainMap.length / 8) % 4]) == 1.0f) {
                         hasGainMap = false;
                         if (isHuawei) {
                             Log.d(TAG, "DETECTED FAKE GAINMAP, REPLACING WITH STATIC GAINMAP");
                             gainMap = new float[Const.gainMap.length];
                             for (int i = 0; i < Const.gainMap.length; i += 4) {
                                 float in = (float) Const.gainMap[i] + (float) Const.gainMap[i + 1] + (float) Const.gainMap[i + 2] + (float) Const.gainMap[i + 3];
-                                in /= 4.f;
+                                in /= 4.0f;
                                 gainMap[i] = in;
                                 gainMap[i + 1] = in;
                                 gainMap[i + 2] = in;
@@ -369,7 +369,7 @@ public class Parameters {
         if (!usedDynamic)
             if (level != null) {
                 level.copyTo(blarr, 0);
-                for (int i = 0; i < 4; i++) blackLevel[i] = blarr[i];
+                for (int i = 0; i < 4; i++) blackLevel[i] = (float) blarr[i];
             }
         if(blackLevelOverride >= 0) {
             for (int i = 0; i < 4; i++) blackLevel[i] = blackLevelOverride;
@@ -418,9 +418,9 @@ public class Parameters {
         }
         int ref1 = characteristics.get(CameraCharacteristics.SENSOR_REFERENCE_ILLUMINANT1);
         int ref2;
-        Object ref2obj = characteristics.get(CameraCharacteristics.SENSOR_REFERENCE_ILLUMINANT2);
+        Byte ref2obj = characteristics.get(CameraCharacteristics.SENSOR_REFERENCE_ILLUMINANT2);
         if (ref2obj != null) {
-            ref2 = (byte) ref2obj;
+            ref2 = ref2obj;
         } else {
             ref2 = ref1;
         }
@@ -503,15 +503,15 @@ public class Parameters {
 
         Converter.convertColorspaceTransform(calibration1, calibrationTransform1);
         Converter.convertColorspaceTransform(calibration2, calibrationTransform2);
-        Converter.convertColorspaceTransform(forwardt1, ForwardTransform1);
-        Converter.convertColorspaceTransform(forwardt2, ForwardTransform2);
-        Converter.convertColorspaceTransform(colorMat1, ColorMatrix1);
-        Converter.convertColorspaceTransform(colorMat2, ColorMatrix2);
+        Converter.convertColorspaceTransform(forwardt1, forwardTransform1);
+        Converter.convertColorspaceTransform(forwardt2, forwardTransform2);
+        Converter.convertColorspaceTransform(colorMat1, colorMatrix1);
+        Converter.convertColorspaceTransform(colorMat2, colorMatrix2);
 
-        float[] normalizedForwardTransform1 = ForwardTransform1.clone();
-        float[] normalizedColorMatrix1 = ColorMatrix1.clone();
-        float[] normalizedColorMatrix2 = ColorMatrix2.clone();
-        float[] normalizedForwardTransform2 = ForwardTransform2.clone();
+        float[] normalizedForwardTransform1 = forwardTransform1.clone();
+        float[] normalizedColorMatrix1 = colorMatrix1.clone();
+        float[] normalizedColorMatrix2 = colorMatrix2.clone();
+        float[] normalizedForwardTransform2 = forwardTransform2.clone();
 
         Converter.normalizeFM(normalizedForwardTransform1);
         Converter.normalizeFM(normalizedForwardTransform2);
@@ -531,29 +531,29 @@ public class Parameters {
                 interpolationFactor, /*out*/sensorToXYZ);
         Log.d("Parameters", "sensorToXYZ: " + Arrays.toString(sensorToXYZ));
         if (sensorSpecifics.profileHueSatMapDims != null && sensorSpecifics.profileHueSatMapData1 != null && sensorSpecifics.profileHueSatMapData2 != null) {
-            HSVMapSize[0] = sensorSpecifics.profileHueSatMapDims[0];
-            HSVMapSize[1] = sensorSpecifics.profileHueSatMapDims[1];
-            HSVMap = new float[HSVMapSize[0] * HSVMapSize[1] * 3];
-            for (int i = 0; i < HSVMap.length; i+=3) {
-                HSVMap[i] = sensorSpecifics.profileHueSatMapData1[i] * (1.f - (float)interpolationFactor) + sensorSpecifics.profileHueSatMapData2[i] * (float)interpolationFactor;
-                HSVMap[i+1] = sensorSpecifics.profileHueSatMapData1[i+1] * (1.f - (float)interpolationFactor) + sensorSpecifics.profileHueSatMapData2[i+1] * (float)interpolationFactor;
-                HSVMap[i+2] = sensorSpecifics.profileHueSatMapData1[i+2] * (1.f - (float)interpolationFactor) + sensorSpecifics.profileHueSatMapData2[i+2] * (float)interpolationFactor;
-                HSVMap[i] /= 360.f;
+            hsvMapSize[0] = sensorSpecifics.profileHueSatMapDims[0];
+            hsvMapSize[1] = sensorSpecifics.profileHueSatMapDims[1];
+            hsvMap = new float[hsvMapSize[0] * hsvMapSize[1] * 3];
+            for (int i = 0; i < hsvMap.length; i+=3) {
+                hsvMap[i] = sensorSpecifics.profileHueSatMapData1[i] * (1.0f - (float)interpolationFactor) + sensorSpecifics.profileHueSatMapData2[i] * (float)interpolationFactor;
+                hsvMap[i+1] = sensorSpecifics.profileHueSatMapData1[i+1] * (1.0f - (float)interpolationFactor) + sensorSpecifics.profileHueSatMapData2[i+1] * (float)interpolationFactor;
+                hsvMap[i+2] = sensorSpecifics.profileHueSatMapData1[i+2] * (1.0f - (float)interpolationFactor) + sensorSpecifics.profileHueSatMapData2[i+2] * (float)interpolationFactor;
+                hsvMap[i] /= 360.0f;
             }
         }
         if (sensorSpecifics.profileLookTableDims != null && sensorSpecifics.profileLookTableData != null) {
-            LookMapSize[0] = sensorSpecifics.profileLookTableDims[0];
-            LookMapSize[1] = sensorSpecifics.profileLookTableDims[1];
-            LookMapSize[2] = sensorSpecifics.profileLookTableDims[2];
-            LookMap = new float[LookMapSize[0] * LookMapSize[1] * LookMapSize[2] * 3];
-            for (int i = 0; i < LookMap.length; i+=3) {
-                LookMap[i] = sensorSpecifics.profileLookTableData[i] / 360.f;
-                LookMap[i+1] = sensorSpecifics.profileLookTableData[i+1];
-                LookMap[i+2] = sensorSpecifics.profileLookTableData[i+2];
+            lookMapSize[0] = sensorSpecifics.profileLookTableDims[0];
+            lookMapSize[1] = sensorSpecifics.profileLookTableDims[1];
+            lookMapSize[2] = sensorSpecifics.profileLookTableDims[2];
+            lookMap = new float[lookMapSize[0] * lookMapSize[1] * lookMapSize[2] * 3];
+            for (int i = 0; i < lookMap.length; i+=3) {
+                lookMap[i] = sensorSpecifics.profileLookTableData[i] / 360.0f;
+                lookMap[i+1] = sensorSpecifics.profileLookTableData[i+1];
+                lookMap[i+2] = sensorSpecifics.profileLookTableData[i+2];
             }
         }
         Converter.multiply(Converter.sXYZtoProPhoto, sensorToXYZ, /*out*/sensorToProPhoto);
-        File customCCT = new File(Environment.getExternalStorageDirectory() + "//DCIM//PhotonCamera//", "customCCT.txt");
+        File customCCT = new File(Environment.getExternalStorageDirectory().toString() + "//DCIM//PhotonCamera//", "customCCT.txt");
         //ColorSpaceTransform CST = PhotonCamera.getCaptureController().mColorSpaceTransform;//= result.get(CaptureResult.COLOR_CORRECTION_TRANSFORM);
         ColorSpaceTransform CST = result.get(CaptureResult.COLOR_CORRECTION_TRANSFORM);
         assert calibration2 != null;

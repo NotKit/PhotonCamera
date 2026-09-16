@@ -175,12 +175,12 @@ public final class UpscaleCrop extends Node {
 
     @Override
     public void Run() {
-        GLTexture input = previousNode.WorkingTexture;
+        GLTexture input = previousNode.workingTexture;
         PostPipeline pp = (PostPipeline) basePipeline;
 
         if (input == null) {
             freeUnusedKernelParams(pp);
-            WorkingTexture = null;
+            workingTexture = null;
             return;
         }
 
@@ -200,7 +200,7 @@ public final class UpscaleCrop extends Node {
             // the ESD4D result ferry must not ride through the whole render
             // (and leak until process death if left to close()).
             freeUnusedKernelParams(pp);
-            WorkingTexture = input;
+            workingTexture = input;
             return;
         }
 
@@ -211,7 +211,7 @@ public final class UpscaleCrop extends Node {
                 input.mSize.x <= 0 ||
                 input.mSize.y <= 0) {
             freeUnusedKernelParams(pp);
-            WorkingTexture = input;
+            workingTexture = input;
             return;
         }
 
@@ -233,7 +233,7 @@ public final class UpscaleCrop extends Node {
 
         if (target.equals(input.mSize)) {
             freeUnusedKernelParams(pp);
-            WorkingTexture = input;
+            workingTexture = input;
             return;
         }
 
@@ -328,12 +328,12 @@ public final class UpscaleCrop extends Node {
             rebindAniso(input, input, 0, 0);
             glProg.drawBlocks(out);
             glProg.closed = true;
-            WorkingTexture = out;
+            workingTexture = out;
             if (((PostPipeline) basePipeline).debugTiledCompare) {
                 verifyAnisoRegions(input);
             }
         } else {
-            WorkingTexture = glUtils.interpolate(input, target);
+            workingTexture = glUtils.interpolate(input, target);
         }
 
         // CPU copies served their purpose (params now on GPU, or unused on
@@ -395,7 +395,7 @@ public final class UpscaleCrop extends Node {
             Log.d("TiledHarness", "upscale strips skipped (not aniso)");
             return;
         }
-        GLTexture fullOut = WorkingTexture;
+        GLTexture fullOut = workingTexture;
         int imgW = fullOut.mSize.x;
         int imgH = fullOut.mSize.y;
         int inH = fullIn.mSize.y;
@@ -423,7 +423,7 @@ public final class UpscaleCrop extends Node {
             tileY0 = o0;
             tileY1 = o0 + rows;
             tileOut = reg;
-            WorkingTexture = reg;
+            workingTexture = reg;
             try {
                 rebindAniso(fullIn, inTile, o0, wy0);
                 glProg.drawBlocks(reg);
@@ -454,7 +454,7 @@ public final class UpscaleCrop extends Node {
         tileY0 = 0;
         tileY1 = -1;
         tileOut = null;
-        WorkingTexture = fullOut;
+        workingTexture = fullOut;
         glProg.setVar("u_tileOrigin", 0, 0);
         glProg.setVar("u_winOrigin", 0, 0);
         glProg.setTexture("InputBuffer", fullIn);

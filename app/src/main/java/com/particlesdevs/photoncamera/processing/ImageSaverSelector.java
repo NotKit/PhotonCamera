@@ -4,34 +4,35 @@ import android.graphics.ImageFormat;
 import com.particlesdevs.photoncamera.util.Log;
 
 public class ImageSaverSelector {
-    private static JPEGSaver JPEGSaver;
-    private static YUVSaver YUVSaver;
-    private static RAW16Saver RAW16Saver;
+    private static JPEGSaver jpegSaver;
+    private static YUVSaver yuvSaver;
+    private static RAW16Saver raw16Saver;
 
     private static final String TAG = "ImageSaverSelector";
 
     public static void init(SaverImplementation saverImplementation) {
-        JPEGSaver = new JPEGSaver(saverImplementation.processingEventsListener);
-        YUVSaver = new YUVSaver(saverImplementation.processingEventsListener);
-        RAW16Saver = new RAW16Saver(saverImplementation.processingEventsListener);
+        jpegSaver = new JPEGSaver(saverImplementation.processingEventsListener);
+        yuvSaver = new YUVSaver(saverImplementation.processingEventsListener);
+        raw16Saver = new RAW16Saver(saverImplementation.processingEventsListener);
     }
 
-    public static SaverImplementation getImageSaver(int format, SaverImplementation saverImplementation) {
+    public static SaverImplementation getImageSaver(int format, SaverImplementation fallback) {
+        SaverImplementation saverImplementation = fallback;
         switch (format) {
             case ImageFormat.JPEG:
-                saverImplementation = JPEGSaver;
+                saverImplementation = jpegSaver;
                 //saverImplementation = new JPEGSaver(saverImplementation.processingEventsListener);
                 break;
 
             case ImageFormat.YUV_420_888:
-                saverImplementation = YUVSaver;
+                saverImplementation = yuvSaver;
                 //saverImplementation = new YUVSaver(saverImplementation.processingEventsListener);
                 break;
 
             case ImageFormat.RAW10:
             case ImageFormat.RAW_SENSOR:
                 Log.d(TAG, "Selected RAW16Saver for format: " + format);
-                saverImplementation = RAW16Saver;
+                saverImplementation = raw16Saver;
                 //saverImplementation = new RAW16Saver(saverImplementation.processingEventsListener);
                 break;
 

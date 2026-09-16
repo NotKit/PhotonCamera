@@ -42,15 +42,15 @@ public class ColorCorrectionCube {
     }
 
     public float[][] Combine(ColorCorrectionCube lower, float[] temp) {
-        temp[2] += 0.00000001;
-        temp[0] += 0.00000001;
+        temp[2] += 0.00000001f;
+        temp[0] += 0.00000001f;
         float ratio = (temp[0] + temp[1]) / temp[2];
         ratio -= lower.ColorRatio;
-        ratio *= 1.f / (ColorRatio - lower.ColorRatio);
+        ratio *= 1.0f / (ColorRatio - lower.ColorRatio);
         float[][] combined = new float[3][9];
         for (int i = 0; i < 3; i++) {
             for (int j = 0; j < 9; j++) {
-                combined[i][j] = lower.cube[i][j] * (1.f - ratio) + cube[i][j] * ratio;
+                combined[i][j] = lower.cube[i][j] * (1.0f - ratio) + cube[i][j] * ratio;
             }
         }
         return combined;

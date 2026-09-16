@@ -24,9 +24,9 @@ public class ColorD extends Node {
 
     @Override
     public void Run() {
-        glProg.setTexture("InputBuffer", previousNode.WorkingTexture);
-        WorkingTexture = basePipeline.getMain();
-        glProg.drawBlocks(WorkingTexture);
+        glProg.setTexture("InputBuffer", previousNode.workingTexture);
+        workingTexture = basePipeline.getMain();
+        glProg.drawBlocks(workingTexture);
         glProg.closed = true;
     }
 }

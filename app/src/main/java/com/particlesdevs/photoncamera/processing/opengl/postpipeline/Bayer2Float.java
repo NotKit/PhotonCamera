@@ -97,7 +97,7 @@ public class Bayer2Float extends Node {
                 float[] wp = basePipeline.mParameters.whitePoint;
                 if (wp != null) {
                     for (int c = 0; c < 3; c++) {
-                        if (wp[c] > 0.f && wp[c] < 1.f) clipLevel = Math.max(clipLevel, 1.f / wp[c]);
+                        if (wp[c] > 0.0f && wp[c] < 1.0f) clipLevel = Math.max(clipLevel, 1.0f / wp[c]);
                     }
                 }
                 postPipeline.rawClipLevel = clipLevel;
@@ -114,7 +114,7 @@ public class Bayer2Float extends Node {
         }
         Point wsize = new Point(basePipeline.mParameters.rawSize);
         basePipeline.main2 = new GLTexture(wsize, new GLFormat(GLFormat.DataType.FLOAT_16, GLDrawParams.WorkDim), null, GL_LINEAR, GL_CLAMP_TO_EDGE);
-        WorkingTexture = basePipeline.main2;
+        workingTexture = basePipeline.main2;
 
         drawMain();
         // main1 must stay eagerly allocated here: deferring it moved the
@@ -213,7 +213,7 @@ public class Bayer2Float extends Node {
         glProg.setVar("blackLevel", new float[]{0.f, 0.f, 0.f, 0.f});
         if (hlChromaResult != null) glProg.setVar("Chrominance", hlChromaResult);
         Log.d(Name, "CfaPattern:" + basePipeline.mParameters.cfaPattern);
-        postPipeline.regenerationSense = 10.f;
+        postPipeline.regenerationSense = 10.0f;
         int minimal = -1;
         for (int i = 0; i < basePipeline.mParameters.whitePoint.length; i++) {
             if (i == 1) continue;
@@ -228,7 +228,7 @@ public class Bayer2Float extends Node {
         glProg.setVar("Regeneration", postPipeline.regenerationSense);
         glProg.setVar("MinimalInd", minimal);
         glProg.setVar("yOffset", tileActive() ? tileY0 : 0);
-        glProg.drawBlocks(WorkingTexture);
+        glProg.drawBlocks(workingTexture);
     }
 
     /**
@@ -237,7 +237,7 @@ public class Bayer2Float extends Node {
      * texture stays full-res by design, so no halo is needed here.
      */
     private void verifyRegions() {
-        GLTexture fullOut = WorkingTexture;
+        GLTexture fullOut = workingTexture;
         int imgH = fullOut.mSize.y;
         int imgW = fullOut.mSize.x;
         float worst = TileDriver.verifyNodeBands(fullOut, imgW, imgH, 2,
@@ -248,7 +248,7 @@ public class Bayer2Float extends Node {
                     tileY0 = b0;
                     tileY1 = b0 + rows;
                     tileOut = reg;
-                    WorkingTexture = reg;
+                    workingTexture = reg;
                     drawMain();
                     return reg;
                 });
@@ -256,6 +256,6 @@ public class Bayer2Float extends Node {
         tileY0 = 0;
         tileY1 = -1;
         tileOut = null;
-        WorkingTexture = fullOut;
+        workingTexture = fullOut;
     }
 }

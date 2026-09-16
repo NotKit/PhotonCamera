@@ -6,6 +6,7 @@ import android.hardware.camera2.CaptureResult;
 
 import com.particlesdevs.photoncamera.processing.processor.RawVideoProcessor;
 import com.particlesdevs.photoncamera.util.Log;
+import com.particlesdevs.photoncamera.api.CameraMode;
 import com.particlesdevs.photoncamera.api.ParseExif;
 import com.particlesdevs.photoncamera.app.PhotonCamera;
 import com.particlesdevs.photoncamera.control.GyroBurst;
@@ -127,7 +128,8 @@ public class DefaultSaver extends SaverImplementation {
         super.processStart(imageFormat, characteristics, captureResult, captureRequest, cameraRotation);
         Path dngFile = ImagePath.newDNGFilePath();
         Path jpgFile = ImagePath.newImageFilePath();
-        switch (PhotonCamera.getSettings().selectedMode) {
+        CameraMode mode = PhotonCamera.getSettings().selectedMode;
+        switch (mode) {
             case UNLIMITED:
                 mUnlimitedProcessor.configure(PhotonCamera.getSettings().rawSaver);
                 mUnlimitedProcessor.unlimitedStart(
@@ -152,6 +154,8 @@ public class DefaultSaver extends SaverImplementation {
                         processingCallback
                 );
                 break;
+            default:
+                break;
         }
     }
 
@@ -160,12 +164,15 @@ public class DefaultSaver extends SaverImplementation {
     }
 
     public void processEnd() {
-        switch (PhotonCamera.getSettings().selectedMode){
+        CameraMode mode = PhotonCamera.getSettings().selectedMode;
+        switch (mode){
             case UNLIMITED:
                 mUnlimitedProcessor.unlimitedEnd();
                 break;
             case RAWVIDEO:
                 mRawVideoProcessor.videoEnd();
+                break;
+            default:
                 break;
         }
     }

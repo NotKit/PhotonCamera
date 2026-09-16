@@ -219,7 +219,7 @@ public final class ColorTemperatureConverter {
             double[] outMeasuredXy) {
         if (calib.colorTemp1 == calib.colorTemp2) {
             if (outKelvin != null) {
-                outKelvin[0] = calib.colorTemp1;
+                outKelvin[0] = (double) calib.colorTemp1;
             }
             if (outMeasuredXy != null) {
                 double[] xy = kelvinToCIExy(calib.colorTemp1);
@@ -253,7 +253,7 @@ public final class ColorTemperatureConverter {
             }
 
             Converter.map(invColorMatrix, cameraNeutral, /* out */neutralGuess);
-            Converter.calculateCIExyCoordinates(neutralGuess[0], neutralGuess[1], neutralGuess[2], /* out */xy);
+            Converter.calculateCIExyCoordinates((double) neutralGuess[0], (double) neutralGuess[1], (double) neutralGuess[2], /* out */xy);
             lastX = xy[0];
             lastY = xy[1];
             lastCCT = cieXyToKelvin(xy[0], xy[1]);
@@ -449,8 +449,8 @@ public final class ColorTemperatureConverter {
         return new ColorSpaceTransform(rationals);
     }
 
-    public static double[] kelvinToCIExy(double T) {
-        T = Math.max(1667.0, Math.min(25000.0, T));
+    public static double[] kelvinToCIExy(double kelvin) {
+        final double T = Math.max(1667.0, Math.min(25000.0, kelvin));
 
         final double x;
         if (T <= 4000.0) {
