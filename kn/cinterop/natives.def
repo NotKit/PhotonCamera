@@ -1,0 +1,16 @@
+# The app's own native code (app/src/main/cpp) behind a plain C ABI.
+#
+# Kotlin/Native has no JNI, so the 64 Java_* entry points of dngCreator,
+# allocator, ncnnMl, flacRecorder and native-engine are reached through
+# host/natives/photoncam_native.h instead - one C function per Java native,
+# forwarding to the unmodified JNI body through a pointer-shaped JNIEnv
+# (host/natives/jnilite.h).  The Kotlin objects the converted app calls are in
+# src/commonMain/kotlin/photoncam/natives/, one per Java class.
+#
+# Built by host/natives/build_klib.sh, which supplies the include and library
+# paths; libphotoncam_native.a comes from host/natives/build.sh and libncnn.a
+# from host/natives/build_ncnn.sh.
+headers = photoncam_native.h
+headerFilter = photoncam_native.h
+package = photoncam.natives.abi
+linkerOpts = -lstdc++ -lm -ldl -lpthread
