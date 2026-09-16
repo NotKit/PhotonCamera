@@ -32,16 +32,16 @@ public class ESD3DBayerCS extends Node {
             grad = basePipeline.getMain();
             WorkingTexture = basePipeline.main3;
         }*/
-        WorkingTexture = basePipeline.getMain();
+        workingTexture = basePipeline.getMain();
         grad = basePipeline.main3;
         glProg.setLayout(16,16,1);
         glProg.setDefine("INSIZE",basePipeline.workSize);
         glProg.useAssetProgram("ESD3DBayerCS/diffbayercs",true);
-        glProg.setTextureCompute("inTexture", previousNode.WorkingTexture,false);
+        glProg.setTextureCompute("inTexture", previousNode.workingTexture,false);
         glProg.setTextureCompute("outTexture", grad,true);
         glProg.computeAuto(grad.mSize,1);
         endT("Differentiate");
-        //glUtils.ConvDiff(previousNode.WorkingTexture, grad, 0.f);
+        //glUtils.ConvDiff(previousNode.WorkingTexture, grad, 0.0f);
 
 
 
@@ -50,12 +50,12 @@ public class ESD3DBayerCS extends Node {
             Log.d(Name, "NoiseS:" + basePipeline.noiseS + ", NoiseO:" + basePipeline.noiseO);
             glProg.setDefine("NOISES", basePipeline.noiseS);
             glProg.setDefine("NOISEO", basePipeline.noiseO);
-            glProg.setDefine("INSIZE", previousNode.WorkingTexture.mSize);
+            glProg.setDefine("INSIZE", previousNode.workingTexture.mSize);
             glProg.useAssetProgram("esd3dbayer");
             glProg.setTexture("NoiseMap", map);
-            glProg.setTexture("InputBuffer", previousNode.WorkingTexture);
+            glProg.setTexture("InputBuffer", previousNode.workingTexture);
             glProg.setTexture("GradBuffer", grad);
-            glProg.drawBlocks(WorkingTexture);
+            glProg.drawBlocks(workingTexture);
         }
         endT("ES3D");
         glProg.closed = true;

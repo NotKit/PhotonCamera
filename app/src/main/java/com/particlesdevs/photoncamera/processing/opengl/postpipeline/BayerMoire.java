@@ -18,7 +18,7 @@ public class BayerMoire extends Node {
     @Override
     public void Run() {
         glProg.setLayout(tile,tile,1);
-        glProg.setDefine("OUTSET",previousNode.WorkingTexture.mSize);
+        glProg.setDefine("OUTSET",previousNode.workingTexture.mSize);
         glProg.setDefine("TILE",tile);
         glProg.setDefine("NOISEO",basePipeline.noiseO);
         glProg.setDefine("NOISES",basePipeline.noiseS);
@@ -26,11 +26,11 @@ public class BayerMoire extends Node {
         glProg.setDefine("MSIZE", msize);
         glProg.setDefine("KERNELSIZE", 5.5f);
         glProg.useAssetProgram("BayerMoire/bayermoire",true);
-        glProg.setTextureCompute("inTexture",previousNode.WorkingTexture,false);
-        WorkingTexture = basePipeline.getMain();
-        glProg.setTextureCompute("outTexture",WorkingTexture,true);
+        glProg.setTextureCompute("inTexture",previousNode.workingTexture,false);
+        workingTexture = basePipeline.getMain();
+        glProg.setTextureCompute("outTexture",workingTexture,true);
         //for(int i =0; i<5;i++)
-        glProg.computeAuto(WorkingTexture.mSize,1);
+        glProg.computeAuto(workingTexture.mSize,1);
         glProg.closed = true;
     }
 }

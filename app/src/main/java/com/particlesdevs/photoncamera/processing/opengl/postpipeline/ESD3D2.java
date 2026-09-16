@@ -32,7 +32,7 @@ public class ESD3D2 extends Node {
     @Tunable(title = "Noise Target", category = "Denoise", max = 0.1f, defaultValue = 0.00390625f, step = 0.0001f,
             description = "Target noise level to map to minimum kernel size (1/256 = 0.00390625)"
     )
-    float noiseTarget = 1.0f/256.f;
+    float noiseTarget = 1.0f/256.0f;
 
     @Tunable(title = "Luma", category = "Denoise", max = 2.0f, defaultValue = 0.8f,
             description = "Luma strength multiplier for denoising"
@@ -84,7 +84,7 @@ public class ESD3D2 extends Node {
             glProg.setDefine("LUMA", luma);
 
             glProg.setDefine("INSIZE", basePipeline.mParameters.rawSize);
-            //float ks = 1.0f + Math.min((basePipeline.noiseS+basePipeline.noiseO) * 3.0f * noiseToKernelSize, 34.f);
+            //float ks = 1.0f + Math.min((basePipeline.noiseS+basePipeline.noiseO) * 3.0f * noiseToKernelSize, 34.0f);
             //int msize = 7 + (int)ks - (int)ks%2;
             double noiseMpy = Math.max((NoiseS+NoiseO)/noiseTarget, 0.0000001);
             double kernelSize = 1.0f + Math.sqrt(noiseMpy) * noiseToKernelSize;
@@ -114,7 +114,7 @@ public class ESD3D2 extends Node {
     @Override
     public void Run() {
         if (!enable) {
-            WorkingTexture = previousNode.WorkingTexture;
+            workingTexture = previousNode.workingTexture;
             return;
         }
         float N = (float) Math.sqrt(0.5 * basePipeline.noiseS + basePipeline.noiseO);
@@ -127,33 +127,33 @@ public class ESD3D2 extends Node {
         GLTexture gradLow = null;
         Log.d(Name, "Scaling factor:" + scale);
         if(!useColorDenoising){
-            outp = previousNode.WorkingTexture;
+            outp = previousNode.workingTexture;
         } else {
             if (scale != 1) {
-                basePipeline.main4 = glUtils.gaussdown(previousNode.WorkingTexture, scale);
+                basePipeline.main4 = glUtils.gaussdown(previousNode.workingTexture, scale);
                 // Denoise runs at low resolution, so the intermediate has to match main4's size
                 basePipeline.main5 = new GLTexture(basePipeline.main4.mSize, new GLFormat(GLFormat.DataType.FLOAT_16, GLDrawParams.WorkDim));
                 gradLow = new GLTexture(basePipeline.main4.mSize, new GLFormat(GLFormat.DataType.FLOAT_16, GLDrawParams.WorkDim));
-                glUtils.ConvDiff(basePipeline.main4, gradLow, 0.f);
+                glUtils.ConvDiff(basePipeline.main4, gradLow, 0.0f);
                 ESD3DRun(basePipeline.main4, basePipeline.main5, gradLow, 0.0f, scaleF * 0.75f);
-                WorkingTexture = basePipeline.getMain();
+                workingTexture = basePipeline.getMain();
                 outp = basePipeline.getMain();
-                guidedUpsample(basePipeline.main5, basePipeline.main4, previousNode.WorkingTexture, outp, scale);
+                guidedUpsample(basePipeline.main5, basePipeline.main4, previousNode.workingTexture, outp, scale);
             } else {
-                WorkingTexture = basePipeline.getMain();
-                grad = new GLTexture(previousNode.WorkingTexture.mSize, new GLFormat(GLFormat.DataType.FLOAT_16, GLDrawParams.WorkDim));
-                glUtils.ConvDiff(previousNode.WorkingTexture, grad, 0.f);
-                ESD3DRun(previousNode.WorkingTexture, WorkingTexture, grad, 0.0f, 1.0f);
+                workingTexture = basePipeline.getMain();
+                grad = new GLTexture(previousNode.workingTexture.mSize, new GLFormat(GLFormat.DataType.FLOAT_16, GLDrawParams.WorkDim));
+                glUtils.ConvDiff(previousNode.workingTexture, grad, 0.0f);
+                ESD3DRun(previousNode.workingTexture, workingTexture, grad, 0.0f, 1.0f);
                 outp = basePipeline.getMain();
-                guidedUpsample(WorkingTexture, previousNode.WorkingTexture, previousNode.WorkingTexture, outp, scale);
+                guidedUpsample(workingTexture, previousNode.workingTexture, previousNode.workingTexture, outp, scale);
             }
         }
-        WorkingTexture = basePipeline.getMain();
+        workingTexture = basePipeline.getMain();
         if (grad == null) {
             grad = new GLTexture(outp.mSize, new GLFormat(GLFormat.DataType.FLOAT_16, GLDrawParams.WorkDim));
         }
-        glUtils.ConvDiff(outp, grad, 0.f);
-        ESD3DRun(outp, WorkingTexture, grad, moire, 1.0f);
+        glUtils.ConvDiff(outp, grad, 0.0f);
+        ESD3DRun(outp, workingTexture, grad, moire, 1.0f);
         glProg.closed = true;
         grad.close();
         if (gradLow != null) {

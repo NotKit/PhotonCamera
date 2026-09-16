@@ -10,6 +10,7 @@ import com.particlesdevs.photoncamera.processing.opengl.GLOneScript;
 import com.particlesdevs.photoncamera.processing.opengl.GLProg;
 import com.particlesdevs.photoncamera.processing.opengl.GLTexture;
 import com.particlesdevs.photoncamera.processing.opengl.GLUtils;
+import java.nio.Buffer;
 
 public class LuckyOperator extends GLOneScript {
     Point insize;
@@ -26,22 +27,22 @@ public class LuckyOperator extends GLOneScript {
         GLTexture input1 = new GLTexture(insize,new GLFormat(GLFormat.DataType.UNSIGNED_16),scriptParams.input);
         glProg.setTexture("InputBuffer",input1);
         glProg.setVar("CfaPattern",scriptParams.parameters.cfaPattern);
-        WorkingTexture = new GLTexture(input1.mSize.x/2,input1.mSize.y/2,new GLFormat(GLFormat.DataType.FLOAT_16),null);
+        workingTexture = new GLTexture(input1.mSize.x/2,input1.mSize.y/2,new GLFormat(GLFormat.DataType.FLOAT_16),(Buffer) null);
         glProg.drawBlocks(input1);
-        GLTexture luckyTex = new GLTexture(input1.mSize,WorkingTexture.mFormat,null);
+        GLTexture luckyTex = new GLTexture(input1.mSize,workingTexture.mFormat,(Buffer) null);
         glProg.drawBlocks(luckyTex);
         GLUtils glUtils = new GLUtils(glOne.glProcessing);
         //WorkingTexture = glUtils.gaussdown( glUtils.gaussdown(luckyTex,8),8);
-        WorkingTexture =  glUtils.gaussdown(luckyTex,64);
-        glOne.glProgram.drawBlocks(WorkingTexture);
+        workingTexture =  glUtils.gaussdown(luckyTex,64);
+        glOne.glProgram.drawBlocks(workingTexture);
         glOne.glProcessing.drawBlocksToOutput();
         glOne.glProgram.close();
         glOne.glProcessing.close();
-        Output = glOne.glProcessing.mOutBuffer;
-        for(int i =0; i<Output.remaining();i++){
-            out+=((long)Output.get(i)) + 128;
+        output = glOne.glProcessing.mOutBuffer;
+        for(int i =0; i<output.remaining();i++){
+            out+=((long)output.get(i)) + 128;
         }
-        WorkingTexture.close();
+        workingTexture.close();
         Log.d("LuckyOperator","Result:"+out);
     }
 

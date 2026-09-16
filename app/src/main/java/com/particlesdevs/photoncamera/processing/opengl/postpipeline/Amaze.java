@@ -95,12 +95,12 @@ public class Amaze extends Node {
 
     @Override
     public void Run() {
-        inTex = previousNode.WorkingTexture;
+        inTex = previousNode.workingTexture;
         imgW = inTex.mSize.x;
         imgH = inTex.mSize.y;
         window = new Point(TILE + 2 * BORDER + 2 * PAD, TILE + 2 * BORDER + 2 * PAD);
         inner = new Point(PAD + BORDER, PAD + BORDER);
-        WorkingTexture = basePipeline.main3;
+        workingTexture = basePipeline.main3;
 
         cfa = alloc(window, 1);
         grad = alloc(window, 4);
@@ -146,7 +146,7 @@ public class Amaze extends Node {
         greenD3.close();
         dgrb01.close();
 
-        WorkingTexture = basePipeline.swap3();
+        workingTexture = basePipeline.swap3();
     }
 
     private void runTile(int ox, int oy) {
@@ -271,7 +271,7 @@ public class Amaze extends Node {
         glProg.setVar("u_outoff", ox, oy);
         glProg.setTexture("u_chroma", dgrb01);
         glProg.setTexture("u_hvwt", hvwt3);
-        glProg.setTextureCompute("img_out", WorkingTexture, true);
+        glProg.setTextureCompute("img_out", workingTexture, true);
         dispatch(new Point(tw, th));
     }
 }

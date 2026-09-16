@@ -26,17 +26,17 @@ public class BayerBilateral extends Node {
         float noiseO = modeler.computeModel[0].second.floatValue()+
                 modeler.computeModel[1].second.floatValue()+
                 modeler.computeModel[2].second.floatValue();
-        noiseS/=3.f;
-        noiseO/=3.f;
+        noiseS/=3.0f;
+        noiseO/=3.0f;
         Log.d(Name,"NoiseS:"+noiseS+", NoiseO:"+noiseO);
         glProg.setDefine("NOISES",noiseS);
         glProg.setDefine("NOISEO",noiseO);
         glProg.setDefine("INTENSE", (float) basePipeline.mSettings.noiseRstr);
-        glProg.setDefine("INSIZE",previousNode.WorkingTexture.mSize);
+        glProg.setDefine("INSIZE",previousNode.workingTexture.mSize);
         glProg.useProgram("BayerBilateral/bayerbilateral");
-        glProg.setTexture("InputBuffer",previousNode.WorkingTexture);
-        WorkingTexture = basePipeline.getMain();
-        glProg.drawBlocks(WorkingTexture);
+        glProg.setTexture("InputBuffer",previousNode.workingTexture);
+        workingTexture = basePipeline.getMain();
+        glProg.drawBlocks(workingTexture);
         glProg.closed = true;
     }
 }

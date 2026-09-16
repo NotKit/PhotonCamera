@@ -84,7 +84,7 @@ public class Bayer2Float extends Node {
                 float[] wp = basePipeline.mParameters.whitePoint;
                 if (wp != null) {
                     for (int c = 0; c < 3; c++) {
-                        if (wp[c] > 0.f && wp[c] < 1.f) clipLevel = Math.max(clipLevel, 1.f / wp[c]);
+                        if (wp[c] > 0.0f && wp[c] < 1.0f) clipLevel = Math.max(clipLevel, 1.0f / wp[c]);
                     }
                 }
                 postPipeline.rawClipLevel = clipLevel;
@@ -137,7 +137,7 @@ public class Bayer2Float extends Node {
         glProg.setVar("blackLevel", basePipeline.mParameters.blackLevel);
         if (hlChroma != null) glProg.setVar("Chrominance", hlChroma);
         Log.d(Name, "CfaPattern:" + basePipeline.mParameters.cfaPattern);
-        postPipeline.regenerationSense = 10.f;
+        postPipeline.regenerationSense = 10.0f;
         int minimal = -1;
         for (int i = 0; i < basePipeline.mParameters.whitePoint.length; i++) {
             if (i == 1) continue;
@@ -146,17 +146,17 @@ public class Bayer2Float extends Node {
                 minimal = i;
             }
         }
-        if (basePipeline.mParameters.cfaPattern == 4) postPipeline.regenerationSense = 1.f;
-        postPipeline.regenerationSense = 1.f / postPipeline.regenerationSense;
-        postPipeline.regenerationSense = 1.f;
+        if (basePipeline.mParameters.cfaPattern == 4) postPipeline.regenerationSense = 1.0f;
+        postPipeline.regenerationSense = 1.0f / postPipeline.regenerationSense;
+        postPipeline.regenerationSense = 1.0f;
         Log.d(Name, "Regeneration:" + postPipeline.regenerationSense);
         glProg.setVar("Regeneration", postPipeline.regenerationSense);
         glProg.setVar("MinimalInd", minimal);
         Point wsize = new Point(basePipeline.mParameters.rawSize);
         basePipeline.main2 = new GLTexture(wsize, new GLFormat(GLFormat.DataType.FLOAT_16, GLDrawParams.WorkDim), null, GL_LINEAR, GL_CLAMP_TO_EDGE);
-        WorkingTexture = basePipeline.main2;
+        workingTexture = basePipeline.main2;
 
-        glProg.drawBlocks(WorkingTexture);
+        glProg.drawBlocks(workingTexture);
         basePipeline.main1 = new GLTexture(wsize, new GLFormat(GLFormat.DataType.FLOAT_16, GLDrawParams.WorkDim), null, GL_LINEAR, GL_CLAMP_TO_EDGE);
         basePipeline.main3 = new GLTexture(wsize, new GLFormat(GLFormat.DataType.FLOAT_16, GLDrawParams.WorkDim), null, GL_LINEAR, GL_CLAMP_TO_EDGE);
         ((PostPipeline) basePipeline).GainMap = GainMapTex;

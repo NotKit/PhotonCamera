@@ -35,10 +35,10 @@ public class ColorCorrectionTransform {
     public float[] combineMatrix(float[] whitePoint) {
         float combineK = (whitePoint[0] + whitePoint[1]) / whitePoint[2];
         combineK -= ((point2[0] + point2[1]) / point2[2]);
-        combineK *= 1.0 / (((point1[0] + point1[1]) / point1[2]) - ((point2[0] + point2[1]) / point2[2]));
+        combineK *= (float) (1.0 / (((point1[0] + point1[1]) / point1[2]) - ((point2[0] + point2[1]) / point2[2])));
         float[] outp = new float[9];
         for (int i = 0; i < 9; i++) {
-            outp[i] = matrix2[i] * (1.f - combineK) + matrix[i] * combineK;
+            outp[i] = matrix2[i] * (1.0f - combineK) + matrix[i] * combineK;
         }
         return outp;
     }

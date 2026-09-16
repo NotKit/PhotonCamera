@@ -24,15 +24,16 @@ public class ContrastLimitedSharpening extends Node {
     public void Run() {
         sharpSize = getTuning("SharpSize", sharpSize);
         glProg.useAssetProgram("lsharpening");
-        float sharpnessLevel = (float) Math.sqrt((CaptureController.mCaptureResult.get(CaptureResult.SENSOR_SENSITIVITY)) * IsoExpoSelector.getMPY() - 50.) / 14.2f;
+        int iso = CaptureController.mCaptureResult.get(CaptureResult.SENSOR_SENSITIVITY);
+        float sharpnessLevel = (float) Math.sqrt(iso * IsoExpoSelector.getMPY() - 50.) / 14.2f;
         sharpnessLevel = Math.max(0.5f, sharpnessLevel);
         sharpnessLevel = Math.min(1.5f, sharpnessLevel);
         Log.d("PostNode:" + Name, "sharpnessLevel:" + sharpnessLevel + " iso:" + CaptureController.mCaptureResult.get(CaptureResult.SENSOR_SENSITIVITY));
         glProg.setVar("size", sharpSize);
         glProg.setVar("strength", PreferenceKeys.getSharpnessValue());
-        glProg.setTexture("InputBuffer", previousNode.WorkingTexture);
-        WorkingTexture = basePipeline.getMain();
-        glProg.drawBlocks(WorkingTexture);
+        glProg.setTexture("InputBuffer", previousNode.workingTexture);
+        workingTexture = basePipeline.getMain();
+        glProg.drawBlocks(workingTexture);
         glProg.closed = true;
     }
 }

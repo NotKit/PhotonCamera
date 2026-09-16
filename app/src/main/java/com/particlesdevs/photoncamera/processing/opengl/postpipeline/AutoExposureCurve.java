@@ -1,6 +1,7 @@
     package com.particlesdevs.photoncamera.processing.opengl.postpipeline;
 
     import android.graphics.Point;
+    import java.util.Arrays;
     import com.particlesdevs.photoncamera.processing.opengl.GLFormat;
     import com.particlesdevs.photoncamera.processing.opengl.GLTexture;
     import com.particlesdevs.photoncamera.processing.opengl.nodes.Node;
@@ -117,9 +118,9 @@
             float[] sensorWP = basePipeline.mParameters.whitePoint;
             float[] extent = new float[3];
             for (int c = 0; c < 3; c++) {
-                extent[c] = sensorWP != null && sensorWP[c] > 0.f && sensorWP[c] < 1.f
-                        ? 1.f / sensorWP[c] : 1.f;
-                histogram.exposure[c] = 1.f / extent[c];
+                extent[c] = sensorWP != null && sensorWP[c] > 0.0f && sensorWP[c] < 1.0f
+                        ? 1.0f / sensorWP[c] : 1.0f;
+                histogram.exposure[c] = 1.0f / extent[c];
             }
             // Green sites are inpainted from the R/B opposed colours, so G's
             // reconstruction ceiling is the cube-space mean of the R/B
@@ -129,14 +130,14 @@
             float gCeiling = (float) Math.pow((Math.cbrt(extent[0]) + Math.cbrt(extent[2])) * 0.5, 3.0);
             if (gCeiling > extent[1]) {
                 extent[1] = gCeiling;
-                histogram.exposure[1] = 1.f / gCeiling;
+                histogram.exposure[1] = 1.0f / gCeiling;
             }
             Log.d(Name, "Histogram extent:" + extent[0] + "," + extent[1] + "," + extent[2]
                     + " exposure:" + histogram.exposure[0] + "," + histogram.exposure[1] + "," + histogram.exposure[2]
-                    + " whitePoint:" + (sensorWP != null ? sensorWP[0] + "," + sensorWP[1] + "," + sensorWP[2] : "null"));
+                    + " whitePoint:" + (sensorWP != null ? Arrays.toString(sensorWP) : "null"));
             int[][] result;
             try {
-                result = histogram.Compute(previousNode.WorkingTexture);
+                result = histogram.Compute(previousNode.workingTexture);
             } finally {
                 histogram.close();
             }
@@ -261,7 +262,7 @@
                     new GLFormat(GLFormat.DataType.FLOAT_16), BufferUtils.getFrom(curve),
                     GL_LINEAR, GL_CLAMP_TO_EDGE);
 
-            WorkingTexture = previousNode.WorkingTexture;
+            workingTexture = previousNode.workingTexture;
             glProg.closed = true;
         }
 
@@ -338,7 +339,8 @@
         }
 
         /** Applies the noise and max gain clamps to the estimated multiplier. */
-        private float clampGain(float mpy) {
+        private float clampGain(float gain) {
+            float mpy = gain;
             float gainNoiseMax = (float) (noiseMax / Math.sqrt(basePipeline.noiseS * 0.5 + basePipeline.noiseO));
             gainNoiseMax = Math.max(gainNoiseMax, 1.0f);
             if (mpy > gainNoiseMax) {

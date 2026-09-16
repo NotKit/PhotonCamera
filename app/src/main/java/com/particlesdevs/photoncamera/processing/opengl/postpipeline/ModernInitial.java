@@ -38,16 +38,16 @@ public class ModernInitial extends Node {
             description = "Extra S-curve on top of the contrast slider; 0 (default) keeps the raw-editor linear match")
     float baseContrast = 0.0f;
 
-    GLTexture HSVTexture;
-    GLTexture LookupTexture;
+    GLTexture hsvTexture;
+    GLTexture lookupTexture;
 
     @Override
     public void Compile() {}
 
     @Override
     public void AfterRun() {
-        if (HSVTexture != null) HSVTexture.close();
-        if (LookupTexture != null) LookupTexture.close();
+        if (hsvTexture != null) hsvTexture.close();
+        if (lookupTexture != null) lookupTexture.close();
         if(((PostPipeline)basePipeline).exposureCurve != null) {
             ((PostPipeline)basePipeline).exposureCurve.close();
             ((PostPipeline)basePipeline).exposureCurve = null;
@@ -60,12 +60,12 @@ public class ModernInitial extends Node {
         // demosaic/denoise/ABLC) so the Ultra HDR gain-map pass can measure
         // the pre-local-tone-map scene.
         if (((PostPipeline) basePipeline).captureDemosaic) {
-            ((PostPipeline) basePipeline).captureDemosaicLinear(super.previousNode.WorkingTexture);
+            ((PostPipeline) basePipeline).captureDemosaicLinear(super.previousNode.workingTexture);
         }
 
         float sat = (float) basePipeline.mSettings.saturation;
         if(basePipeline.mSettings.cfaPattern == 4) {
-            sat = 0.f; //MONO
+            sat = 0.0f; //MONO
         }
         glProg.setDefine("SATURATION",sat);
         glProg.setDefine("CONTRAST", (float) basePipeline.mSettings.contrastMpy);
@@ -77,9 +77,9 @@ public class ModernInitial extends Node {
         boolean aeCurve = ((PostPipeline)basePipeline).exposureCurve != null;
         if(aeCurve) glProg.setDefine("EXPOCURVE", 1);
         //DCP profile tables
-        if (basePipeline.mParameters.HSVMap != null)
+        if (basePipeline.mParameters.hsvMap != null)
             glProg.setDefine("USE_HSV", 1);
-        if (basePipeline.mParameters.LookMap != null)
+        if (basePipeline.mParameters.lookMap != null)
             glProg.setDefine("LOOKUP", 1);
         glProg.useAssetProgram("Initial/modern");
 
@@ -93,7 +93,7 @@ public class ModernInitial extends Node {
         glProg.setVar("intermediateToSRGB",cct);
         glProg.setVar("activeSize",2,2,basePipeline.mParameters.sensorPix.right-basePipeline.mParameters.sensorPix.left-2,
                 basePipeline.mParameters.sensorPix.bottom-basePipeline.mParameters.sensorPix.top-2);
-        glProg.setTexture("InputBuffer",super.previousNode.WorkingTexture);
+        glProg.setTexture("InputBuffer",super.previousNode.workingTexture);
         glProg.setTexture("GainMap", ((PostPipeline)basePipeline).GainMap);
         //setVar resolves locations on the active program: only valid after
         //useAssetProgram above.
@@ -101,14 +101,14 @@ public class ModernInitial extends Node {
             glProg.setVar("adaptiveWhitePoint", ((PostPipeline)basePipeline).adaptiveWhitePoint);
             glProg.setTexture("ExposureCurve",((PostPipeline)basePipeline).exposureCurve);
         }
-        if (basePipeline.mParameters.HSVMap != null) {
-            HSVTexture = new GLTexture(new Point(basePipeline.mParameters.HSVMapSize[1], basePipeline.mParameters.HSVMapSize[0]), new GLFormat(GLFormat.DataType.FLOAT_32, 3), BufferUtils.getFrom(basePipeline.mParameters.HSVMap), GL_LINEAR, GL_CLAMP_TO_EDGE);
-            glProg.setTexture("HSVMap", HSVTexture);
+        if (basePipeline.mParameters.hsvMap != null) {
+            hsvTexture = new GLTexture(new Point(basePipeline.mParameters.hsvMapSize[1], basePipeline.mParameters.hsvMapSize[0]), new GLFormat(GLFormat.DataType.FLOAT_32, 3), BufferUtils.getFrom(basePipeline.mParameters.hsvMap), GL_LINEAR, GL_CLAMP_TO_EDGE);
+            glProg.setTexture("HSVMap", hsvTexture);
         }
-        if (basePipeline.mParameters.LookMap != null) {
-            LookupTexture = new GLTexture(new Point(basePipeline.mParameters.LookMapSize[2] * basePipeline.mParameters.LookMapSize[1], basePipeline.mParameters.LookMapSize[0]), new GLFormat(GLFormat.DataType.FLOAT_32, 3), BufferUtils.getFrom(basePipeline.mParameters.LookMap), GL_LINEAR, GL_CLAMP_TO_EDGE);
-            glProg.setTexture("LookMap", LookupTexture);
+        if (basePipeline.mParameters.lookMap != null) {
+            lookupTexture = new GLTexture(new Point(basePipeline.mParameters.lookMapSize[2] * basePipeline.mParameters.lookMapSize[1], basePipeline.mParameters.lookMapSize[0]), new GLFormat(GLFormat.DataType.FLOAT_32, 3), BufferUtils.getFrom(basePipeline.mParameters.lookMap), GL_LINEAR, GL_CLAMP_TO_EDGE);
+            glProg.setTexture("LookMap", lookupTexture);
         }
-        WorkingTexture = basePipeline.getMain();
+        workingTexture = basePipeline.getMain();
     }
 }

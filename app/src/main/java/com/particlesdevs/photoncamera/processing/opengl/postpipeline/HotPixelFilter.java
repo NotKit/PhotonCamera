@@ -18,17 +18,17 @@ public class HotPixelFilter extends Node {
     public void Run() {
         glProg.setLayout(tile,tile,1);
         int tileSize = 7;
-        glProg.setDefine("OUTSET",previousNode.WorkingTexture.mSize);
+        glProg.setDefine("OUTSET",previousNode.workingTexture.mSize);
         glProg.setDefine("TILE",tileSize);
         glProg.setDefine("NOISEO",basePipeline.noiseO);
         glProg.setDefine("NOISES",basePipeline.noiseS);
         glProg.setDefine("IMPULSE",5.0f);
         glProg.useAssetProgram("HotPixelFilter/hotpixels",true);
-        glProg.setTextureCompute("inTexture",previousNode.WorkingTexture,false);
-        WorkingTexture = previousNode.WorkingTexture;
-        glProg.setTextureCompute("outTexture",WorkingTexture,true);
+        glProg.setTextureCompute("inTexture",previousNode.workingTexture,false);
+        workingTexture = previousNode.workingTexture;
+        glProg.setTextureCompute("outTexture",workingTexture,true);
         for(int i =0; i<5;i++)
-            glProg.computeManual(WorkingTexture.mSize.x/(8*tileSize),WorkingTexture.mSize.y/(8*tileSize),3);
+            glProg.computeManual(workingTexture.mSize.x/(8*tileSize),workingTexture.mSize.y/(8*tileSize),3);
         glProg.closed = true;
     }
 }

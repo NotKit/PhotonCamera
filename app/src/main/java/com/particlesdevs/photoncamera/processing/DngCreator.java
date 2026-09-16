@@ -1,5 +1,7 @@
 package com.particlesdevs.photoncamera.processing;
 
+import android.graphics.Point;
+import android.graphics.Rect;
 import android.media.Image;
 import android.os.Build;
 
@@ -11,7 +13,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
-import de.hdodenhof.circleimageview.BuildConfig;
+import com.particlesdevs.photoncamera.BuildConfig;
 
 public class DngCreator {
     private long nativePtr;
@@ -446,7 +448,7 @@ public class DngCreator {
     double[] toDouble(float[] array) {
         double[] result = new double[array.length];
         for (int i = 0; i < array.length; i++) {
-            result[i] = array[i];
+            result[i] = (double) array[i];
         }
         return result;
     }
@@ -491,22 +493,24 @@ public class DngCreator {
         setWhiteLevel(parameters.whiteLevel);
         setCalibrationIlluminant1((short) parameters.calibrationIlluminant1);
         setCalibrationIlluminant2((short) parameters.calibrationIlluminant2);
-        setColorMatrix1(toDouble(parameters.ColorMatrix1));
-        setColorMatrix2(toDouble(parameters.ColorMatrix2));
-        setForwardMatrix1(toDouble(parameters.ForwardTransform1));
-        setForwardMatrix2(toDouble(parameters.ForwardTransform2));
+        setColorMatrix1(toDouble(parameters.colorMatrix1));
+        setColorMatrix2(toDouble(parameters.colorMatrix2));
+        setForwardMatrix1(toDouble(parameters.forwardTransform1));
+        setForwardMatrix2(toDouble(parameters.forwardTransform2));
         setCameraCalibration1(toDouble(parameters.calibrationTransform1));
         setCameraCalibration2(toDouble(parameters.calibrationTransform2));
         setAsShotNeutral(toDouble(parameters.whitePoint));
-        setCFAPattern(parameters.cfaPattern);
+        setCFAPattern((int) parameters.cfaPattern);
         setOrientation(parameters.cameraRotation/90);
+        final Rect sensorPix = parameters.sensorPix;
+        final Point mapSize = parameters.mapSize;
         setGainMap(parameters.gainMap,
-                   parameters.sensorPix.top,
-                   parameters.sensorPix.left,
-                   parameters.sensorPix.bottom,
-                   parameters.sensorPix.right,
-                   parameters.mapSize.x,
-                   parameters.mapSize.y);
+                   sensorPix.top,
+                   sensorPix.left,
+                   sensorPix.bottom,
+                   sensorPix.right,
+                   mapSize.x,
+                   mapSize.y);
     }
 
     /**
@@ -555,12 +559,8 @@ public class DngCreator {
     }
 
     @Override
-    protected void finalize() throws Throwable {
-        try {
-            close();
-        } finally {
-            super.finalize();
-        }
+    protected void finalize() {
+        close();
     }
 
     static {

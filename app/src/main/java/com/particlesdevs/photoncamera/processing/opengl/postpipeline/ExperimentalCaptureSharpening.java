@@ -28,21 +28,21 @@ public class ExperimentalCaptureSharpening extends Node {
 
     @Override
     public void Run() {
-        GLTexture input = previousNode.WorkingTexture;
+        GLTexture input = previousNode.workingTexture;
         int selectedIterations = Math.max(0, Math.min(iterations, MAX_ITERATIONS));
         if (debugResponse == 0 && selectedIterations == 0) {
-            WorkingTexture = input;
+            workingTexture = input;
             glProg.closed = true;
             return;
         }
 
         if (debugResponse == 1) {
-            WorkingTexture = basePipeline.getMain();
+            workingTexture = basePipeline.getMain();
             glProg.useAssetProgram("capturesharpen/capturesharpen");
             glProg.setTexture("OriginalBuffer", input);
             glProg.setVar("contrastThreshold", contrastThreshold);
             glProg.setVar("operation", 2);
-            glProg.drawBlocks(WorkingTexture);
+            glProg.drawBlocks(workingTexture);
             glProg.closed = true;
             return;
         }
@@ -72,13 +72,13 @@ public class ExperimentalCaptureSharpening extends Node {
             correction.close();
         }
 
-        WorkingTexture = basePipeline.getMain();
+        workingTexture = basePipeline.getMain();
         glProg.useAssetProgram("capturesharpen/capturesharpen");
         glProg.setTexture("OriginalBuffer", input);
         glProg.setTexture("EstimateBuffer", estimate);
         glProg.setVar("contrastThreshold", contrastThreshold);
         glProg.setVar("operation", 1);
-        glProg.drawBlocks(WorkingTexture);
+        glProg.drawBlocks(workingTexture);
         estimate.close();
         glProg.closed = true;
     }

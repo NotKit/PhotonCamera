@@ -50,7 +50,7 @@ public class CorrectingFlow extends Node {
          */
         Log.d(Name,"Input:"+ Arrays.toString(parsedFlow));
         for(int i =0; i<parsedFlow.length;i++){
-            parsedFlow[i]/=basePipeline.mParameters.rawSize.x/4.0;
+            parsedFlow[i]/=(float)(basePipeline.mParameters.rawSize.x/4.0);
         }
 
 
@@ -95,9 +95,9 @@ public class CorrectingFlow extends Node {
 
         if(basePipeline.mParameters.sensorSpecifics == null ||
                 basePipeline.mParameters.sensorSpecifics.aberrationCorrection == null ||
-                basePipeline.mParameters.sensorSpecifics.aberrationCorrection[0] == 0.0
-                        && basePipeline.mParameters.sensorSpecifics.aberrationCorrection[1] == 0.0) {
-            WorkingTexture = previousNode.WorkingTexture;
+                basePipeline.mParameters.sensorSpecifics.aberrationCorrection[0] == 0.0f
+                        && basePipeline.mParameters.sensorSpecifics.aberrationCorrection[1] == 0.0f) {
+            workingTexture = previousNode.workingTexture;
             glProg.closed = true;
             return;
         }
@@ -110,11 +110,11 @@ public class CorrectingFlow extends Node {
         glProg.setDefine("GC",correction[4],correction[5]);
         glProg.setDefine("BC",correction[6],correction[7]);
         glProg.useAssetProgram("CorrectingFlow/correctingflow");
-        glProg.setTexture("InputBuffer",previousNode.WorkingTexture);
+        glProg.setTexture("InputBuffer",previousNode.workingTexture);
         //glProg.setTexture("CorrectingFlowRG", correctingFlowRG);
         //glProg.setTexture("CorrectingFlowB", correctingFlowB);
-        WorkingTexture = basePipeline.getMain();
-        glProg.drawBlocks(WorkingTexture);
+        workingTexture = basePipeline.getMain();
+        glProg.drawBlocks(workingTexture);
         glProg.closed = true;
     }
 }

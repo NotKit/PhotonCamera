@@ -18,7 +18,7 @@ public class BinnedDemosaic extends Node {
 
     @Override
     public void Run() {
-        glProg.setTexture("InputBuffer", previousNode.WorkingTexture);
+        glProg.setTexture("InputBuffer", previousNode.workingTexture);
         for(int i =0; i<4;i++){
             basePipeline.mParameters.blackLevel[i]/=basePipeline.mParameters.whiteLevel*((PostPipeline)basePipeline).regenerationSense;
         }
@@ -26,8 +26,8 @@ public class BinnedDemosaic extends Node {
                 FloatBuffer.wrap(basePipeline.mParameters.gainMap),GL_LINEAR,GL_CLAMP_TO_EDGE);
         glProg.setVar("blackLevel",basePipeline.mParameters.blackLevel);
         glProg.setTexture("GainMap",GainMapTex);
-        WorkingTexture = basePipeline.main3;
-        glProg.drawBlocks(WorkingTexture);
+        workingTexture = basePipeline.main3;
+        glProg.drawBlocks(workingTexture);
         glProg.closed = true;
         GainMapTex.close();
     }

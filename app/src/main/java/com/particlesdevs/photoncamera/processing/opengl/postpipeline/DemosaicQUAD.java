@@ -12,8 +12,8 @@ public class DemosaicQUAD extends Node {
     @Override
     public void Compile() {}
     float gradSize = 1.5f;
-    float fuseMin = 0.f;
-    float fuseMax = 1.f;
+    float fuseMin = 0.0f;
+    float fuseMax = 1.0f;
     float fuseShift = -0.3f;
     float fuseMpy = 0.0f;
     @Override
@@ -24,7 +24,7 @@ public class DemosaicQUAD extends Node {
         fuseShift = getTuning("FuseShift",fuseShift);
         fuseMpy = getTuning("FuseMpy",fuseMpy);
         GLTexture glTexture;
-        glTexture = previousNode.WorkingTexture;
+        glTexture = previousNode.workingTexture;
         //Gradients
         glProg.useAssetProgram("demosaic/demosaicp0quad");
         glProg.setTexture("RawBuffer", glTexture);
@@ -44,12 +44,12 @@ public class DemosaicQUAD extends Node {
         glProg.setDefine("NOISES",basePipeline.noiseS);
         glProg.setDefine("NOISEO",basePipeline.noiseO);
         glProg.useAssetProgram("demosaic/demosaicp12quad");
-        glProg.setTexture("RawBuffer",previousNode.WorkingTexture);
+        glProg.setTexture("RawBuffer",previousNode.workingTexture);
         glProg.setTexture("GradBuffer",basePipeline.main3);
         glProg.setVar("CfaPattern", basePipeline.mParameters.cfaPattern);
-        GLTexture prev = previousNode.WorkingTexture;
+        GLTexture prev = previousNode.workingTexture;
         outp = basePipeline.main1;
-        if(basePipeline.main1 == previousNode.WorkingTexture){
+        if(basePipeline.main1 == previousNode.workingTexture){
             outp = basePipeline.main2;
         }
         glProg.drawBlocks(outp);
@@ -61,8 +61,8 @@ public class DemosaicQUAD extends Node {
         glProg.setTexture("GreenBuffer", outp);
         glProg.setVar("whitePoint",basePipeline.mParameters.whitePoint);
         glProg.setVar("CfaPattern", basePipeline.mParameters.cfaPattern);
-        WorkingTexture = basePipeline.main3;
-        glProg.drawBlocks(WorkingTexture);
+        workingTexture = basePipeline.main3;
+        glProg.drawBlocks(workingTexture);
         glProg.close();
     }
 }

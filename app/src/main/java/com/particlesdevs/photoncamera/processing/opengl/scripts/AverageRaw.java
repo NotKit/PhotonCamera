@@ -6,7 +6,7 @@ import com.particlesdevs.photoncamera.processing.opengl.GLDrawParams;
 import com.particlesdevs.photoncamera.processing.render.Parameters;
 import com.particlesdevs.photoncamera.util.Log;
 
-import com.particlesdevs.photoncamera.processing.processor.UnlimitedProcessor;
+import com.particlesdevs.photoncamera.processing.processor.ProcessorBase;
 import com.particlesdevs.photoncamera.processing.opengl.GLCoreBlockProcessing;
 import com.particlesdevs.photoncamera.processing.opengl.GLFormat;
 import com.particlesdevs.photoncamera.processing.opengl.GLOneScript;
@@ -145,7 +145,7 @@ public class AverageRaw extends GLOneScript {
         } else {
             glProg.setTexture("InputBuffer", first);
         }
-        glProg.setVar("whiteLevel",UnlimitedProcessor.FAKE_WL);
+        glProg.setVar("whiteLevel",ProcessorBase.FAKE_WL);
         glProg.setVar("blackLevel", new float[]{0.0f,0.0f,0.0f,0.0f});
         glProg.setVar("WhiteBalance", 1.0f/wBalance[0], 1.0f/wBalance[1], 1.0f/wBalance[2], 1.0f/wBalance[3]);
         //in1 = WorkingTexture;
@@ -159,7 +159,7 @@ public class AverageRaw extends GLOneScript {
         glProg.close();
         input.close();
         first = null;
-        Output = glOne.glProcessing.mOutBuffer;
+        output = glOne.glProcessing.mOutBuffer;
     }
 
 }

@@ -19,15 +19,15 @@ public class DirectedMedian extends Node {
     public void Run() {
         GLTexture grad;
         grad = basePipeline.main3;
-        glUtils.ConvDiff(previousNode.WorkingTexture, grad, 0.f);
+        glUtils.ConvDiff(previousNode.workingTexture, grad, 0.0f);
         {
             glProg.setDefine("INTENSE", (float) basePipeline.mSettings.noiseRstr);
-            glProg.setDefine("INSIZE", previousNode.WorkingTexture.mSize);
+            glProg.setDefine("INSIZE", previousNode.workingTexture.mSize);
             glProg.useAssetProgram("DirectedMedian/directedmedian");
-            glProg.setTexture("InputBuffer", previousNode.WorkingTexture);
+            glProg.setTexture("InputBuffer", previousNode.workingTexture);
             glProg.setTexture("GradBuffer", grad);
-            WorkingTexture = basePipeline.getMain();
-            glProg.drawBlocks(WorkingTexture);
+            workingTexture = basePipeline.getMain();
+            glProg.drawBlocks(workingTexture);
         }
         glProg.closed = true;
     }

@@ -168,8 +168,8 @@ public class Converter {
         float[] neutralGuess = new float[3];
         float[] interpolationXYZToCamera = new float[9];
         float[] interpolationXYZToCameraInverse = new float[9];
-        double lower = Math.min(colorTemperature1, colorTemperature2);
-        double upper = Math.max(colorTemperature1, colorTemperature2);
+        double lower = (double) Math.min(colorTemperature1, colorTemperature2);
+        double upper = (double) Math.max(colorTemperature1, colorTemperature2);
         if (DEBUG) {
             Log.d(TAG, "calibrationTransform1: " + Arrays.toString(calibrationTransform1));
             Log.d(TAG, "colorMatrix1: " + Arrays.toString(colorMatrix1));
@@ -190,7 +190,7 @@ public class Converter {
                         "Cannot invert XYZ to Camera matrix, input matrices are invalid." + Arrays.toString(interpolationXYZToCamera) + " " + Arrays.toString(interpolationXYZToCameraInverse));
             }
             map(interpolationXYZToCameraInverse, cameraNeutral, /*out*/neutralGuess);
-            calculateCIExyCoordinates(neutralGuess[0], neutralGuess[1], neutralGuess[2], /*out*/xy);
+            calculateCIExyCoordinates((double) neutralGuess[0], (double) neutralGuess[1], (double) neutralGuess[2], /*out*/xy);
             double colorTemperature = calculateColorTemperature(xy[0], xy[1]);
             if (colorTemperature <= lower) {
                 interpolationFactor = 1;
@@ -280,15 +280,15 @@ public class Converter {
      * @param output set the output to be the inverse of m.
      */
     public static boolean invert(float[] m, /*out*/float[] output) {
-        double a00 = m[0];
-        double a01 = m[1];
-        double a02 = m[2];
-        double a10 = m[3];
-        double a11 = m[4];
-        double a12 = m[5];
-        double a20 = m[6];
-        double a21 = m[7];
-        double a22 = m[8];
+        double a00 = (double) m[0];
+        double a01 = (double) m[1];
+        double a02 = (double) m[2];
+        double a10 = (double) m[3];
+        double a11 = (double) m[4];
+        double a12 = (double) m[5];
+        double a20 = (double) m[6];
+        double a21 = (double) m[7];
+        double a22 = (double) m[8];
         double t00 = a11 * a22 - a21 * a12;
         double t01 = a21 * a02 - a01 * a22;
         double t02 = a01 * a12 - a11 * a02;
@@ -346,7 +346,7 @@ public class Converter {
 
     public static void lerp(float[] a, float[] b, double f, /*out*/float[] result) {
         for (int i = 0; i < 9; i++) {
-            result[i] = (float) lerp(a[i], b[i], f);
+            result[i] = (float) lerp((double) a[i], (double) b[i], (double) f);
         }
     }
 

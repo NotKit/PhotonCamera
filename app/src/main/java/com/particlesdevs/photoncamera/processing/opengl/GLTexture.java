@@ -10,11 +10,32 @@ import androidx.annotation.NonNull;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
-import static android.opengl.GLES31.*;
+import static android.opengl.GLES31.GL_CLAMP_TO_EDGE;
+import static android.opengl.GLES31.GL_COLOR_ATTACHMENT0;
+import static android.opengl.GLES31.GL_FLOAT;
+import static android.opengl.GLES31.GL_FRAMEBUFFER;
+import static android.opengl.GLES31.GL_LINEAR;
+import static android.opengl.GLES31.GL_TEXTURE1;
+import static android.opengl.GLES31.GL_TEXTURE_2D;
+import static android.opengl.GLES31.GL_TEXTURE_MAG_FILTER;
+import static android.opengl.GLES31.GL_TEXTURE_MIN_FILTER;
+import static android.opengl.GLES31.GL_TEXTURE_WRAP_S;
+import static android.opengl.GLES31.GL_TEXTURE_WRAP_T;
+import static android.opengl.GLES31.glActiveTexture;
+import static android.opengl.GLES31.glBindFramebuffer;
+import static android.opengl.GLES31.glBindTexture;
+import static android.opengl.GLES31.glDeleteBuffers;
+import static android.opengl.GLES31.glDeleteTextures;
+import static android.opengl.GLES31.glFramebufferTexture2D;
+import static android.opengl.GLES31.glGenFramebuffers;
+import static android.opengl.GLES31.glGenTextures;
+import static android.opengl.GLES31.glReadPixels;
+import static android.opengl.GLES31.glTexImage2D;
+import static android.opengl.GLES31.glTexParameteri;
+import static android.opengl.GLES31.glTexStorage2D;
+import static android.opengl.GLES31.glTexSubImage2D;
+import static android.opengl.GLES31.glViewport;
 import static com.particlesdevs.photoncamera.processing.opengl.GLCoreBlockProcessing.checkEglError;
-import static javax.microedition.khronos.opengles.GL11.GL_TEXTURE_2D;
-import static javax.microedition.khronos.opengles.GL11.GL_TEXTURE_MAG_FILTER;
-import static javax.microedition.khronos.opengles.GL11.GL_TEXTURE_MIN_FILTER;
 
 public class GLTexture implements AutoCloseable {
     public Point mSize;

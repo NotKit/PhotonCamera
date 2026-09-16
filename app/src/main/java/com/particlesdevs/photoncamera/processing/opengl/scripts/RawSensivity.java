@@ -28,7 +28,7 @@ public class RawSensivity extends GLOneScript {
         Log.d(Name,"whitelevel old:"+oldWhiteLevel);
         Log.d(Name,"whitelevel sensivity:"+sensitivity);
         glProg.setVar("sensivity",sensitivity);
-        WorkingTexture = new GLTexture(inp);
+        workingTexture = new GLTexture(inp);
     }
 
     @Override

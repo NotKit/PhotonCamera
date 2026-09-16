@@ -55,10 +55,10 @@ public class Sharpen2 extends Node {
         glProg.setVar("size", sharpSize);
         float sharpness = Math.max(PreferenceKeys.getSharpnessValue(), 0.0f);
         glProg.setVar("strength", sharpness);
-        glProg.setTexture("InputBuffer", previousNode.WorkingTexture);
-        glProg.setTexture("BlurBuffer",previousNode.WorkingTexture);
-        WorkingTexture = basePipeline.getMain();
-        glProg.drawBlocks(WorkingTexture);
+        glProg.setTexture("InputBuffer", previousNode.workingTexture);
+        glProg.setTexture("BlurBuffer",previousNode.workingTexture);
+        workingTexture = basePipeline.getMain();
+        glProg.drawBlocks(workingTexture);
         glProg.closed = true;
     }
 }

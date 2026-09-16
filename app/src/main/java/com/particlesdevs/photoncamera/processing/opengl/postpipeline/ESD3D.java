@@ -27,7 +27,7 @@ public class ESD3D extends Node {
     @Tunable(title = "Noise Target", category = "Denoise", max = 0.1f, defaultValue = 0.00390625f, step = 0.0001f,
             description = "Target noise level to map to minimum kernel size (1/256 = 0.00390625)"
     )
-    float noiseTarget = 1.0f/256.f;
+    float noiseTarget = 1.0f/256.0f;
     
     @Tunable(title = "Luma", category = "Denoise", max = 2.0f, defaultValue = 0.8f,
             description = "Luma strength multiplier for denoising"
@@ -52,7 +52,7 @@ public class ESD3D extends Node {
     @Override
     public void Run() {
         if (!enable) {
-            WorkingTexture = previousNode.WorkingTexture;
+            workingTexture = previousNode.workingTexture;
             return;
         }
         // Values are automatically injected in BeforeRun()!
@@ -68,8 +68,8 @@ public class ESD3D extends Node {
             //grad = basePipeline.getMain();
             WorkingTexture = basePipeline.main3;
         }*/
-        //glUtils.ConvDiff(previousNode.WorkingTexture, grad, 0.f);
-        WorkingTexture = basePipeline.getMain();
+        //glUtils.ConvDiff(previousNode.WorkingTexture, grad, 0.0f);
+        workingTexture = basePipeline.getMain();
 
         {
             Log.d(Name, "NoiseS:" + basePipeline.noiseS + ", NoiseO:" + basePipeline.noiseO);
@@ -79,7 +79,7 @@ public class ESD3D extends Node {
             glProg.setDefine("LUMA", luma);
 
             glProg.setDefine("INSIZE", basePipeline.mParameters.rawSize);
-            //float ks = 1.0f + Math.min((basePipeline.noiseS+basePipeline.noiseO) * 3.0f * noiseToKernelSize, 34.f);
+            //float ks = 1.0f + Math.min((basePipeline.noiseS+basePipeline.noiseO) * 3.0f * noiseToKernelSize, 34.0f);
             //int msize = 7 + (int)ks - (int)ks%2;
             double noiseMpy = Math.max((basePipeline.noiseS+basePipeline.noiseO)/noiseTarget, 0.0000001);
             double kernelSize = 1.0f + Math.sqrt(noiseMpy) * noiseToKernelSize;
@@ -89,9 +89,9 @@ public class ESD3D extends Node {
             glProg.setDefine("MSIZE", msize);
             glProg.useAssetProgram("denoise/esd3d2");
             //glProg.setTexture("NoiseMap", basePipeline.main4);
-            glProg.setTexture("InputBuffer", previousNode.WorkingTexture);
+            glProg.setTexture("InputBuffer", previousNode.workingTexture);
             //glProg.setTexture("GradBuffer", grad);
-            glProg.drawBlocks(WorkingTexture);
+            glProg.drawBlocks(workingTexture);
         }
         glProg.closed = true;
         /*if(needClose) {

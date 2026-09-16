@@ -25,10 +25,10 @@ public class Concat extends Node {
         else
             glProg.setDefine("CONCAT", 0);
         glProg.useAssetProgram("Concat/concat",true);
-        glProg.setTextureCompute("inTexture",previousNode.WorkingTexture,false);
-        WorkingTexture = basePipeline.getMain();
-        glProg.setTextureCompute("outTexture",WorkingTexture,true);
-        glProg.computeManual(WorkingTexture.mSize.x/(tile*2),WorkingTexture.mSize.y/(tile*2),1);
+        glProg.setTextureCompute("inTexture",previousNode.workingTexture,false);
+        workingTexture = basePipeline.getMain();
+        glProg.setTextureCompute("outTexture",workingTexture,true);
+        glProg.computeManual(workingTexture.mSize.x/(tile*2),workingTexture.mSize.y/(tile*2),1);
         glProg.closed = true;
     }
 }

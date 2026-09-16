@@ -11,6 +11,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -18,7 +19,58 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static android.opengl.GLES31.*;
+import static android.opengl.GLES31.GL_ALL_SHADER_BITS;
+import static android.opengl.GLES31.GL_COMPILE_STATUS;
+import static android.opengl.GLES31.GL_COMPUTE_SHADER;
+import static android.opengl.GLES31.GL_FLOAT;
+import static android.opengl.GLES31.GL_FRAGMENT_SHADER;
+import static android.opengl.GLES31.GL_LINK_STATUS;
+import static android.opengl.GLES31.GL_READ_ONLY;
+import static android.opengl.GLES31.GL_RGBA;
+import static android.opengl.GLES31.GL_RGBA_INTEGER;
+import static android.opengl.GLES31.GL_SHADER_STORAGE_BUFFER;
+import static android.opengl.GLES31.GL_TEXTURE0;
+import static android.opengl.GLES31.GL_TEXTURE_UPDATE_BARRIER_BIT;
+import static android.opengl.GLES31.GL_VERTEX_SHADER;
+import static android.opengl.GLES31.GL_WRITE_ONLY;
+import static android.opengl.GLES31.glAttachShader;
+import static android.opengl.GLES31.glBindImageTexture;
+import static android.opengl.GLES31.glCompileShader;
+import static android.opengl.GLES31.glCreateProgram;
+import static android.opengl.GLES31.glCreateShader;
+import static android.opengl.GLES31.glDeleteProgram;
+import static android.opengl.GLES31.glDeleteShader;
+import static android.opengl.GLES31.glDispatchCompute;
+import static android.opengl.GLES31.glFinish;
+import static android.opengl.GLES31.glFlush;
+import static android.opengl.GLES31.glGetAttribLocation;
+import static android.opengl.GLES31.glGetError;
+import static android.opengl.GLES31.glGetProgramInfoLog;
+import static android.opengl.GLES31.glGetProgramiv;
+import static android.opengl.GLES31.glGetShaderInfoLog;
+import static android.opengl.GLES31.glGetShaderiv;
+import static android.opengl.GLES31.glGetUniformLocation;
+import static android.opengl.GLES31.glLinkProgram;
+import static android.opengl.GLES31.glMemoryBarrier;
+import static android.opengl.GLES31.glReadPixels;
+import static android.opengl.GLES31.glShaderSource;
+import static android.opengl.GLES31.glUniform1f;
+import static android.opengl.GLES31.glUniform1fv;
+import static android.opengl.GLES31.glUniform1i;
+import static android.opengl.GLES31.glUniform1iv;
+import static android.opengl.GLES31.glUniform1ui;
+import static android.opengl.GLES31.glUniform2f;
+import static android.opengl.GLES31.glUniform2i;
+import static android.opengl.GLES31.glUniform2ui;
+import static android.opengl.GLES31.glUniform3f;
+import static android.opengl.GLES31.glUniform3i;
+import static android.opengl.GLES31.glUniform3ui;
+import static android.opengl.GLES31.glUniform4f;
+import static android.opengl.GLES31.glUniform4i;
+import static android.opengl.GLES31.glUniform4ui;
+import static android.opengl.GLES31.glUniformMatrix3fv;
+import static android.opengl.GLES31.glUseProgram;
+import static android.opengl.GLES31.glViewport;
 import static com.particlesdevs.photoncamera.processing.opengl.GLCoreBlockProcessing.checkEglError;
 
 public class GLProg implements AutoCloseable {
@@ -48,7 +100,7 @@ public class GLProg implements AutoCloseable {
         mFlushBuffer.mark();
     }
     boolean changedDef = false;
-    ArrayList<String[]> Defines = new ArrayList<>();
+    ArrayList<String[]> defines = new ArrayList<>();
 
     public void setDefine(String DefineName, Point in){
         setDefine(DefineName,in.x,in.y);
@@ -63,17 +115,41 @@ public class GLProg implements AutoCloseable {
     public void setLayout(int x, int y, int z){
         setDefine("LAYOUT","layout(local_size_x = "+x+", local_size_y = "+y+", local_size_z = "+z+") in;");
     }
-    public void setDefine(String DefineName, float... vars){
+    public void setDefine(String DefineName, float[] vars){
         setDefine(DefineName,true,vars);
     }
-    public void setDefine(String DefineName,boolean transposed, float... vars){
+    public void setDefine(String DefineName, float x){
+        setDefine(DefineName,new float[]{x});
+    }
+    public void setDefine(String DefineName, float x, float y){
+        setDefine(DefineName,new float[]{x,y});
+    }
+    public void setDefine(String DefineName, float x, float y, float z){
+        setDefine(DefineName,new float[]{x,y,z});
+    }
+    public void setDefine(String DefineName, float x, float y, float z, float w){
+        setDefine(DefineName,new float[]{x,y,z,w});
+    }
+    public void setDefine(String DefineName,boolean transposed, float[] vars){
         setDefine(DefineName,Arrays.toString(vars).replace("]","").replace("[",""));
     }
-    public void setDefine(String DefineName, int... vars){
+    public void setDefine(String DefineName, int[] vars){
         setDefine(DefineName,Arrays.toString(vars).replace("]","").replace("[",""));
+    }
+    public void setDefine(String DefineName, int x){
+        setDefine(DefineName,new int[]{x});
+    }
+    public void setDefine(String DefineName, int x, int y){
+        setDefine(DefineName,new int[]{x,y});
+    }
+    public void setDefine(String DefineName, int x, int y, int z){
+        setDefine(DefineName,new int[]{x,y,z});
+    }
+    public void setDefine(String DefineName, int x, int y, int z, int w){
+        setDefine(DefineName,new int[]{x,y,z,w});
     }
     public void setDefine(String DefineName, String DefineVal){
-        Defines.add(new String[]{DefineName,DefineVal});
+        defines.add(new String[]{DefineName,DefineVal});
         changedDef = true;
     }
     public void useAssetProgram(String name){
@@ -85,7 +161,7 @@ public class GLProg implements AutoCloseable {
     public void useFileProgram(String path, boolean compute){
         // open file by path
         try {
-            useProgram(new String(Files.readAllBytes(new File(path).toPath())),compute);
+            useProgram(new String(Files.readAllBytes(new File(path).toPath()), StandardCharsets.UTF_8),compute);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -104,7 +180,7 @@ public class GLProg implements AutoCloseable {
         closed = false;
         String shader;
         if(changedDef) {
-            shader = GLInterface.loadShader(fragmentRes,Defines);
+            shader = GLInterface.loadShader(fragmentRes,defines);
         }
         else {
             shader = GLInterface.loadShader(fragmentRes);
@@ -118,7 +194,7 @@ public class GLProg implements AutoCloseable {
         isCompute = compute;
         closed = false;
         String shader;
-        if(changedDef) shader = GLInterface.loadShader(programSource,Defines);
+        if(changedDef) shader = GLInterface.loadShader(programSource,defines);
         else {
             shader = GLInterface.loadShader(programSource);
         }
@@ -127,7 +203,7 @@ public class GLProg implements AutoCloseable {
     private void useShader(String shader, boolean compute){
         mComputeLayouts = GLInterface.getLayouts(shader);
         if(mProgramCache.containsKey(shader)) {
-            Defines.clear();
+            defines.clear();
             changedDef = false;
             Integer prog = mProgramCache.get(shader);
             if(prog == null) return;
@@ -150,7 +226,7 @@ public class GLProg implements AutoCloseable {
             glGetError();
             glUseProgram(program);
             checkEglError("glUseProgram");
-            Defines.clear();
+            defines.clear();
             changedDef = false;
             mCurrentProgramActive = program;
             mProgramCache.put(shader,program);
@@ -307,7 +383,8 @@ public class GLProg implements AutoCloseable {
         drawBlocks(texture.mSize.x, texture.mSize.y, bh, -1, forceFlush ? texture.mFormat.mFormat.mID : -1);
     }
 
-    public void drawBlocks(int w, int h, int bh, int flushFormat, int flushType) {
+    public void drawBlocks(int w, int h, int bh, int flushFormatIn, int flushType) {
+        int flushFormat = flushFormatIn;
         mFlushBuffer.reset();
         if (flushFormat == -1) {
             flushFormat = flushType == GL_FLOAT ? GL_RGBA : GL_RGBA_INTEGER;
@@ -379,7 +456,7 @@ public class GLProg implements AutoCloseable {
         checkEglError("glBindImageTexture tex.mTextureID:"+tex.mTextureID);
     }
 
-    public void setVar(String name, int... vars) {
+    public void setVar(String name, int[] vars) {
         int addr = glGetUniformLocation(mCurrentProgramActive, name);
         switch (vars.length) {
             case 1:
@@ -402,7 +479,20 @@ public class GLProg implements AutoCloseable {
         checkEglError("setVar:" + name);
     }
 
-    public void setVar1(String name, int... vars) {
+    public void setVar(String name, int x) {
+        setVar(name,new int[]{x});
+    }
+    public void setVar(String name, int x, int y) {
+        setVar(name,new int[]{x,y});
+    }
+    public void setVar(String name, int x, int y, int z) {
+        setVar(name,new int[]{x,y,z});
+    }
+    public void setVar(String name, int x, int y, int z, int w) {
+        setVar(name,new int[]{x,y,z,w});
+    }
+
+    public void setVar1(String name, int[] vars) {
         int addr = glGetUniformLocation(mCurrentProgramActive, name);
         glUniform1iv(addr, vars.length, vars, 0);
         checkEglError("setVar:" + name);
@@ -412,7 +502,7 @@ public class GLProg implements AutoCloseable {
         setVar(name, in.x, in.y);
     }
 
-    public void setVar(String name, boolean transpose, float... vars) {
+    public void setVar(String name, boolean transpose, float[] vars) {
         int address = glGetUniformLocation(mCurrentProgramActive, name);
         switch (vars.length) {
             case 1:
@@ -435,11 +525,23 @@ public class GLProg implements AutoCloseable {
         }
         checkEglError("setVar:" + name);
     }
-    public void setVar(String name, float... vars) {
+    public void setVar(String name, float[] vars) {
         setVar(name,true,vars);
     }
+    public void setVar(String name, float x) {
+        setVar(name,new float[]{x});
+    }
+    public void setVar(String name, float x, float y) {
+        setVar(name,new float[]{x,y});
+    }
+    public void setVar(String name, float x, float y, float z) {
+        setVar(name,new float[]{x,y,z});
+    }
+    public void setVar(String name, float x, float y, float z, float w) {
+        setVar(name,new float[]{x,y,z,w});
+    }
     /** Sets a float array uniform (uniform float name[len]). */
-    public void setVarFloats(String name, float... vars) {
+    public void setVarFloats(String name, float[] vars) {
         int address = glGetUniformLocation(mCurrentProgramActive, name);
         glUniform1fv(address, vars.length, vars, 0);
         checkEglError("setVarFloats:" + name);
@@ -449,7 +551,20 @@ public class GLProg implements AutoCloseable {
         setVarU(name,var.x,var.y);
     }
 
-    public void setVarU(String name, int... vars) {
+    public void setVarU(String name, int x) {
+        setVarU(name,new int[]{x});
+    }
+    public void setVarU(String name, int x, int y) {
+        setVarU(name,new int[]{x,y});
+    }
+    public void setVarU(String name, int x, int y, int z) {
+        setVarU(name,new int[]{x,y,z});
+    }
+    public void setVarU(String name, int x, int y, int z, int w) {
+        setVarU(name,new int[]{x,y,z,w});
+    }
+
+    public void setVarU(String name, int[] vars) {
         int address = glGetUniformLocation(mCurrentProgramActive, name);
         switch (vars.length) {
             case 1:

@@ -243,7 +243,7 @@ public class PyramidAlignment implements AutoCloseable {
         hist.Gc = true;
         hist.Bc = true;
         hist.Ac = true;
-        float overexposure = 64.f;
+        float overexposure = 64.0f;
         hist.exposure = new float[]{overexposure, overexposure, overexposure, overexposure};
         int[][] histDataBase = hist.Compute(temp).clone();
         float[] blackLevel = new float[4];
@@ -257,7 +257,7 @@ public class PyramidAlignment implements AutoCloseable {
             for (int j = 0; j < histDataBase[i].length; j++) {
                 integration += histDataBase[i][j];
                 if (integration > histSum * 0.3) {
-                    blackLevel[i] = (j / (histDataBase[i].length - 1.f)) / overexposure;
+                    blackLevel[i] = (j / (histDataBase[i].length - 1.0f)) / overexposure;
                     Log.d("PyramidAlignment", "blackLevel[" + i + "] = " + blackLevel[i]);
                     break;
                 }
@@ -295,8 +295,8 @@ public class PyramidAlignment implements AutoCloseable {
         float noiseO = modeler.baseModel[0].second.floatValue() +
                 modeler.baseModel[1].second.floatValue() +
                 modeler.baseModel[2].second.floatValue();
-        noiseS /= 3.f;
-        noiseO /= 3.f;
+        noiseS /= 3.0f;
+        noiseO /= 3.0f;
         double noisempy = Math.pow(2.0, PhotonCamera.getSettings().mergeStrength);
         noiseS = (float)Math.max(noiseS * noisempy,1e-6f);
         noiseO = (float)Math.max(noiseO * noisempy,1e-6f);
@@ -357,7 +357,7 @@ public class PyramidAlignment implements AutoCloseable {
                 for (int j = 0; j < histData[i].length; j++) {
                     integration += histData[i][j];
                     if (integration > histSum * 0.3) {
-                        blackLevel[i] = (j / (histData[i].length - 1.f))/ overexposure;
+                        blackLevel[i] = (j / (histData[i].length - 1.0f))/ overexposure;
                         Log.d("PyramidAlignment", "blackLevel[" + i + "] = " + blackLevel[i]);
                         break;
                     }

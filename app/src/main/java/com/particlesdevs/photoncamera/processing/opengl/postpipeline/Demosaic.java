@@ -15,13 +15,13 @@ public class Demosaic extends Node {
     @Override
     public void Run() {
         GLTexture glTexture;
-        glTexture = previousNode.WorkingTexture;
+        glTexture = previousNode.workingTexture;
         glProg.useAssetProgram("demosaic/demosaicp1");
         glProg.setTexture("RawBuffer", glTexture);
         glProg.setVar("CfaPattern", basePipeline.mParameters.cfaPattern);
         if(basePipeline.mSettings.cfaPattern == -2) glProg.setDefine("QUAD","1");
         glProg.drawBlocks(basePipeline.main1);
-        GLTexture outp = previousNode.WorkingTexture;
+        GLTexture outp = previousNode.workingTexture;
 
 
         //Green Channel guided denoising, hotpixel removing
@@ -39,9 +39,9 @@ public class Demosaic extends Node {
         glProg.setVar("whitePoint",basePipeline.mParameters.whitePoint);
         glProg.setVar("CfaPattern", basePipeline.mParameters.cfaPattern);
         glProg.setVar("neutral", basePipeline.mParameters.whitePoint[0], basePipeline.mParameters.whitePoint[1], basePipeline.mParameters.whitePoint[1], basePipeline.mParameters.whitePoint[2]);
-        WorkingTexture = basePipeline.main3;
-        glProg.drawBlocks(WorkingTexture);
+        workingTexture = basePipeline.main3;
+        glProg.drawBlocks(workingTexture);
         glProg.close();
-        WorkingTexture = basePipeline.swap3();
+        workingTexture = basePipeline.swap3();
     }
 }

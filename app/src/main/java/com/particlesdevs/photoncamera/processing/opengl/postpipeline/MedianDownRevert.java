@@ -14,9 +14,9 @@ public class MedianDownRevert extends Node {
 
     @Override
     public void Run() {
-        WorkingTexture = basePipeline.getMain();
-        glUtils.interpolate(previousNode.WorkingTexture,WorkingTexture,2.0,WorkingTexture.mSize);
-        basePipeline.workSize = new Point(WorkingTexture.mSize.x,WorkingTexture.mSize.y);
+        workingTexture = basePipeline.getMain();
+        glUtils.interpolate(previousNode.workingTexture,workingTexture,2.0,workingTexture.mSize);
+        basePipeline.workSize = new Point(workingTexture.mSize.x,workingTexture.mSize.y);
         glProg.closed = true;
     }
 }

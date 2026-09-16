@@ -48,20 +48,20 @@ final class OpposedGL {
     static float[] compute(GLProg prog, GLTexture raw, Point size, int cfaPattern, boolean rgbLayout,
                            float whiteLevel, float[] blackLevel, float[] whitePoint, float clip) {
         final int mw = size.x / 3, mh = size.y / 3;
-        if (size.x < 16 || size.y < 16 || mw < 8 || mh < 8 || whiteLevel <= 0.f) return null;
+        if (size.x < 16 || size.y < 16 || mw < 8 || mh < 8 || whiteLevel <= 0.0f) return null;
 
         float[] lvl = {
                 blackLevel[0] / whiteLevel,
                 (blackLevel[1] + blackLevel[2]) * 0.5f / whiteLevel,
                 blackLevel[3] / whiteLevel};
-        float[] wp = {1.f, 1.f, 1.f};
+        float[] wp = {1.0f, 1.0f, 1.0f};
         if (!rgbLayout && whitePoint != null) {
-            for (int c = 0; c < 3; c++) wp[c] = whitePoint[c] > 0.f ? whitePoint[c] : 1.f;
+            for (int c = 0; c < 3; c++) wp[c] = whitePoint[c] > 0.0f ? whitePoint[c] : 1.0f;
         }
         float[] clipThr = new float[3];
         float[] loClip = new float[3];
         for (int c = 0; c < 3; c++) {
-            clipThr[c] = whiteLevel * (lvl[c] + clip * wp[c] * (1.f - lvl[c]));
+            clipThr[c] = whiteLevel * (lvl[c] + clip * wp[c] * (1.0f - lvl[c]));
             loClip[c] = LO_CLIP_FACTOR * clip;
         }
 
@@ -130,7 +130,7 @@ final class OpposedGL {
             }
             float[] chrominance = new float[3];
             for (int c = 0; c < 3; c++)
-                chrominance[c] = cnt[c] > MIN_SAMPLES ? (float) (sum[c] / cnt[c]) : 0.f;
+                chrominance[c] = cnt[c] > MIN_SAMPLES ? (float) (sum[c] / cnt[c]) : 0.0f;
             return chrominance;
         } finally {
             maskA.close();

@@ -46,8 +46,8 @@ public class HeadroomRender extends Node {
     @Override
     public void AfterRun() {
         // Last consumer of the fusion map (was Initial's duty).
-        if (((PostPipeline) basePipeline).FusionMap != null) {
-            ((PostPipeline) basePipeline).FusionMap.close();
+        if (((PostPipeline) basePipeline).fusionMap != null) {
+            ((PostPipeline) basePipeline).fusionMap.close();
         }
         if (fallbackGainMap != null) {
             fallbackGainMap.close();
@@ -76,18 +76,18 @@ public class HeadroomRender extends Node {
             if (fallbackGainMap == null) {
                 fallbackGainMap = new GLTexture(new Point(1, 1),
                         new GLFormat(GLFormat.DataType.FLOAT_16, 4),
-                        BufferUtils.getFrom(new float[]{1.f, 1.f, 1.f, 1.f}),
+                        BufferUtils.getFrom(new float[]{1.0f, 1.0f, 1.0f, 1.0f}),
                         GL_LINEAR, GL_CLAMP_TO_EDGE);
             }
             gainMapTex = fallbackGainMap;
         }
 
-        boolean fusion = pipeline.FusionMap != null;
+        boolean fusion = pipeline.fusionMap != null;
         glProg.setDefine("FUSION", fusion);
         glProg.setDefine("NEUTRALPOINT", basePipeline.mParameters.whitePoint);
         glProg.useAssetProgram("headroom/render");
-        glProg.setTexture("InputBuffer", super.previousNode.WorkingTexture);
-        if (fusion) glProg.setTexture("FusionMap", pipeline.FusionMap);
+        glProg.setTexture("InputBuffer", super.previousNode.workingTexture);
+        if (fusion) glProg.setTexture("FusionMap", pipeline.fusionMap);
         glProg.setTexture("GainMap", gainMapTex);
         glProg.setVar("sensorToIntermediate", basePipeline.mParameters.sensorToProPhoto);
         glProg.setVar("intermediateToSRGB", intermediateToSRGB);
@@ -101,6 +101,6 @@ public class HeadroomRender extends Node {
                 + " outputExposureScale:" + outputExposureScale
                 + " intermediateToSRGB:" + Arrays.toString(intermediateToSRGB));
 
-        WorkingTexture = basePipeline.getMain();
+        workingTexture = basePipeline.getMain();
     }
 }

@@ -18,7 +18,7 @@ public class CaptureSharpening extends Node {
     public void Run() {
         Log.d(Name,"CaptureSharpening specific:"+basePipeline.mParameters.sensorSpecifics);
         if(basePipeline.mParameters.sensorSpecifics == null){
-            WorkingTexture = previousNode.WorkingTexture;
+            workingTexture = previousNode.workingTexture;
             glProg.closed = true;
             return;
         }
@@ -29,10 +29,10 @@ public class CaptureSharpening extends Node {
         glProg.setDefine("SHARPSIZEKER",size);
         glProg.setDefine("INSIZE",basePipeline.workSize);
         glProg.useAssetProgram("CaptureSharpening/capturesharpening");
-        glProg.setTexture("InputBuffer",previousNode.WorkingTexture);
+        glProg.setTexture("InputBuffer",previousNode.workingTexture);
 
-        WorkingTexture = basePipeline.getMain();
-        glProg.drawBlocks(WorkingTexture);
+        workingTexture = basePipeline.getMain();
+        glProg.drawBlocks(workingTexture);
 
         glProg.closed = true;
     }

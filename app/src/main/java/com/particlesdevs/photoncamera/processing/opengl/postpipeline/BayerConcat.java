@@ -22,10 +22,10 @@ public class BayerConcat extends Node {
         glProg.setDefine("TILE",tile);
         glProg.setDefine("CONCAT", concat);
         glProg.useAssetProgram("Concat/concat",true);
-        glProg.setTextureCompute("inTexture",previousNode.WorkingTexture,false);
-        WorkingTexture = basePipeline.getMain();
-        glProg.setTextureCompute("outTexture",WorkingTexture,true);
-        glProg.computeAuto(WorkingTexture.mSize,1);
+        glProg.setTextureCompute("inTexture",previousNode.workingTexture,false);
+        workingTexture = basePipeline.getMain();
+        glProg.setTextureCompute("outTexture",workingTexture,true);
+        glProg.computeAuto(workingTexture.mSize,1);
         glProg.closed = true;
     }
 }

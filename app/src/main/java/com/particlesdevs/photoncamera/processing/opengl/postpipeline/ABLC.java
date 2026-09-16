@@ -81,7 +81,7 @@ public class ABLC extends Node {
     @Override
     public void Run() {
         if(!enable){
-            WorkingTexture = super.previousNode.WorkingTexture;
+            workingTexture = super.previousNode.workingTexture;
             return;
         }
         ABL abl = new ABL(basePipeline.glint.glProcessing, histSize);
@@ -95,7 +95,7 @@ public class ABLC extends Node {
                 minExposureMpy,
                 maxEV,
                 noise,
-                previousNode.WorkingTexture
+                previousNode.workingTexture
         );
 
         Log.d(TAG, String.format("Bruteforce Black Levels - R: %.4f, G: %.4f, B: %.4f", 
@@ -103,10 +103,10 @@ public class ABLC extends Node {
 
         // Apply black level correction
         glProg.useAssetProgram("ABLC/levelcorrection");
-        glProg.setTexture("InputBuffer", previousNode.WorkingTexture);
+        glProg.setTexture("InputBuffer", previousNode.workingTexture);
         glProg.setVar("blackLevel", blackLevels);
-        WorkingTexture = basePipeline.getMain();
-        glProg.drawBlocks(WorkingTexture);
+        workingTexture = basePipeline.getMain();
+        glProg.drawBlocks(workingTexture);
         glProg.closed = true;
     }
 }

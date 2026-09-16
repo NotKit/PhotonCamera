@@ -65,18 +65,18 @@ public class AEC extends Node {
         Log.d(Name, "AEC avr:" + avr);
         Log.d(Name, "AEC ind:" + indo);
         Log.d(Name, "AEC max:" + indmax);
-        if (indo > ind80 && (indmax > ind80 || indmax == -1)) return 1.f;
+        if (indo > ind80 && (indmax > ind80 || indmax == -1)) return 1.0f;
         if (indo > ind80) indo = indmax;
         float corr = ((float) ind80) / indo;
         if (indo == -1) corr = ((float) ind80) / indmax;
-        if (indmax > ind80) corr = 1.f;
+        if (indmax > ind80) corr = 1.0f;
         Log.d(Name, "Corr:" + corr);
         return corr;
     }
 
     @Override
     public void Run() {
-        GLTexture r0 = glUtils.interpolate(previousNode.WorkingTexture, new Point(previousNode.WorkingTexture.mSize.x / 8, previousNode.WorkingTexture.mSize.x / 8));
+        GLTexture r0 = glUtils.interpolate(previousNode.workingTexture, new Point(previousNode.workingTexture.mSize.x / 8, previousNode.workingTexture.mSize.x / 8));
         float reg = ((PostPipeline) basePipeline).regenerationSense;
         GLTexture r2 = glUtils.mpy(r0, new float[]{reg, reg, reg});
         GLTexture r1 = glUtils.interpolate(r2, new Point(40, 40));
@@ -86,7 +86,7 @@ public class AEC extends Node {
         preview.copyPixelsFromBuffer(glInt.glProcessing.drawBlocksToOutput(r1.mSize, bitmapF));
         if (basePipeline.mSettings.DebugData) glUtils.SaveProgResult(r1.mSize, "debAEC");
         ((PostPipeline) basePipeline).AecCorr = MpyAEC(Histogram(preview));
-        WorkingTexture = previousNode.WorkingTexture;
+        workingTexture = previousNode.workingTexture;
         preview.recycle();
         glProg.closed = true;
     }

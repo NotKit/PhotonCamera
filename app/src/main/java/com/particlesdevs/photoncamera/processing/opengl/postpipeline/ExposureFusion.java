@@ -8,6 +8,7 @@ import com.particlesdevs.photoncamera.processing.opengl.GLFormat;
 import com.particlesdevs.photoncamera.processing.opengl.GLTexture;
 import com.particlesdevs.photoncamera.processing.opengl.GLUtils;
 import com.particlesdevs.photoncamera.processing.opengl.nodes.Node;
+import java.nio.Buffer;
 
 public class ExposureFusion extends Node {
 
@@ -19,7 +20,7 @@ public class ExposureFusion extends Node {
 
     @Override
     public void AfterRun() {
-        previousNode.WorkingTexture.close();
+        previousNode.workingTexture.close();
     }
 
     GLTexture expose(GLTexture in, float str){
@@ -52,18 +53,18 @@ public class ExposureFusion extends Node {
         glProg.setVar("neutralPoint", basePipeline.mParameters.whitePoint);
         //if(basePipeline.main2 != null) basePipeline.main2.close();
         if(basePipeline.main2 == null) basePipeline.main2 = new GLTexture(in.mSize,new GLFormat(GLFormat.DataType.FLOAT_16, GLDrawParams.WorkDim));
-        //GLTexture out = new GLTexture(in.mSize,new GLFormat(GLFormat.DataType.FLOAT_16, GLConst.WorkDim),null);
+        //GLTexture out = new GLTexture(in.mSize,new GLFormat(GLFormat.DataType.FLOAT_16, GLConst.WorkDim),(Buffer) null);
         glProg.drawBlocks(basePipeline.main2);
         glProg.close();
         return basePipeline.main2;
     }
     @Override
     public void Run() {
-        GLTexture in = previousNode.WorkingTexture;
-        double compressor = 1.f;
-        //if(PhotonCamera.getManualMode().getCurrentExposureValue() != 0 && PhotonCamera.getManualMode().getCurrentISOValue() != 0) compressor = 1.f;
+        GLTexture in = previousNode.workingTexture;
+        double compressor = 1.0f;
+        //if(PhotonCamera.getManualMode().getCurrentExposureValue() != 0 && PhotonCamera.getManualMode().getCurrentISOValue() != 0) compressor = 1.0f;
         int perlevel = 4;
-        int levelcount = (int)(Math.log10(previousNode.WorkingTexture.mSize.x)/Math.log10(perlevel))+1;
+        int levelcount = (int)(Math.log10(previousNode.workingTexture.mSize.x)/Math.log10(perlevel))+1;
         if(levelcount <= 0) levelcount = 2;
         Log.d(Name,"levelCount:"+levelcount);
         float fact2 = (float)(1.0f/compressor)*3.5f;
@@ -121,7 +122,7 @@ public class ExposureFusion extends Node {
 
         }
         //previousNode.WorkingTexture.close();
-        WorkingTexture = unexpose(wip, (float) basePipeline.mSettings.gain);
+        workingTexture = unexpose(wip, (float) basePipeline.mSettings.gain);
         Log.d(Name,"Output Size:"+wip.mSize);
         //wip.close();
         glProg.closed = true;

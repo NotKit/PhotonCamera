@@ -49,7 +49,7 @@ public class GLContext implements AutoCloseable {
         eglInitialize(mDisplay, major, 0, minor, 0);
         int[] numConfig = new int[1];
         if (!eglChooseConfig(mDisplay, GLDrawParams.attribList, 0,
-                null, 0, 0, numConfig, 0)
+                new EGLConfig[0], 0, 0, numConfig, 0)
                 || numConfig[0] == 0) {
             throw new RuntimeException("OpenGL config count zero");
         }

@@ -13,10 +13,10 @@ import java.util.Arrays;
 import java.util.Properties;
 
 public class GLOneScript implements AutoCloseable {
-    public GLTexture WorkingTexture;
+    public GLTexture workingTexture;
     public GLOneParams glOne;
     public final String Name;
-    public ByteBuffer Output;
+    public ByteBuffer output;
     public final String Rid;
     private long timeStart;
     public Point size;
@@ -112,25 +112,25 @@ public class GLOneScript implements AutoCloseable {
             glFormat = new GLFormat(GLFormat.DataType.UNSIGNED_8, 4);
             sizeo = new Point(1, 1);
         }
-        if (Output == null)
+        if (output == null)
             glOne = new GLOneParams(sizeo, outbit, glFormat);
         else {
-            glOne = new GLOneParams(sizeo, outbit, glFormat, Output);
+            glOne = new GLOneParams(sizeo, outbit, glFormat, output);
         }
         Compile();
         startT();
         StartScript();
         if (!hiddenScript) {
             //glOne.glProgram.drawBlocks(WorkingTexture);
-            WorkingTexture.BufferLoad();
+            workingTexture.BufferLoad();
             glOne.glProcessing.drawBlocksToOutput();
 
         } else {
-            glOne.glProgram.drawBlocks(WorkingTexture);
+            glOne.glProgram.drawBlocks(workingTexture);
         }
         AfterRun();
         endT();
-        Output = glOne.glProcessing.mOutBuffer;
+        output = glOne.glProcessing.mOutBuffer;
     }
     public void AfterRun(){
 

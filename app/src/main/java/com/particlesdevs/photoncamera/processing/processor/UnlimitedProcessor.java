@@ -109,7 +109,7 @@ public class UnlimitedProcessor extends ProcessorBase {
 //        parameters.path = ImageSaver.jpgFilePathToSave.getAbsolutePath();
         processingEventsListener.onProcessingStarted("Unlimited");
         averageRaw.FinalScript();
-        ByteBuffer unlimitedBuffer = averageRaw.Output;
+        ByteBuffer unlimitedBuffer = averageRaw.output;
         averageRaw.close();
         averageRaw = null;
 
@@ -145,7 +145,7 @@ public class UnlimitedProcessor extends ProcessorBase {
         }
 
         processingEventsListener.onProcessingFinished("Unlimited JPG Processing Finished");
-        imageFile = Paths.get(imageFile.toAbsolutePath() + ".jpg");
+        imageFile = Paths.get(imageFile.toAbsolutePath().toString() + ".jpg");
         boolean imageSaved;
         if (PhotonCamera.getSettings().ultraHdr && gm != null) {
             try {

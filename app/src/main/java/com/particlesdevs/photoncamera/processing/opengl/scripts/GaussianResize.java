@@ -25,7 +25,7 @@ public class GaussianResize extends GLOneScript {
         GLProg glProg = glOne.glProgram;
         GLTexture input = new GLTexture(sizeIn,new GLFormat(GLFormat.DataType.FLOAT_16),inputB);
         glProg.setTexture("InputBuffer", input);
-        WorkingTexture = new GLTexture(new Point(sizeIn.x / 4, sizeIn.y / 4), new GLFormat(GLFormat.DataType.FLOAT_16));
+        workingTexture = new GLTexture(new Point(sizeIn.x / 4, sizeIn.y / 4), new GLFormat(GLFormat.DataType.FLOAT_16));
     }
 
     @Override
@@ -33,10 +33,10 @@ public class GaussianResize extends GLOneScript {
         Compile();
         startT();
         StartScript();
-        WorkingTexture.BufferLoad();
-        glOne.glProcessing.drawBlocksToOutput(WorkingTexture.mSize,WorkingTexture.mFormat,Output);
+        workingTexture.BufferLoad();
+        glOne.glProcessing.drawBlocksToOutput(workingTexture.mSize,workingTexture.mFormat,output);
         AfterRun();
         endT();
-        WorkingTexture.close();
+        workingTexture.close();
     }
 }

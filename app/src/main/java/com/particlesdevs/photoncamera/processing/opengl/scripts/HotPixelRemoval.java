@@ -21,6 +21,6 @@ public class HotPixelRemoval extends GLOneScript {
         GLTexture input1 = new GLTexture(size,new GLFormat(GLFormat.DataType.UNSIGNED_16),scriptParams.input);
         glProg.setTexture("InputBuffer",input1);
         glProg.setVar("CfaPattern", PhotonCamera.getSettings().cfaPattern);
-        WorkingTexture = new GLTexture(input1);
+        workingTexture = new GLTexture(input1);
     }
 }

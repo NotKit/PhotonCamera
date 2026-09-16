@@ -47,7 +47,7 @@ public class LinearExposure extends Node {
         // Keep the linear scene snapshot for the Ultra HDR gain-map pass
         // (this buffer is the post-demosaic/ABLC input Initial used to see).
         if (pipeline.captureDemosaic) {
-            pipeline.captureDemosaicLinear(previousNode.WorkingTexture);
+            pipeline.captureDemosaicLinear(previousNode.workingTexture);
         }
         int bins = histSize;
         if (bins < 16) bins = 1024; // guard against a failed tunable injection
@@ -59,7 +59,7 @@ public class LinearExposure extends Node {
         histogram.Ac = false;
         int[][] result;
         try {
-            result = histogram.Compute(previousNode.WorkingTexture);
+            result = histogram.Compute(previousNode.workingTexture);
         } finally {
             histogram.close();
         }
@@ -79,7 +79,7 @@ public class LinearExposure extends Node {
             float gain50 = midAnchor / Math.max(p50, 1.0e-4f);
             float gain90 = highAnchor / Math.max(p90, 1.0e-4f);
             float sceneGain = (float) Math.sqrt(
-                    Math.max(1.f, gain50) * Math.max(1.f, gain90));
+                    Math.max(1.0f, gain50) * Math.max(1.0f, gain90));
             gain = Math.max(gainMin, Math.min(gainMax, sceneGain));
             Log.d(Name, "p50:" + p50 + " p90:" + p90
                     + " displayGain:" + gain);
@@ -88,7 +88,7 @@ public class LinearExposure extends Node {
         }
         pipeline.linearDisplayGain = gain;
 
-        WorkingTexture = previousNode.WorkingTexture;
+        workingTexture = previousNode.workingTexture;
         glProg.closed = true;
     }
 
