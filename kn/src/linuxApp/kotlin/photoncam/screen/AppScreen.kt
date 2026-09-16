@@ -28,7 +28,10 @@ private val application: PhotonCamera by lazy {
 	// attach and onCreate() can be called straight away.
 	PhotonCamera().also {
 		runCatching { it.onCreate() }
-			.onFailure { e -> println("[pc] PhotonCamera.onCreate failed: $e") }
+			.onFailure { e ->
+				println("[pc] PhotonCamera.onCreate failed: $e")
+				e.stackTraceToString().lines().drop(1).take(12).forEach { println("    $it") }
+			}
 	}
 }
 
