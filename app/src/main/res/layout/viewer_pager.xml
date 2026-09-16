@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The photo itself. A subsampling view tiles files far too large to hold as one
+  bitmap and decodes UltraHDR gain maps, so like the camera preview it stays an
+  Android view inside the Compose screen's image slot.
+-->
+<androidx.viewpager2.widget.ViewPager2
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/view_pager"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
