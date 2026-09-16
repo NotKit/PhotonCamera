@@ -1,0 +1,12 @@
+# OpenGL ES 3.1 + EGL 1.4 for the android.opengl.* shims.
+#
+# Kotlin/Native's linux targets ship no GLES/EGL platform library, so the
+# GLES20/30/31/EGL14 objects under src/commonMain/kotlin/android/opengl bind the
+# system libGLESv2/libEGL through this interop instead.  gl31.h pulls in gl3.h
+# and gl2.h, so one header gives the whole ES 3.1 surface; gl2ext.h adds the OES
+# extension enums (GL_TEXTURE_EXTERNAL_OES).
+headers = GLES3/gl31.h GLES2/gl2ext.h EGL/egl.h EGL/eglext.h
+headerFilter = GLES2/** GLES3/** EGL/** KHR/**
+package = photoncam.gles
+compilerOpts = -idirafter /usr/include
+linkerOpts = -lGLESv2 -lEGL
