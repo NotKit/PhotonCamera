@@ -1,0 +1,47 @@
+apply plugin: 'org.jetbrains.kotlin.multiplatform'
+apply plugin: 'com.android.library'
+apply plugin: 'org.jetbrains.compose'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+
+kotlin {
+    androidTarget {
+        compilerOptions {
+            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        }
+    }
+    // The desktop target is what makes this multiplatform: the same commonMain
+    // UI can run on Compose Desktop.
+    jvm('desktop')
+
+    sourceSets {
+        commonMain.dependencies {
+            // api: the host module names these types too - it builds the screen's state.
+            api compose.runtime
+            api compose.foundation
+            api compose.material3
+            api compose.ui
+            api compose.components.resources
+        }
+        androidMain.dependencies {
+            implementation 'androidx.activity:activity-compose:1.11.0'
+        }
+    }
+}
+
+android {
+    namespace 'com.particlesdevs.photoncamera.composeui'
+    compileSdk 36
+    defaultConfig {
+        minSdk 26
+    }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+}
+
+compose.resources {
+    publicResClass = true
+    packageOfResClass = 'com.particlesdevs.photoncamera.composeui.resources'
+    generateResClass = auto
+}
