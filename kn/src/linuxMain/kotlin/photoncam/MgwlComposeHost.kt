@@ -1,0 +1,306 @@
+package photoncam
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.snapshots.Snapshot
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.InternalComposeUiApi
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.asComposeCanvas
+import androidx.compose.ui.input.pointer.PointerButton
+import androidx.compose.ui.input.pointer.PointerButtons
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.platform.ComposeUiMainDispatcher
+import androidx.compose.ui.scene.CanvasLayersComposeScene
+import androidx.compose.ui.scene.ComposeScene
+import androidx.compose.ui.scene.ComposeScenePointer
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
+import kotlinx.cinterop.CPointer
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.StableRef
+import kotlinx.cinterop.alloc
+import kotlinx.cinterop.asStableRef
+import kotlinx.cinterop.memScoped
+import kotlinx.cinterop.ptr
+import kotlinx.cinterop.staticCFunction
+import kotlinx.cinterop.toKString
+import net.thekit.mgwl.MGWL_PTR_AXIS
+import net.thekit.mgwl.MGWL_PTR_BUTTON
+import net.thekit.mgwl.MGWL_PTR_MOTION
+import net.thekit.mgwl.MGWL_TOUCH_DOWN
+import net.thekit.mgwl.MGWL_TOUCH_MOVE
+import net.thekit.mgwl.MGWL_TOUCH_UP
+import net.thekit.mgwl.mgwl_callbacks
+import net.thekit.mgwl.mgwl_create
+import net.thekit.mgwl.mgwl_create_window
+import net.thekit.mgwl.mgwl_destroy
+import net.thekit.mgwl.mgwl_egl_vendor
+import net.thekit.mgwl.mgwl_gl_renderer
+import net.thekit.mgwl.mgwl_height
+import net.thekit.mgwl.mgwl_make_current
+import net.thekit.mgwl.mgwl_pump
+import net.thekit.mgwl.mgwl_scale
+import net.thekit.mgwl.mgwl_set_callbacks
+import net.thekit.mgwl.mgwl_should_close
+import net.thekit.mgwl.mgwl_swap_buffers
+import net.thekit.mgwl.mgwl_width
+import org.jetbrains.skia.BackendRenderTarget
+import org.jetbrains.skia.Color
+import org.jetbrains.skia.ColorSpace
+import org.jetbrains.skia.DirectContext
+import org.jetbrains.skia.FramebufferFormat
+import org.jetbrains.skia.Surface
+import org.jetbrains.skia.SurfaceColorFormat
+import org.jetbrains.skia.SurfaceOrigin
+import platform.posix.CLOCK_MONOTONIC
+import platform.posix.clock_gettime
+import platform.posix.getenv
+import platform.posix.timespec
+
+/**
+ * A Compose scene rendered by skiko into the EGL context our own C host created,
+ * with no AWT, no JVM and no `ak-window`.
+ *
+ * Transliterated from `firefox-atl/fenix-kn`'s host of the same name, with
+ * everything Fenix removed: no Gecko process, no Maliit IME, no clipboard, no
+ * content-hub share, no keyboard -- a camera has no text field.  What is left is
+ * the window, the surface, the frame loop and pointer input.
+ *
+ * WHY NOT AURORA'S OWN WINDOW.  Aurora's `application {}` ends in
+ * `Window.runWindow()`, a Rust winit/glutin loop (`libac_window.a`).  On Ubuntu
+ * Touch it dies in `eglCreateWindowSurface` with `EGL_BAD_ATTRIBUTE` against
+ * libhybris, and on a desktop wlroots it never gets a window at all -- its winit
+ * fork binds `wl_shell` and `qt_surface_extension`.  `mgwl` is xdg_wm_base and
+ * has neither problem.  Everything else in the Aurora distribution -- Compose and
+ * skiko -- is stock upstream and windowing-free, so this is the only seam.
+ *
+ * Everything runs on the calling thread: libwayland is not casually thread-safe
+ * and the EGL context is bound per-thread.
+ */
+@OptIn(ExperimentalForeignApi::class, InternalComposeUiApi::class, ExperimentalComposeUiApi::class)
+class MgwlComposeHost private constructor(private val handle: CPointer<cnames.structs.mgwl>, private val es: Int) {
+
+	private lateinit var scene: ComposeScene
+	private var directContext: DirectContext? = null
+	private var renderTarget: BackendRenderTarget? = null
+	private var skiaSurface: Surface? = null
+
+	private var width = 0
+	private var height = 0
+	private var scale = 1
+	val density = readDensity()
+
+	private var surfaceDirty = true
+	private var needsRender = true
+	private var closed = false
+
+	private val trace = getenv("PC_TRACE") != null
+
+	private val pointers = HashMap<Int, ComposeScenePointer>()
+	private var mouseButtons = 0
+	private var frames = 0L
+
+	fun run(appId: String, title: String, w: Int, h: Int, maxSeconds: Int, content: @Composable () -> Unit) {
+		val self = StableRef.create(this)
+		memScoped {
+			val cb = alloc<mgwl_callbacks>()
+			cb.configure = staticCFunction { u, cw, ch ->
+				u!!.asStableRef<MgwlComposeHost>().get().onConfigure(cw, ch)
+			}
+			cb.close = staticCFunction { u -> u!!.asStableRef<MgwlComposeHost>().get().closed = true }
+			cb.touch = staticCFunction { u, id, x, y, phase ->
+				u!!.asStableRef<MgwlComposeHost>().get().onTouch(id, x.toFloat(), y.toFloat(), phase)
+			}
+			cb.pointer = staticCFunction { u, kind, x, y, buttons ->
+				u!!.asStableRef<MgwlComposeHost>().get().onPointer(kind, x.toFloat(), y.toFloat(), buttons.toInt())
+			}
+			mgwl_set_callbacks(handle, cb.ptr, self.asCPointer())
+		}
+		if (mgwl_create_window(handle, appId, title, w, h, es) != 0) error("mgwl_create_window failed")
+
+		width = mgwl_width(handle)
+		height = mgwl_height(handle)
+		scale = maxOf(1, mgwl_scale(handle))
+		mgwl_make_current(handle)
+		println(
+			"[pc] EGL_VENDOR=${mgwl_egl_vendor(handle)?.toKString()}" +
+				" GL_RENDERER=${mgwl_gl_renderer(handle)?.toKString()}" +
+				" size=${width}x$height scale=$scale density=$density"
+		)
+
+		// ComposeUiMainDispatcher is Compose's own; it is public and, unlike
+		// Aurora's window layer, has no ak-window in it.
+		scene = CanvasLayersComposeScene(
+			density = Density(density),
+			layoutDirection = LayoutDirection.Ltr,
+			size = IntSize(bufWidth(), bufHeight()),
+			coroutineContext = ComposeUiMainDispatcher,
+			invalidate = { needsRender = true },
+		)
+		ComposeUiMainDispatcher.setInvalidator { needsRender = true }
+		scene.setContent(content)
+		loop(maxSeconds)
+
+		skiaSurface?.close(); renderTarget?.close(); directContext?.close()
+		scene.close()
+		mgwl_destroy(handle)
+		self.dispose()
+		println("[pc] $frames frames rendered")
+	}
+
+	// Compose animates off this, so it has to be WALL time.  posix.clock() is
+	// processor time -- an animation driven by it advances only while the process
+	// is burning CPU, which in an event-driven loop is almost never.
+	private fun monotonicNanos(): Long = memScoped {
+		val ts = alloc<timespec>()
+		clock_gettime(CLOCK_MONOTONIC.toInt(), ts.ptr)
+		ts.tv_sec * 1_000_000_000L + ts.tv_nsec
+	}
+
+	private fun bufWidth() = maxOf(1, width * scale)
+	private fun bufHeight() = maxOf(1, height * scale)
+
+	private fun loop(maxSeconds: Int) {
+		val deadline = platform.posix.time(null) + maxSeconds
+		while (!closed && mgwl_should_close(handle) == 0) {
+			if (maxSeconds > 0 && platform.posix.time(null) >= deadline) break
+			Snapshot.sendApplyNotifications()
+			ComposeUiMainDispatcher.drainTasks()
+			if (surfaceDirty) rebuildSurface()
+
+			val surface = skiaSurface
+			if (surface != null && (needsRender || scene.hasInvalidations())) {
+				needsRender = false
+				val canvas = surface.canvas
+				canvas.clear(Color.BLACK)
+				scene.render(canvas.asComposeCanvas(), monotonicNanos())
+				surface.flushAndSubmit()
+				mgwl_swap_buffers(handle)
+				frames++
+			}
+			val timeout = if (scene.hasInvalidations() || needsRender) 0 else 16
+			mgwl_pump(handle, timeout)
+			ComposeUiMainDispatcher.drainTasks()
+		}
+	}
+
+	private fun rebuildSurface() {
+		surfaceDirty = false
+		mgwl_make_current(handle)
+		skiaSurface?.close(); renderTarget?.close()
+		val ctx = directContext ?: DirectContext.makeGL().also { directContext = it }
+		val w = bufWidth(); val h = bufHeight()
+		val rt = BackendRenderTarget.makeGL(w, h, 0, 8, 0, FramebufferFormat.GR_GL_RGBA8)
+		renderTarget = rt
+		// Native's makeFromBackendRenderTarget is nullable where the JVM's is not.
+		skiaSurface = Surface.makeFromBackendRenderTarget(
+			ctx, rt, SurfaceOrigin.BOTTOM_LEFT, SurfaceColorFormat.RGBA_8888, ColorSpace.sRGB,
+		) ?: error("Surface.makeFromBackendRenderTarget returned null (${w}x$h)")
+		scene.size = IntSize(w, h)
+		needsRender = true
+	}
+
+	private fun onConfigure(w: Int, h: Int) {
+		if (w == width && h == height) return
+		width = w; height = h
+		scale = maxOf(1, mgwl_scale(handle))
+		surfaceDirty = true
+	}
+
+	private fun onTouch(id: Int, x: Float, y: Float, phase: Int) {
+		needsRender = true
+		if (trace) println("[pc] touch id=$id $x,$y phase=$phase")
+		when (phase) {
+			MGWL_TOUCH_DOWN.toInt() -> { pointers[id] = pointer(id, x, y, true, PointerType.Touch); send(PointerEventType.Press) }
+			MGWL_TOUCH_MOVE.toInt() -> { pointers[id] = pointer(id, x, y, true, PointerType.Touch); send(PointerEventType.Move) }
+			MGWL_TOUCH_UP.toInt() -> {
+				pointers[id]?.let { pointers[id] = pointer(id, it.position.x / scale, it.position.y / scale, false, PointerType.Touch) }
+				send(PointerEventType.Release)
+				pointers.remove(id)
+			}
+			else -> { pointers.clear(); scene.cancelPointerInput(); ComposeUiMainDispatcher.drainTasks() }
+		}
+	}
+
+	// qtmir emulates a mouse from touch and sends buttonless enter/leave/motion at
+	// the touch point; an unpressed Mouse pointer left in the dispatch set rides
+	// along with every touch event.  Keep the mouse only while a button is held,
+	// and drop hover entirely -- MonoGram found this the hard way.
+	private fun onPointer(kind: Int, x: Float, y: Float, buttons: Int) {
+		needsRender = true
+		if (trace) println("[pc] pointer kind=$kind $x,$y buttons=$buttons")
+		// A WHEEL EVENT CARRIES NO POSITION: mgwl's axis callback puts the scroll
+		// DELTA in x and y, so the last motion/button is where the wheel is.
+		if (kind != MGWL_PTR_AXIS.toInt()) { lastX = x; lastY = y }
+		when (kind) {
+			MGWL_PTR_BUTTON.toInt() -> {
+				val pressed = buttons != 0
+				mouseButtons = buttons
+				pointers[MOUSE] = pointer(MOUSE, x, y, pressed, PointerType.Mouse)
+				send(if (pressed) PointerEventType.Press else PointerEventType.Release)
+				if (!pressed) pointers.remove(MOUSE)
+			}
+			MGWL_PTR_MOTION.toInt() -> if (mouseButtons != 0) {
+				pointers[MOUSE] = pointer(MOUSE, x, y, true, PointerType.Mouse)
+				send(PointerEventType.Move)
+			}
+			MGWL_PTR_AXIS.toInt() -> {
+				pointers[MOUSE] = pointer(MOUSE, lastX, lastY, mouseButtons != 0, PointerType.Mouse)
+				// A wl_pointer axis value is already a distance in surface-local
+				// units (libinput's notch is 15) and this scene takes scrollDelta
+				// in PIXELS.  Three pixels per unit is the usual three lines.
+				send(PointerEventType.Scroll, Offset(-x * SCROLL_PX, -y * SCROLL_PX))
+				if (mouseButtons == 0) pointers.remove(MOUSE)
+			}
+		}
+	}
+
+	// Where the pointer last was, in surface-local units.  Only the wheel needs
+	// it; every other kind carries its own place.
+	private var lastX = 0f
+	private var lastY = 0f
+
+	private fun pointer(id: Int, x: Float, y: Float, pressed: Boolean, type: PointerType) =
+		ComposeScenePointer(PointerId(id.toLong()), Offset(x * scale, y * scale), pressed, type)
+
+	// `buttons` and `button` are not optional decoration for a MOUSE pointer.
+	// Compose's clickable reads the button state out of the event, not out of the
+	// pointer's own `pressed` flag, so a press sent without them leaves the button
+	// visually held and never fires onClick.
+	private fun send(eventType: PointerEventType, scroll: Offset = Offset.Zero) {
+		val mouseDown = pointers[MOUSE]?.pressed == true
+		val r = scene.sendPointerEvent(
+			eventType,
+			pointers.values.toList(),
+			buttons = PointerButtons(isPrimaryPressed = mouseDown),
+			scrollDelta = scroll,
+			button = if (pointers.containsKey(MOUSE) &&
+				(eventType == PointerEventType.Press || eventType == PointerEventType.Release)
+			) PointerButton.Primary else null,
+		)
+		if (trace) println("[pc]   -> $eventType n=${pointers.size} primary=$mouseDown result=$r")
+		// One pump can dispatch several batched events; without draining here only
+		// the first of a batch is ever seen by the gesture coroutines.
+		ComposeUiMainDispatcher.drainTasks()
+	}
+
+	companion object {
+		/** Pixels per unit of wl_pointer axis value.  See the AXIS branch. */
+		private const val SCROLL_PX = 3f
+		private const val MOUSE = -1
+
+		fun create(socketPath: String? = null, es: Int = 2): MgwlComposeHost? {
+			val h = mgwl_create(socketPath) ?: return null
+			return MgwlComposeHost(h, es)
+		}
+
+		/** Lomiri's grid unit is 8 px per density step; a desktop has none. */
+		private fun readDensity(): Float {
+			val gu = getenv("GRID_UNIT_PX")?.toKString()?.toFloatOrNull()
+			return if (gu != null && gu > 0f) gu / 8f else 2f
+		}
+	}
+}
