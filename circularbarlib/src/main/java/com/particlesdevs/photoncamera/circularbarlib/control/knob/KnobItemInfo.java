@@ -1,13 +1,15 @@
-package com.particlesdevs.photoncamera.circularbarlib.ui.views.knobview;
+package com.particlesdevs.photoncamera.circularbarlib.control.knob;
 
-import android.graphics.drawable.Drawable;
-
-import java.util.ArrayList;
-import java.util.List;
-
+/**
+ * One tick of a knob, as plain data: what it is worth, what to draw for it and
+ * whether it is the one selected.  The widget owns the drawing.
+ */
 public class KnobItemInfo implements Comparable<KnobItemInfo> {
-    public final Drawable drawable;
+    /** Value text for the manual bar, always set. */
     public final String text;
+    /** Text drawn at this tick, or null for a bare tick. */
+    public final String label;
+    public final KnobIcon icon;
     public final int tick;
     public final double value;
     public boolean isSelected;
@@ -15,22 +17,16 @@ public class KnobItemInfo implements Comparable<KnobItemInfo> {
     public double rotationLeft;
     public double rotationRight;
 
-    public KnobItemInfo(Drawable drawable2, String text, int tick, double value) {
-        this.drawable = drawable2;
-        this.text = text;
-        this.tick = tick;
-        this.value = value;
+    public KnobItemInfo(String text, String label, int tick, double value) {
+        this(text, label, KnobIcon.NONE, tick, value);
     }
 
-    public static List<KnobItemInfo> createItemList(Drawable[] drawables, String[] texts, int[] ticks, double[] values) {
-        List<KnobItemInfo> items = null;
-        if (!(drawables == null || texts == null || ticks == null || values == null || drawables.length != texts.length || texts.length != ticks.length || ticks.length != values.length)) {
-            items = new ArrayList<>();
-            for (int i = 0; i < drawables.length; i++) {
-                items.add(new KnobItemInfo(drawables[i], texts[i], ticks[i], values[i]));
-            }
-        }
-        return items;
+    public KnobItemInfo(String text, String label, KnobIcon icon, int tick, double value) {
+        this.text = text;
+        this.label = label;
+        this.icon = icon;
+        this.tick = tick;
+        this.value = value;
     }
 
     @Override

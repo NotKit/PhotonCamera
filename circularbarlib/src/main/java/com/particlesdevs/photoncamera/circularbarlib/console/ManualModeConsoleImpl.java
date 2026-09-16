@@ -4,11 +4,13 @@ import android.app.Activity;
 import android.content.Context;
 import android.hardware.camera2.CameraCharacteristics;
 import android.os.Vibrator;
-import android.view.View;
 
 import com.particlesdevs.photoncamera.circularbarlib.api.ManualModeConsole;
+import com.particlesdevs.photoncamera.circularbarlib.api.ManualUi;
+import com.particlesdevs.photoncamera.circularbarlib.api.ManualUiFactory;
 import com.particlesdevs.photoncamera.circularbarlib.camera.CameraProperties;
 import com.particlesdevs.photoncamera.circularbarlib.control.ManualParamModel;
+import com.particlesdevs.photoncamera.circularbarlib.control.knob.KnobItemInfo;
 import com.particlesdevs.photoncamera.circularbarlib.control.models.EvModel;
 import com.particlesdevs.photoncamera.circularbarlib.control.models.FocusModel;
 import com.particlesdevs.photoncamera.circularbarlib.control.models.IsoModel;
@@ -17,9 +19,8 @@ import com.particlesdevs.photoncamera.circularbarlib.control.models.ShutterModel
 import com.particlesdevs.photoncamera.circularbarlib.control.models.WbModel;
 import com.particlesdevs.photoncamera.circularbarlib.model.KnobModel;
 import com.particlesdevs.photoncamera.circularbarlib.model.ManualModeModel;
-import com.particlesdevs.photoncamera.circularbarlib.ui.ViewObserver;
-import com.particlesdevs.photoncamera.circularbarlib.ui.views.knobview.KnobView;
-import com.particlesdevs.photoncamera.circularbarlib.ui.views.knobview.KnobItemInfo;
+import com.particlesdevs.photoncamera.circularbarlib.model.ManualParam;
+import com.particlesdevs.photoncamera.circularbarlib.model.ParamClickListener;
 
 import java.util.Observer;
 
@@ -28,19 +29,19 @@ import java.util.Observer;
  * {@link ManualModeModel}
  * <p>
  * This class also manages the attaching/detaching of {@link ManualModel}
- * subclasses to {@link KnobView}
- * and setting listeners to models
+ * subclasses to the knob widget and setting listeners to models
  * <p>
  * Authors - Vibhor, KillerInk
  */
 public class ManualModeConsoleImpl implements ManualModeConsole {
     private static final String TAG = "ManualModeConsole";
-    private static ManualModeConsole sInstance;
+    private static ManualModeConsoleImpl sInstance;
     private final ManualModeModel manualModeModel;
     private final KnobModel knobModel;
     private final ManualParamModel manualParamModel = new ManualParamModel();
     private ManualModel<?> mfModel, isoModel, expoTimeModel, evModel, wbModel, selectedModel;
-    private ViewObserver viewObserver;
+    private ManualUiFactory uiFactory;
+    private ManualUi manualUi;
     private boolean preserveManualWb = false;
 
     private ManualModeConsoleImpl() {
@@ -48,15 +49,20 @@ public class ManualModeConsoleImpl implements ManualModeConsole {
         this.knobModel = new KnobModel();
     }
 
-    public static ManualModeConsole getInstance() {
+    public static ManualModeConsoleImpl getInstance() {
         if (sInstance == null) {
             sInstance = newInstance();
         }
         return sInstance;
     }
 
-    public static ManualModeConsole newInstance() {
+    public static ManualModeConsoleImpl newInstance() {
         return new ManualModeConsoleImpl();
+    }
+
+    /** Set by the platform before {@link #init}; it builds the manual-mode surface. */
+    public void setUiFactory(ManualUiFactory uiFactory) {
+        this.uiFactory = uiFactory;
     }
 
     public ManualModeModel getManualModeModel() {
@@ -84,7 +90,9 @@ public class ManualModeConsoleImpl implements ManualModeConsole {
 
     @Override
     public void init(Activity activity, CameraCharacteristics cameraCharacteristics) {
-        viewObserver = new ViewObserver(activity);
+        if (uiFactory != null) {
+            manualUi = uiFactory.create(activity);
+        }
         addObserver();
         addKnobs(activity, cameraCharacteristics);
         setupOnClickListeners();
@@ -93,16 +101,18 @@ public class ManualModeConsoleImpl implements ManualModeConsole {
 
     @Override
     public void onResume() {
-        if (viewObserver != null) {
-            viewObserver.enableOrientationListener();
+        ManualUi ui = manualUi;
+        if (ui != null) {
+            ui.onResume();
         }
         addObserver();
     }
 
     @Override
     public void onPause() {
-        if (viewObserver != null) {
-            viewObserver.disableOrientationListener();
+        ManualUi ui = manualUi;
+        if (ui != null) {
+            ui.onPause();
         }
         removeObservers();
     }
@@ -113,10 +123,11 @@ public class ManualModeConsoleImpl implements ManualModeConsole {
     }
 
     private void addObserver() {
-        if (viewObserver != null) {
+        ManualUi ui = manualUi;
+        if (ui != null) {
             removeObservers();
-            knobModel.addObserver(viewObserver);
-            manualModeModel.addObserver(viewObserver);
+            knobModel.addObserver(ui);
+            manualModeModel.addObserver(ui);
         }
     }
 
@@ -130,24 +141,24 @@ public class ManualModeConsoleImpl implements ManualModeConsole {
         double preservedWb = (this.preserveManualWb) ? manualParamModel.getCurrentWbValue() : ManualParamModel.WB_AUTO;
         manualParamModel.reset();
         Vibrator v = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
-        mfModel = new FocusModel(context, cameraCharacteristics, cameraProperties.focusRange, manualParamModel,
+        mfModel = new FocusModel(cameraCharacteristics, cameraProperties.focusRange, manualParamModel,
                 manualModeModel::setFocusText, v);
-        evModel = new EvModel(context, cameraCharacteristics, cameraProperties.evRange, manualParamModel,
+        evModel = new EvModel(cameraCharacteristics, cameraProperties.evRange, manualParamModel,
                 manualModeModel::setEvText, v);
         ((EvModel) evModel).setEvStep(
                 (cameraCharacteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_STEP).floatValue()));
-        isoModel = new IsoModel(context, cameraCharacteristics, cameraProperties.isoRange, manualParamModel,
+        isoModel = new IsoModel(cameraCharacteristics, cameraProperties.isoRange, manualParamModel,
                 manualModeModel::setIsoText, v);
-        expoTimeModel = new ShutterModel(context, cameraCharacteristics, cameraProperties.expRange, manualParamModel,
+        expoTimeModel = new ShutterModel(cameraCharacteristics, cameraProperties.expRange, manualParamModel,
                 manualModeModel::setExposureText, v);
-        wbModel = new WbModel(context, cameraCharacteristics, null, manualParamModel,
+        wbModel = new WbModel(cameraCharacteristics, null, manualParamModel,
                 manualModeModel::setWbText, v);
 
         // Restore manual White Balance temperature across camera lenses if enabled
         if (preservedWb != ManualParamModel.WB_AUTO) {
             for (KnobItemInfo item : wbModel.getKnobInfoList()) {
                 if (Math.abs(item.value - preservedWb) < 0.1) {
-                    wbModel.onSelectedKnobItemChanged(item);
+                    wbModel.onItemSelected(item);
                     manualModeModel.setWbText(item.text);
                     break;
                 }
@@ -155,7 +166,7 @@ public class ManualModeConsoleImpl implements ManualModeConsole {
         }
 
         knobModel.setKnobVisible(false);
-        manualModeModel.setCheckedTextViewId(-1);
+        manualModeModel.setSelectedParam(null);
     }
 
     @Override
@@ -182,22 +193,44 @@ public class ManualModeConsoleImpl implements ManualModeConsole {
     }
 
     private void setupOnClickListeners() {
-        manualModeModel.setFocusTextClicked(v -> setListeners(v, mfModel));
-        manualModeModel.setEvTextClicked(v -> setListeners(v, evModel));
-        manualModeModel.setExposureTextClicked(v -> setListeners(v, expoTimeModel));
-        manualModeModel.setIsoTextClicked(v -> setListeners(v, isoModel));
-        manualModeModel.setWbTextClicked(v -> setListeners(v, wbModel));
+        manualModeModel.setParamClickListener(new ParamClickListener() {
+            @Override
+            public void onParamClicked(ManualParam param) {
+                ManualModel<?> model = modelOf(param);
+                if (model != null) {
+                    setModelToKnob(param, model);
+                }
+            }
+
+            @Override
+            public void onParamLongClicked(ManualParam param) {
+                ManualModel<?> model = modelOf(param);
+                if (model == null) {
+                    return;
+                }
+                if (selectedModel == model) {
+                    knobModel.setKnobResetCalled(true);
+                }
+                model.resetModel();
+            }
+        });
     }
 
-    private void setListeners(View view, ManualModel<?> model) {
-        setModelToKnob(view.getId(), model);
-        view.setOnLongClickListener(v -> {
-            if (selectedModel == model) {
-                knobModel.setKnobResetCalled(true);
-            }
-            model.resetModel();
-            return true;
-        });
+    private ManualModel<?> modelOf(ManualParam param) {
+        switch (param) {
+            case ISO:
+                return isoModel;
+            case EXPOSURE:
+                return expoTimeModel;
+            case EV:
+                return evModel;
+            case FOCUS:
+                return mfModel;
+            case WB:
+                return wbModel;
+            default:
+                return null;
+        }
     }
 
     private void setAutoText() {
@@ -233,7 +266,7 @@ public class ManualModeConsoleImpl implements ManualModeConsole {
             evModel.resetModel();
         if (wbModel != null && (!this.preserveManualWb || manualParamModel.getCurrentWbValue() == ManualParamModel.WB_AUTO))
             wbModel.resetModel();
-        manualModeModel.setCheckedTextViewId(-1);
+        manualModeModel.setSelectedParam(null);
     }
 
     @Override
@@ -243,10 +276,11 @@ public class ManualModeConsoleImpl implements ManualModeConsole {
 
     @Override
     public boolean isManualFocusModeActive() {
-        if (mfModel == null) {
+        ManualModel<?> focus = mfModel;
+        if (focus == null) {
             return false;
         }
-        KnobItemInfo currentInfo = mfModel.getCurrentInfo();
+        KnobItemInfo currentInfo = focus.getCurrentInfo();
         return currentInfo != null && currentInfo.value != ManualParamModel.FOCUS_AUTO;
     }
 
@@ -257,43 +291,44 @@ public class ManualModeConsoleImpl implements ManualModeConsole {
 
     @Override
     public void setManualWbValue(double kelvinValue) {
-        if (wbModel == null) {
+        ManualModel<?> wb = wbModel;
+        if (wb == null) {
             manualParamModel.setCurrentWbValue(kelvinValue);
             return;
         }
 
         // 1. Locate the matching knob item for the measured Kelvin value
         KnobItemInfo matchedItem = null;
-        for (KnobItemInfo item : wbModel.getKnobInfoList()) {
+        for (KnobItemInfo item : wb.getKnobInfoList()) {
             if (Math.abs(item.value - kelvinValue) < 0.1) {
                 matchedItem = item;
                 break;
             }
         }
 
-        // 2. Synchronize WbModel, manual bar text, and active KnobView wheel rotation
+        // 2. Synchronize WbModel, manual bar text, and active knob rotation
         if (matchedItem != null) {
-            wbModel.onSelectedKnobItemChanged(matchedItem);
+            wb.onItemSelected(matchedItem);
             manualModeModel.setWbText(matchedItem.text);
-            if (selectedModel == wbModel) {
-                knobModel.setManualModel(wbModel);
+            if (selectedModel == wb) {
+                knobModel.setManualModel(wb);
             }
         } else {
             manualParamModel.setCurrentWbValue(kelvinValue);
         }
     }
 
-    private void setModelToKnob(int viewId, ManualModel<?> modelToKnob) {
+    private void setModelToKnob(ManualParam param, ManualModel<?> modelToKnob) {
         if (modelToKnob == selectedModel) {
             knobModel.setManualModel(null);
             knobModel.setKnobVisible(false);
-            manualModeModel.setCheckedTextViewId(-1);
+            manualModeModel.setSelectedParam(null);
             selectedModel = null;
         } else {
             if (modelToKnob.getKnobInfoList().size() > 1) {
                 knobModel.setManualModel(modelToKnob);
                 knobModel.setKnobVisible(true);
-                manualModeModel.setCheckedTextViewId(viewId);
+                manualModeModel.setSelectedParam(param);
                 selectedModel = modelToKnob;
             }
         }

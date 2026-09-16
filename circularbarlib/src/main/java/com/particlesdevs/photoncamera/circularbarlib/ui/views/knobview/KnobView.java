@@ -8,6 +8,8 @@ import android.graphics.Paint;
 import android.graphics.Paint.Style;
 import android.graphics.PointF;
 import android.graphics.Rect;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.StateListDrawable;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.util.Range;
@@ -15,12 +17,20 @@ import android.view.MotionEvent;
 import android.view.View;
 
 import com.particlesdevs.photoncamera.circularbarlib.R;
+import com.particlesdevs.photoncamera.circularbarlib.control.knob.KnobChangedListener;
+import com.particlesdevs.photoncamera.circularbarlib.control.knob.KnobHost;
+import com.particlesdevs.photoncamera.circularbarlib.control.knob.KnobIcon;
+import com.particlesdevs.photoncamera.circularbarlib.control.knob.KnobInfo;
+import com.particlesdevs.photoncamera.circularbarlib.control.knob.KnobItemInfo;
+import com.particlesdevs.photoncamera.circularbarlib.control.knob.RotationState;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
-public class KnobView extends View {
+public class KnobView extends View implements KnobHost {
     private static final String TAG = KnobView.class.getSimpleName();
     private static final boolean dolog = false;
     private final Paint m_BackgroundPaint;
@@ -38,7 +48,9 @@ public class KnobView extends View {
     private KnobInfo m_KnobInfo;
     private List<KnobItemInfo> m_KnobItems;
     private float m_KnobItemsSelfRotation;
-    private KnobViewChangedListener m_KnobViewChangedListener;
+    private KnobChangedListener m_KnobViewChangedListener;
+    /** The drawable of each item; the items themselves are plain data. */
+    private final Map<KnobItemInfo, Drawable> m_ItemDrawables = new IdentityHashMap<>();
     private PointF m_RotationCenter;
     private RotationState m_RotationState;
     private int m_Tick;
@@ -99,9 +111,9 @@ public class KnobView extends View {
                     KnobItemInfo nextItem = i + 1 < this.m_KnobItems.size() ? this.m_KnobItems.get(i + 1) : null;
                     drawRotation = (-this.m_DrawableCurrentDegree) + item.rotationCenter;
                     canvas.rotate((float) drawRotation, this.m_RotationCenter.x, this.m_RotationCenter.y);
-                    canvas.rotate(-this.m_KnobItemsSelfRotation, item.drawable.getBounds().exactCenterX(), item.drawable.getBounds().exactCenterY());
-                    item.drawable.draw(canvas);
-                    canvas.rotate(this.m_KnobItemsSelfRotation, item.drawable.getBounds().exactCenterX(), item.drawable.getBounds().exactCenterY());
+                    canvas.rotate(-this.m_KnobItemsSelfRotation, drawableOf(item).getBounds().exactCenterX(), drawableOf(item).getBounds().exactCenterY());
+                    drawableOf(item).draw(canvas);
+                    canvas.rotate(this.m_KnobItemsSelfRotation, drawableOf(item).getBounds().exactCenterX(), drawableOf(item).getBounds().exactCenterY());
                     canvas.rotate((float) (-drawRotation), this.m_RotationCenter.x, this.m_RotationCenter.y);
                     if (!(this.m_DashBounds == null || nextItem == null || (!this.m_DashAroundAutoEnabled && (item.tick == 0 || nextItem.tick == 0)))) {
                         if (item.rotationRight - item.rotationLeft > 0.001d) {
@@ -139,6 +151,7 @@ public class KnobView extends View {
         return new PointF(((float) width) / 2.0f, (float) ((fanEdge / 2.0d) / (((double) height) / fanEdge)));
     }
 
+    @Override
     public KnobItemInfo getCurrentKnobItem() {
         return this.m_Value;
     }
@@ -299,7 +312,9 @@ public class KnobView extends View {
         setTick(mapRotationToTick(this.m_DrawableCurrentDegree));
         setKnobViewRotation(mapTickToRotation(this.m_Tick));
         if (getKnobItemFromTick(this.m_Tick) != null) {
-            getKnobItemFromTick(this.m_Tick).drawable.setState(SELECTED_STATE_SET);
+            KnobItemInfo selected = getKnobItemFromTick(this.m_Tick);
+            selected.isSelected = true;
+            drawableOf(selected).setState(SELECTED_STATE_SET);
         }
         setRotationState(RotationState.IDLE);
     }
@@ -328,6 +343,12 @@ public class KnobView extends View {
     private void onSelectedKnobItemChanged(KnobItemInfo oldItem, KnobItemInfo newItem) {
         if (newItem != null && oldItem != newItem) {
             this.m_Value = newItem;
+            if (oldItem != null) {
+                oldItem.isSelected = false;
+                drawableOf(oldItem).setState(EMPTY_STATE_SET);
+            }
+            newItem.isSelected = true;
+            drawableOf(newItem).setState(SELECTED_STATE_SET);
             if (this.m_KnobViewChangedListener != null) {
                 this.m_KnobViewChangedListener.onSelectedKnobItemChanged(this, oldItem, newItem);
             }
@@ -381,6 +402,7 @@ public class KnobView extends View {
         invalidate();
     }
 
+    @Override
     public void setKnobInfo(KnobInfo info) {
         this.m_KnobInfo = info;
         updateKnobItemsBounds();
@@ -388,14 +410,45 @@ public class KnobView extends View {
         invalidate();
     }
 
+    private Drawable drawableOf(KnobItemInfo item) {
+        Drawable drawable = this.m_ItemDrawables.get(item);
+        if (drawable == null) {
+            drawable = createDrawable(item);
+            this.m_ItemDrawables.put(item, drawable);
+        }
+        return drawable;
+    }
+
+    /** Text and icons are the View's business: the model only names them. */
+    private Drawable createDrawable(KnobItemInfo item) {
+        if (item.icon == KnobIcon.FOCUS_NEAR) {
+            return getContext().getDrawable(R.drawable.manual_icon_focus_near);
+        }
+        if (item.icon == KnobIcon.FOCUS_FAR) {
+            return getContext().getDrawable(R.drawable.manual_icon_focus_far);
+        }
+        ShadowTextDrawable plain = new ShadowTextDrawable();
+        plain.setTextAppearance(getContext(), R.style.ManualModeKnobText);
+        ShadowTextDrawable selected = new ShadowTextDrawable();
+        selected.setTextAppearance(getContext(), R.style.ManualModeKnobTextSelected);
+        if (item.label != null && !item.label.isEmpty()) {
+            plain.setText(item.label);
+            selected.setText(item.label);
+        }
+        StateListDrawable stateDrawable = new StateListDrawable();
+        stateDrawable.addState(new int[]{-android.R.attr.state_selected}, plain);
+        stateDrawable.addState(new int[]{android.R.attr.state_selected}, selected);
+        stateDrawable.setState(item.isSelected ? SELECTED_STATE_SET : EMPTY_STATE_SET);
+        return stateDrawable;
+    }
+
+    @Override
     public void setKnobItems(List<KnobItemInfo> items) {
         log("setKnobItems " + items.size());
+        this.m_ItemDrawables.clear();
         this.m_KnobItems = items;
         updateKnobItemsBounds();
         updateKnobItemSelection();
-        /*KnobItemInfo info = getKnobItemFromTick(this.m_Tick);
-        if (info != null && info.drawable != null)
-            info.drawable.setState(SELECTED_STATE_SET);*/
         log("invalidate setKnobItems");
         invalidate();
     }
@@ -428,7 +481,7 @@ public class KnobView extends View {
         invalidate();
     }
 
-    public void setKnobViewChangedListener(KnobViewChangedListener listener) {
+    public void setKnobViewChangedListener(KnobChangedListener listener) {
         this.m_KnobViewChangedListener = listener;
     }
 
@@ -460,6 +513,7 @@ public class KnobView extends View {
         setTickByValue(getKnobValueFromTick(0));
     }
 
+    @Override
     public void setTickByValue(double value) {
         KnobItemInfo item = getKnobItemFromValue(value);
         if (item != null) {
@@ -485,20 +539,20 @@ public class KnobView extends View {
         log("updateKnobItemsBounds");
         if (this.m_KnobItems != null) {
             for (KnobItemInfo item : this.m_KnobItems) {
-                int left = (getWidth() / 2) - (item.drawable.getIntrinsicWidth() / 2);
+                int left = (getWidth() / 2) - (drawableOf(item).getIntrinsicWidth() / 2);
                 int top = this.m_IconPadding;
                 if (this.m_KnobItemsSelfRotation % 180.0f != 0.0f) {
-                    top = (this.m_IconPadding + (item.drawable.getIntrinsicWidth() / 2)) - (item.drawable.getIntrinsicHeight() / 2);
+                    top = (this.m_IconPadding + (drawableOf(item).getIntrinsicWidth() / 2)) - (drawableOf(item).getIntrinsicHeight() / 2);
                 }
-                item.drawable.setBounds(left, top, left + item.drawable.getIntrinsicWidth(), top + item.drawable.getIntrinsicHeight());
+                drawableOf(item).setBounds(left, top, left + drawableOf(item).getIntrinsicWidth(), top + drawableOf(item).getIntrinsicHeight());
                 if (this.m_KnobInfo != null) {
                     double includedAngle = ((double) ((this.m_KnobInfo.angleMax - this.m_KnobInfo.angleMin) - this.m_KnobInfo.autoAngle)) / ((double) (this.m_KnobInfo.tickMax - this.m_KnobInfo.tickMin));
                     double radius = this.m_RotationCenter.y;
-                    double edgeY = item.drawable.getIntrinsicWidth() / 2.0;
-                    double edgeX = (radius - ((double) this.m_IconPadding)) - ((double) (item.drawable.getIntrinsicHeight() / 2));
+                    double edgeY = drawableOf(item).getIntrinsicWidth() / 2.0;
+                    double edgeX = (radius - ((double) this.m_IconPadding)) - ((double) (drawableOf(item).getIntrinsicHeight() / 2));
                     if (this.m_KnobItemsSelfRotation % 180.0f != 0.0f) {
-                        edgeY = item.drawable.getIntrinsicHeight() / 2.0;
-                        edgeX = (radius - ((double) this.m_IconPadding)) - ((double) (item.drawable.getIntrinsicWidth() / 2));
+                        edgeY = drawableOf(item).getIntrinsicHeight() / 2.0;
+                        edgeX = (radius - ((double) this.m_IconPadding)) - ((double) (drawableOf(item).getIntrinsicWidth() / 2));
                     }
                     double drawableAngleHalf = Math.toDegrees(Math.atan(edgeY / edgeX));
                     item.rotationCenter = (((double) item.tick) * includedAngle) + ((double) ((Integer.signum(item.tick) * this.m_KnobInfo.autoAngle) / 2));
@@ -521,6 +575,7 @@ public class KnobView extends View {
                 } else {
                     item.isSelected = false;
                 }
+                drawableOf(item).setState(item.isSelected ? SELECTED_STATE_SET : EMPTY_STATE_SET);
             }
         }
     }
@@ -548,12 +603,5 @@ public class KnobView extends View {
             tick = this.m_KnobInfo.tickMin;
         }
         return tick;
-    }
-
-    public enum RotationState {
-        IDLE,
-        STARTING,
-        ROTATING,
-        STOPPING
     }
 }

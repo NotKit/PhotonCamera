@@ -1,16 +1,12 @@
 package com.particlesdevs.photoncamera.circularbarlib.model;
 
-import com.particlesdevs.photoncamera.circularbarlib.R;
 import com.particlesdevs.photoncamera.circularbarlib.control.models.ManualModel;
-import com.particlesdevs.photoncamera.circularbarlib.ui.views.knobview.KnobView;
 
 import java.util.Observable;
 
 /**
- * The Observable data class responsible for the behaviour and appearance of {@link KnobView}
- * <p>
- * This model is attached to the said layout through DataBinding
- * for more information {@link R.layout#manual_palette }
+ * The Observable data class responsible for the behaviour and appearance of the
+ * knob widget: which model it shows, whether it is visible, whether to reset it.
  * <p>
  * Authors - Vibhor, KillerInk
  */

@@ -65,8 +65,8 @@ public class ParamController implements Observer {
             Log.w(TAG, "setShutter(): mPreviewRequestBuilder is null");
             return;
         }
-        if (shutterNs == ManualParamModel.EXPOSURE_AUTO) {
-            if (currentISO == ManualParamModel.ISO_AUTO)// check if ISO is Auto
+        if ((double) shutterNs == ManualParamModel.EXPOSURE_AUTO) {
+            if ((double) currentISO == ManualParamModel.ISO_AUTO)// check if ISO is Auto
             {
                 captureController.resetPreviewAEMode();
             }
@@ -84,7 +84,7 @@ public class ParamController implements Observer {
             Log.w(TAG, "setISO(): mPreviewRequestBuilder is null");
             return;
         }
-        if (isoVal == ManualParamModel.ISO_AUTO) {
+        if ((double) isoVal == ManualParamModel.ISO_AUTO) {
             if (currentExposure == ManualParamModel.EXPOSURE_AUTO) // check if Exposure is Auto
             {
                 captureController.resetPreviewAEMode();
@@ -103,7 +103,7 @@ public class ParamController implements Observer {
             Log.w(TAG, "setFocus(): mPreviewRequestBuilder is null");
             return;
         }
-        if (focusDist == ManualParamModel.FOCUS_AUTO) {
+        if ((double) focusDist == ManualParamModel.FOCUS_AUTO) {
             builder.set(CaptureRequest.CONTROL_AF_MODE, PreferenceKeys.getAfMode());
         } else {
             builder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF);
