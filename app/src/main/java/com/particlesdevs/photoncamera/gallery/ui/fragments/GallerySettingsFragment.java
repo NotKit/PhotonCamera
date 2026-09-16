@@ -15,6 +15,7 @@ import androidx.preference.PreferenceFragmentCompat;
 import com.particlesdevs.photoncamera.R;
 import com.particlesdevs.photoncamera.gallery.files.GalleryFileOperations;
 import com.particlesdevs.photoncamera.gallery.viewmodel.GalleryViewModel;
+import com.particlesdevs.photoncamera.ui.settings.compose.SettingsScreenHost;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 
 public class GallerySettingsFragment extends PreferenceFragmentCompat {
     private GalleryViewModel viewModel;
+    private SettingsScreenHost composeHost;
 
     @Override
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
@@ -56,9 +58,30 @@ public class GallerySettingsFragment extends PreferenceFragmentCompat {
             });
             foldersList.setSummary(updateValuesAndGetSummaryText(foldersList,(HashSet<String>) foldersList.getValues(), entrymap));
         }
-        return super.onCreateView(inflater, container, savedInstanceState);
+        // As in SettingsActivity: PreferenceFragmentCompat needs its own list to
+        // exist for its view lifecycle, even though Compose draws the rows.
+        super.onCreateView(inflater, container, savedInstanceState);
+        composeHost = new SettingsScreenHost(
+                requireContext(),
+                () -> {
+                    requireActivity().onBackPressed();
+                    return kotlin.Unit.INSTANCE;
+                },
+                screen -> {
+                    onPreferenceTreeClick(screen);
+                    return kotlin.Unit.INSTANCE;
+                });
+        return composeHost.createView();
 
     }
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        if (composeHost != null && getPreferenceScreen() != null) {
+            composeHost.bind(getPreferenceScreen(), getString(R.string.gallery_folders), true);
+        }
+    }
+
     private String updateValuesAndGetSummaryText(MultiSelectListPreference pref, HashSet<String> values, HashMap<Long, String> entrymap) {
         ArrayList<String> l = new ArrayList<>();
         HashSet<String> newVals = new HashSet<>();
