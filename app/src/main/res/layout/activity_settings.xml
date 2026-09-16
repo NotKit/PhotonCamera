@@ -7,15 +7,6 @@
         android:paddingStart="?android:scrollbarSize"
         android:paddingEnd="?android:scrollbarSize"
 >
-    <androidx.appcompat.widget.Toolbar
-            android:id="@+id/settings_toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:title="Settings"
-            app:navigationIcon="@drawable/ic_baseline_arrow_back_24"
-            android:onClick="back"
-            style="@style/PreferenceActionBarStyle"
-    />
     <FrameLayout
             android:layout_gravity="bottom"
             android:id="@+id/settings_container"

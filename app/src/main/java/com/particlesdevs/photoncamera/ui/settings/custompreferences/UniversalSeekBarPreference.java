@@ -79,6 +79,45 @@ public class UniversalSeekBarPreference extends Preference implements SeekBar.On
         this(context, null);
     }
 
+    // Read by the Compose settings screen, which draws the slider itself.
+    public float getMinValue() {
+        return mMin;
+    }
+
+    public float getMaxValue() {
+        return mMax;
+    }
+
+    public int getSeekBarMax() {
+        return mSeekBarMax;
+    }
+
+    public boolean isShowSeekBarValue() {
+        return showSeekBarValue;
+    }
+
+    /** The persisted value, clamped, as the label shows it. */
+    public String getDisplayValue() {
+        String stored = getPersistedString(fallback_value == null ? "0" : fallback_value);
+        return formatExactValue(clamp(parseValue(stored, parseValue(fallback_value, mMin))));
+    }
+
+    public int getProgress() {
+        String stored = getPersistedString(fallback_value == null ? "0" : fallback_value);
+        return valueToProgress(clamp(parseValue(stored, parseValue(fallback_value, mMin))));
+    }
+
+    /** The slider moved: same path as dragging the SeekBar. */
+    public void setProgressFromUi(int progress) {
+        set(progress);
+        notifyChanged();
+    }
+
+    /** The value label was tapped. */
+    public void openPreciseValueDialog() {
+        showPreciseValueDialog();
+    }
+
     private void log(String msg) {
         if (isLoggingOn)
             Log.d(TAG + getKey(), msg);

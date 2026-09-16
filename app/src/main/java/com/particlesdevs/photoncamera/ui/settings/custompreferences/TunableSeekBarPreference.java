@@ -110,6 +110,51 @@ public class TunableSeekBarPreference extends Preference implements SeekBar.OnSe
         isUserInteraction = true;
     }
     
+    // Read by the Compose settings screen, which draws the slider itself.
+    public float getMinValue() {
+        return mMin;
+    }
+
+    public float getMaxValue() {
+        return mMax;
+    }
+
+    public float getStepPerUnit() {
+        return mStepPerUnit;
+    }
+
+    public boolean isFloatValue() {
+        return isFloat;
+    }
+
+    public void openPreciseValueDialog() {
+        showPreciseValueDialog();
+    }
+
+    /** The slider moved: same path as dragging the SeekBar, which only persists
+     *  while the user is the one moving it. */
+    public void setProgressFromUi(int progress) {
+        isUserInteraction = true;
+        try {
+            set(progress);
+        } finally {
+            isUserInteraction = false;
+        }
+        notifyChanged();
+    }
+
+    public String getDisplayValue() {
+        return formatValue(getSafePersistedValue());
+    }
+
+    public int getProgress() {
+        return valueToProgress(getSafePersistedValue());
+    }
+
+    public int getSeekBarMax() {
+        return Math.max(1, Math.round((mMax - mMin) * mStepPerUnit));
+    }
+
     private void showPreciseValueDialog() {
         Context context = getContext();
         if (context == null) return;
