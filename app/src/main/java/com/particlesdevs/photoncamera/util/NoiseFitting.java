@@ -43,7 +43,7 @@ public class NoiseFitting {
     public static NoiseParameters findParameters(List<DataPoint> data) {
         if (data.size() < 2) {
             Log.e("CurveFitting", "Not enough data points to fit a curve");
-            return new NoiseParameters(0, 0, 0);
+            return new NoiseParameters(0.0, 0.0, 0.0);
         }
 
         // Step 1: Find S using all possible pairs and average the results

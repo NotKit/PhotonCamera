@@ -13,8 +13,6 @@ import com.particlesdevs.photoncamera.gallery.model.GalleryItem;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 public class GalleryViewModel extends AndroidViewModel {
     private final MutableLiveData<GalleryItem> allSelectedImagesFolder = new MutableLiveData<>(GalleryItem.createEmpty());
@@ -37,21 +35,30 @@ public class GalleryViewModel extends AndroidViewModel {
     }
 
     public void fetchAllMedia() {
-        List<GalleryItem> allFolders=GalleryFileOperations._fetchSelectedFolders(getApplication().getContentResolver()).stream().map((Function<GalleryFileOperations.ImagesFolder, GalleryItem>) imagesFolder -> {
+        List<GalleryItem> allFolders = new ArrayList<>();
+        for (GalleryFileOperations.ImagesFolder imagesFolder :
+                GalleryFileOperations._fetchSelectedFolders(getApplication().getContentResolver())) {
             GalleryItem folder = new GalleryItem(imagesFolder.getTopImage());
-            imagesFolder.getAllImageFiles().forEach(imageFile -> folder.getFiles().add(new GalleryItem(imageFile)));
+            for (ImageFile imageFile : imagesFolder.getAllImageFiles()) {
+                folder.getFiles().add(new GalleryItem(imageFile));
+            }
             folder.setDisplayName(imagesFolder.getFolderName());
-            return folder;
-        }).collect(Collectors.toList());
+            allFolders.add(folder);
+        }
         
         ArrayList<ImageFile> all = (ArrayList<ImageFile>) GalleryFileOperations.extractAllSelectedImages();
         if (!all.isEmpty()) {
-            GalleryItem ALL_Folder = new GalleryItem(all.get(0));
-            ALL_Folder.setDisplayName("ALL");
-            ALL_Folder.getFiles().addAll(all.stream().map(GalleryItem::new).collect(Collectors.toList()));
-            allSelectedImagesFolder.setValue(ALL_Folder);
+            GalleryItem allFolder = new GalleryItem(all.get(0));
+            allFolder.setDisplayName("ALL");
+            for (ImageFile imageFile : all) {
+                allFolder.getFiles().add(new GalleryItem(imageFile));
+            }
+            allSelectedImagesFolder.setValue(allFolder);
 
-            allFolders.add(0, ALL_Folder);
+            List<GalleryItem> ordered = new ArrayList<>();
+            ordered.add(allFolder);
+            ordered.addAll(allFolders);
+            allFolders = ordered;
         }
         selectedDisplayFolders.setValue(allFolders);
     }

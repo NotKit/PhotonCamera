@@ -23,6 +23,7 @@ public final class UltraHdrGalleryUtil {
 
     private static final String TAG = "UltraHdrGalleryUtil";
     private static final int SCAN_BYTES = 64 * 1024;
+    private static final int MARKER_PREFIX = 0xFF;
     private static final byte[] XMP_NS = "http://ns.adobe.com/xap/1.0/\0"
             .getBytes(StandardCharsets.US_ASCII);
     private static final byte[] HDRGM_NS = "hdr-gain-map".getBytes(StandardCharsets.US_ASCII);
@@ -101,11 +102,11 @@ public final class UltraHdrGalleryUtil {
         }
         int pos = 0;
         while (pos + 4 <= length) {
-            if ((data[pos] & 0xFF) != 0xFF) {
+            if (u8(data, pos) != MARKER_PREFIX) {
                 pos++;
                 continue;
             }
-            int marker = data[pos + 1] & 0xFF;
+            int marker = u8(data, pos + 1);
             if (marker == 0xD8 || marker == 0xD9) {
                 pos += 2;
                 continue;
@@ -114,7 +115,7 @@ public final class UltraHdrGalleryUtil {
                 pos += 2;
                 continue;
             }
-            int segmentLength = ((data[pos + 2] & 0xFF) << 8) | (data[pos + 3] & 0xFF);
+            int segmentLength = u8(data, pos + 2) * 256 + u8(data, pos + 3);
             if (segmentLength < 2 || pos + 2 + segmentLength > length) {
                 break;
             }
@@ -175,6 +176,12 @@ public final class UltraHdrGalleryUtil {
         } catch (Exception e) {
             Log.d(TAG, "Failed to set window color mode: " + e);
         }
+    }
+
+    /** One unsigned byte, without a bitwise mask: the port's converter reads
+     *  plain arithmetic where Java would widen a byte for you. */
+    private static int u8(byte[] d, int i) {
+        return Byte.toUnsignedInt(d[i]);
     }
 
     private static boolean startsWith(byte[] data, int start, int end, byte[] prefix) {

@@ -2,6 +2,10 @@ package com.particlesdevs.photoncamera.settings;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.gson.annotations.SerializedName;
 
 import com.particlesdevs.photoncamera.app.PhotonCamera;
@@ -195,7 +199,7 @@ public class DynamicNoiseStore {
     }
 
     private static File fileFor(int physicalID) {
-        return new File(dir(), physicalID + ".json");
+        return new File(dir(), String.valueOf(physicalID) + ".json");
     }
 
     /** Serialized representation of one physicalID's state. */
@@ -208,6 +212,38 @@ public class DynamicNoiseStore {
         int minIso;
         @SerializedName("samples")
         List<RawSample> samples;
+
+        /** Explicit, because the port has no reflection for Gson to use. */
+        JsonObject write() {
+            JsonObject o = new JsonObject();
+            o.addProperty("version", version);
+            o.addProperty("physicalID", physicalID);
+            o.addProperty("minIso", minIso);
+            JsonArray arr = new JsonArray();
+            if (samples != null) {
+                for (RawSample sample : samples) arr.add(sample.write());
+            }
+            o.add("samples", arr);
+            return o;
+        }
+
+        static StoreDto read(JsonElement element) {
+            if (element == null || !element.isJsonObject()) return null;
+            JsonObject o = element.getAsJsonObject();
+            StoreDto dto = new StoreDto();
+            if (o.has("version")) dto.version = o.get("version").getAsInt();
+            if (o.has("physicalID")) dto.physicalID = o.get("physicalID").getAsInt();
+            if (o.has("minIso")) dto.minIso = o.get("minIso").getAsInt();
+            dto.samples = new ArrayList<>();
+            JsonArray arr = o.getAsJsonArray("samples");
+            if (arr != null) {
+                for (int i = 0; i < arr.size(); i++) {
+                    RawSample sample = RawSample.read(arr.get(i));
+                    if (sample != null) dto.samples.add(sample);
+                }
+            }
+            return dto;
+        }
     }
 
     /**
@@ -221,7 +257,7 @@ public class DynamicNoiseStore {
         File f = fileFor(physicalID);
         if (!f.exists()) return;
         try (FileReader r = new FileReader(f)) {
-            StoreDto dto = GSON.fromJson(r, StoreDto.class);
+            StoreDto dto = StoreDto.read(JsonParser.parseReader(r));
             if (dto == null) return;
             if (dto.version < CURRENT_VERSION) {
                 Log.d("DynamicNoiseStore", "Discarding store v" + dto.version
@@ -263,7 +299,7 @@ public class DynamicNoiseStore {
             File f = fileFor(physicalID);
             File tmp = new File(f.getParentFile(), f.getName() + ".tmp");
             try (FileWriter w = new FileWriter(tmp)) {
-                GSON.toJson(dto, w);
+                GSON.toJson(dto.write(), w);
                 if (f.exists()) f.delete();
                 tmp.renameTo(f);
             } catch (IOException e) {
@@ -276,9 +312,9 @@ public class DynamicNoiseStore {
     /**
      * Log2 ISO bin relative to the current dynamic minimum ISO.
      */
-    private static int isoBin(int iso, int baseIso) {
-        if (iso <= 0) iso = baseIso;
-        if (baseIso <= 0) baseIso = iso;
+    private static int isoBin(int isoValue, int baseIsoValue) {
+        int iso = isoValue <= 0 ? baseIsoValue : isoValue;
+        int baseIso = baseIsoValue <= 0 ? iso : baseIsoValue;
         double bin = Math.log((double) iso / (double) baseIso) / Math.log(2.0);
         return (int) Math.round(bin);
     }
@@ -422,6 +458,26 @@ public class DynamicNoiseStore {
             this.s = s;
             this.o = o;
             this.key = key;
+        }
+
+        /** Explicit, because the port has no reflection for Gson to use. */
+        JsonObject write() {
+            JsonObject j = new JsonObject();
+            j.addProperty("iso", iso);
+            j.addProperty("s", s);
+            j.addProperty("o", o);
+            j.addProperty("key", key);
+            return j;
+        }
+
+        static RawSample read(JsonElement element) {
+            if (element == null || !element.isJsonObject()) return null;
+            JsonObject j = element.getAsJsonObject();
+            return new RawSample(
+                    j.has("iso") ? j.get("iso").getAsInt() : 0,
+                    j.has("s") ? j.get("s").getAsDouble() : 0.0,
+                    j.has("o") ? j.get("o").getAsDouble() : 0.0,
+                    j.has("key") ? j.get("key").getAsLong() : 0L);
         }
     }
 

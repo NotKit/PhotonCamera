@@ -11,21 +11,22 @@ import java.io.File;
 import java.io.FilenameFilter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class FileManager {
     private static final String TAG = "FileManager";
     private static final List<String> ACCEPTED_FILES_EXTENSIONS = Arrays.asList("JPG", "JPEG", "DNG", "HEIC", "HEIF", "HIF");
     private static final FilenameFilter FILENAME_FILTER = (dir, name) -> {
-        int index = name.lastIndexOf(46);
+        int index = name.lastIndexOf('.');
         return ACCEPTED_FILES_EXTENSIONS.contains(-1 == index ? "" : name.substring(index + 1).toUpperCase()) && new File(dir, name).length() > 0;
     };
     public static File sEXTERNAL_DIR = Environment.getExternalStorageDirectory();
     public static File sCACHE_DIR;
-    public static File sPHOTON_DIR = new File(sEXTERNAL_DIR + "//DCIM//PhotonCamera//");
-    public static File sPHOTON_RAW_DIR = new File(sEXTERNAL_DIR + "//DCIM//PhotonCamera//Raw//");
-    public static File sPHOTON_TUNING_DIR = new File(sEXTERNAL_DIR + "//DCIM//PhotonCamera//Tuning//");
-    public static File sDCIM_CAMERA = new File(sEXTERNAL_DIR + "//DCIM//Camera//");
+    public static File sPHOTON_DIR = new File(sEXTERNAL_DIR, "DCIM/PhotonCamera");
+    public static File sPHOTON_RAW_DIR = new File(sEXTERNAL_DIR, "DCIM/PhotonCamera/Raw");
+    public static File sPHOTON_TUNING_DIR = new File(sEXTERNAL_DIR, "DCIM/PhotonCamera/Tuning");
+    public static File sDCIM_CAMERA = new File(sEXTERNAL_DIR, "DCIM/Camera");
     public static List<File> tempImageFiles;
 
 
@@ -72,14 +73,20 @@ public class FileManager {
                 for(File f : filesList)
                     if(lastDate < f.lastModified())
                         fileDiff.add(f);
-                fileDiff.sort((file1, file2) -> Long.compare(file2.lastModified(), file1.lastModified()));
+                Collections.sort(fileDiff, (file1, file2) -> {
+                    long x = file2.lastModified(), y = file1.lastModified();
+                    return x < y ? -1 : (x > y ? 1 : 0);
+                });
                 fileDiff.addAll(tempImageFiles);
                 tempImageFiles = fileDiff;
             }
             return tempImageFiles;
         }
         if (!filesList.isEmpty()) {
-            filesList.sort((file1, file2) -> Long.compare(file2.lastModified(), file1.lastModified()));
+            Collections.sort(filesList, (file1, file2) -> {
+                long x = file2.lastModified(), y = file1.lastModified();
+                return x < y ? -1 : (x > y ? 1 : 0);
+            });
             tempImageFiles = filesList;
         } else
             Log.e(TAG, "getAllImageFiles(): Could not find any Image Files");

@@ -39,6 +39,8 @@ public interface Command {
             case DEBUG_SHOT:{
                 return new DebugShot(commands);
             }
+            default:
+                break;
         }
         return null;
     }

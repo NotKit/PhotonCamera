@@ -26,7 +26,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -85,7 +84,8 @@ public class BackupRestoreUtil {
                         // Parse the JSON string to a map for better readability
                         String jsonString = entry.getValue().toString();
                         try {
-                            Map<String, ?> settingsMap = GSON.fromJson(jsonString, HashMap.class);
+                            Map<String, ?> settingsMap = GSON.fromJson(jsonString,
+                                    new com.google.gson.reflect.TypeToken<Map<String, Object>>(){}.getType());
                             cameraSettings.put("settings", settingsMap);
                         } catch (Exception e) {
                             // If parsing fails, store as string
@@ -114,17 +114,23 @@ public class BackupRestoreUtil {
             metadata.put("timestamp", String.valueOf(System.currentTimeMillis()));
             exportData.put("metadata", metadata);
             
-            String nameWithExt = fileName.endsWith(".json") ? fileName : fileName.concat(".json");
+            String nameWithExt = fileName.endsWith(".json") ? fileName : fileName + ".json";
             if (SimpleStorageHelper.hasStorageAccess(context)) {
-                try (OutputStream os = SimpleStorageHelper.openOutputStream(context, nameWithExt);
-                     OutputStreamWriter writer = new OutputStreamWriter(os, StandardCharsets.UTF_8)) {
+                OutputStream os = SimpleStorageHelper.openOutputStream(context, nameWithExt);
+                OutputStreamWriter writer = new OutputStreamWriter(os, StandardCharsets.UTF_8);
+                try {
                     GSON.toJson(exportData, writer);
+                } finally {
+                    writer.close();
                 }
                 return "Saved: DCIM/PhotonCamera/" + nameWithExt;
             } else {
                 File toSave = new File(FileManager.sPHOTON_DIR, nameWithExt);
-                try (FileWriter writer = new FileWriter(toSave)) {
+                FileWriter writer = new FileWriter(toSave);
+                try {
                     GSON.toJson(exportData, writer);
+                } finally {
+                    writer.close();
                 }
                 return "Saved: " + toSave.getAbsolutePath();
             }
@@ -145,7 +151,8 @@ public class BackupRestoreUtil {
     public static String restorePreferences(Context context, String fileName) {
         try {
             if (SimpleStorageHelper.hasStorageAccess(context)) {
-                try (InputStream is = SimpleStorageHelper.openInputStream(context, fileName)) {
+                InputStream is = SimpleStorageHelper.openInputStream(context, fileName);
+                try {
                     if (fileName.endsWith(".json")) {
                         return restoreFromJsonStream(context, is, fileName);
                     } else if (fileName.endsWith(".xml")) {
@@ -153,6 +160,8 @@ public class BackupRestoreUtil {
                     } else {
                         return "Error: Unknown file format. Use .json or .xml";
                     }
+                } finally {
+                    is.close();
                 }
             }
         } catch (Exception e) {
@@ -183,11 +192,14 @@ public class BackupRestoreUtil {
      */
     private static String restoreFromJsonStream(Context context, InputStream is, String fileName) throws IOException {
         TunableSettingsManager.ensureTunableClassesRegistered();
-        try (InputStreamReader reader = new InputStreamReader(is, StandardCharsets.UTF_8)) {
+        InputStreamReader reader = new InputStreamReader(is, StandardCharsets.UTF_8);
+        try {
             JsonObject root = JsonParser.parseReader(reader).getAsJsonObject();
             applyRestoredJson(context, root);
             PhotonCamera.restartWithDelay(context, 1000);
             return "Restored from JSON: " + fileName;
+        } finally {
+            reader.close();
         }
     }
     
@@ -196,11 +208,14 @@ public class BackupRestoreUtil {
      */
     private static String restoreFromJson(Context context, File jsonFile) throws IOException {
         TunableSettingsManager.ensureTunableClassesRegistered();
-        try (FileReader reader = new FileReader(jsonFile)) {
+        FileReader reader = new FileReader(jsonFile);
+        try {
             JsonObject root = JsonParser.parseReader(reader).getAsJsonObject();
             applyRestoredJson(context, root);
             PhotonCamera.restartWithDelay(context, 1000);
             return "Restored from JSON: " + jsonFile.getName();
+        } finally {
+            reader.close();
         }
     }
     
@@ -271,12 +286,15 @@ public class BackupRestoreUtil {
      */
     private static String restoreFromXmlStream(Context context, InputStream is, String fileName) throws IOException {
         File temp = new File(context.getCacheDir(), "restore_prefs.xml");
-        try (java.io.FileOutputStream out = new java.io.FileOutputStream(temp)) {
+        java.io.FileOutputStream out = new java.io.FileOutputStream(temp);
+        try {
             byte[] buf = new byte[8192];
             int n;
             while ((n = is.read(buf)) > 0) {
                 out.write(buf, 0, n);
             }
+        } finally {
+            out.close();
         }
         try {
             return restoreFromXml(context, temp);
@@ -290,13 +308,12 @@ public class BackupRestoreUtil {
      */
     private static String restoreFromXml(Context context, File xmlFile) throws IOException {
         File data_dir = context.getDataDir();
-        File shared_prefs_file = Paths.get(
-                data_dir.toPath()
+        File shared_prefs_file = new File(
+                data_dir.getAbsolutePath()
                         + File.separator
                         + "shared_prefs"
                         + File.separator
-                        + context.getPackageName() + "_preferences.xml"
-        ).toFile();
+                        + context.getPackageName() + "_preferences.xml");
         
         FileUtils.copyFile(xmlFile, shared_prefs_file);
         PhotonCamera.restartWithDelay(context, 1000);
@@ -362,7 +379,7 @@ public class BackupRestoreUtil {
 
     public static boolean resetPreferences(Context context) {
         File data_dir = context.getDataDir();
-        File shared_prefs_dir = Paths.get(data_dir.toPath() + File.separator + "shared_prefs").toFile();
+        File shared_prefs_dir = new File(data_dir.getAbsolutePath() + File.separator + "shared_prefs");
         try {
             FileUtils.deleteDirectory(shared_prefs_dir);
             return true;

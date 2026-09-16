@@ -279,10 +279,7 @@ public class SensorConfigPreferenceGenerator {
      * Strip the logical part of a "logical-physical" id (e.g. "0-1" -> "1").
      */
     public static String toPhysicalId(String id) {
-        if (id != null && id.contains("-")) {
-            return id.split("-")[1];
-        }
-        return id;
+        return SensorConfigRegistry.toPhysicalId(id);
     }
 
     private static void scanClass(Class<?> clazz, List<TunableFieldInfo> fields) {
