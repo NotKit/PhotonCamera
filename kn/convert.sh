@@ -33,6 +33,24 @@ RULES=$(ls "$HERE"/j2k/rules/*.py | xargs -n1 basename | sed 's/\.py$//' \
         | grep -v '^__init__$' | grep -vE '^r99[58]_' | paste -sd,)
 "$PY" "$HERE/j2k/j2k.py" --src "$STAGE" --out "$GEN_NEW" --rules "$RULES" | tail -8
 
+# j2k gives a field with no initialiser `= TODO()`, which K/N runs at the
+# file's first touch and so fails the whole file. Give it Java's default.
+"$PY" - "$GEN_NEW" <<'PYEOF'
+import re, sys, pathlib
+DEF = {"Int": "0", "Long": "0L", "Short": "0", "Byte": "0", "Float": "0f",
+       "Double": "0.0", "Boolean": "false", "Char": "'\\u0000'"}
+PROP = re.compile(r'^([ \t]*(?:[\w@.]+[ \t]+)*(?:val|var)[ \t]+`?[\w$]+`?[ \t]*:[ \t]*)([^=]+?)([ \t]*=[ \t]*)TODO\(\)[ \t]*$', re.M)
+def sub(m):
+    t = m.group(2).strip()
+    v = "null" if t.endswith("?") else DEF.get(t)
+    return m.group(0) if v is None else m.group(1) + m.group(2) + m.group(3) + v
+n = 0
+for f in pathlib.Path(sys.argv[1]).rglob("*.kt"):
+    s = f.read_text(); r, k = PROP.subn(sub, s); n += k
+    if k: f.write_text(r)
+print(f"TODO() field initialisers defaulted: {n}")
+PYEOF
+
 # j2k emits GeckoView's generated surface (aidl stand-ins, android.R, the JDK
 # TODO() stubs) for any --src.  The shims under src/commonMain are real
 # implementations, so the stub surface is not wanted; only the converted
