@@ -30,10 +30,10 @@ import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
+import com.particlesdevs.photoncamera.ui.settings.compose.SettingsScreenHost;
 import androidx.preference.PreferenceManager;
 import androidx.preference.PreferenceScreen;
 
-import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.transition.MaterialSharedAxis;
 import com.particlesdevs.photoncamera.R;
@@ -79,11 +79,6 @@ public class SettingsActivity extends BaseActivity implements PreferenceFragment
         }
         setContentView(R.layout.activity_settings);
 
-        MaterialToolbar toolbar = findViewById(R.id.settings_toolbar);
-        if (toolbar != null) {
-            toolbar.setNavigationOnClickListener(v -> getOnBackPressedDispatcher().onBackPressed());
-        }
-
         // Predictive-back compatible handling: applies the restart side effect,
         // then disables and re-dispatches so FragmentManager pops its back stack.
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
@@ -112,11 +107,6 @@ public class SettingsActivity extends BaseActivity implements PreferenceFragment
     }
     
     private void setupWindowInsets() {
-        View toolbar = findViewById(R.id.settings_toolbar);
-        if (toolbar != null) {
-            com.particlesdevs.photoncamera.util.SystemBarsHelper.padTopForStatusBar(toolbar);
-            ViewCompat.requestApplyInsets(toolbar);
-        }
         View settingsContainer = findViewById(R.id.settings_container);
         if (settingsContainer != null) {
             ViewCompat.setOnApplyWindowInsetsListener(settingsContainer, (v, windowInsets) -> {
@@ -172,6 +162,7 @@ public class SettingsActivity extends BaseActivity implements PreferenceFragment
         private Context mContext;
         private View mRootView;
         private SupportedDevice supportedDevice;
+        private SettingsScreenHost composeHost;
         private boolean tunablePreferencesGenerated = false;
         private boolean sensorConfigPreferencesGenerated = false;
         private boolean videoTunablePreferencesGenerated = false;
@@ -583,39 +574,51 @@ public class SettingsActivity extends BaseActivity implements PreferenceFragment
             }
         }
 
+        /**
+         * The preference tree is still built by PreferenceFragmentCompat - only the
+         * list is drawn by Compose now, off that same tree.
+         */
         @NonNull
         @Override
         public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
             if (container != null) container.removeAllViews();
-            return super.onCreateView(inflater, container, savedInstanceState);
+            // PreferenceFragmentCompat manages a RecyclerView of its own across the
+            // view lifecycle - onDestroyView unbinds it - so let it build one even
+            // though the rows are drawn by Compose. It is never attached, so it
+            // never lays out or binds a row.
+            super.onCreateView(inflater, container, savedInstanceState);
+            composeHost = new SettingsScreenHost(
+                    requireContext(),
+                    () -> {
+                        requireActivity().onBackPressed();
+                        return kotlin.Unit.INSTANCE;
+                    },
+                    screen -> {
+                        onPreferenceTreeClick(screen);
+                        return kotlin.Unit.INSTANCE;
+                    });
+            return composeHost.createView();
         }
 
         @Override
         public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
             super.onViewCreated(view, savedInstanceState);
             mRootView = view;
-            setupToolbar();
+            bindComposeScreen();
         }
 
-        private void setupToolbar() {
-            if (activity != null) {
-                Toolbar toolbar = activity.findViewById(R.id.settings_toolbar);
-                if (toolbar != null) {
-                    CharSequence title = getPreferenceScreen().getTitle();
-                    // Default to "Settings" if title is null
-                    if (title == null || title.toString().isEmpty()) {
-                        title = "Settings";
-                    }
-                    toolbar.setTitle(title);
-                }
-            }
+        private void bindComposeScreen() {
+            if (composeHost == null || getPreferenceScreen() == null) return;
+            CharSequence title = getPreferenceScreen().getTitle();
+            String screenTitle = (title == null || title.toString().isEmpty())
+                    ? getString(R.string.settings) : title.toString();
+            composeHost.bind(getPreferenceScreen(), screenTitle, true);
         }
-        
+
         @Override
         public void onResume() {
             super.onResume();
-            // Update toolbar title when fragment resumes (e.g., after navigating back)
-            setupToolbar();
+            bindComposeScreen();
         }
 
 
