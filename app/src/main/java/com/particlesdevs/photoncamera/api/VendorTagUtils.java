@@ -12,7 +12,6 @@ import com.particlesdevs.photoncamera.util.Log;
 import com.particlesdevs.photoncamera.app.PhotonCamera;
 import com.particlesdevs.photoncamera.settings.TunableKeyManager;
 
-import java.lang.reflect.Array;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,8 +36,7 @@ public class VendorTagUtils {
     }
 
     @SuppressLint("NewApi")
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    private static void setPhysical(CaptureRequest.Builder builder, CaptureRequest.Key key, Object value, String physicalId) {
+    private static <T> void setPhysical(CaptureRequest.Builder builder, CaptureRequest.Key<T> key, T value, String physicalId) {
         try {
             builder.setPhysicalCameraKey(key, value, physicalId);
         } catch (Exception e) {
@@ -46,8 +44,7 @@ public class VendorTagUtils {
         }
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
-    private static void setKeyValue(CaptureRequest.Builder builder, CaptureRequest.Key key, Object value) {
+    private static <T> void setKeyValue(CaptureRequest.Builder builder, CaptureRequest.Key<T> key, T value) {
         builder.set(key, value);
     }
 
@@ -84,12 +81,16 @@ public class VendorTagUtils {
             return parseValue(valueType, value);
         }
 
-        public CaptureRequest.Key<?> toCaptureRequestKey() {
-            return new CaptureRequest.Key<>(name, classForValueType(valueType));
+        /* The value's type is only known as a string here, so the key is the
+         * untyped one and the value rides as an Object. */
+        @SuppressWarnings("unchecked")
+        public CaptureRequest.Key<Object> toCaptureRequestKey() {
+            return new CaptureRequest.Key<Object>(name, (Class<Object>) classForValueType(valueType));
         }
 
-        public CaptureResult.Key<?> toCaptureResultKey() {
-            return new CaptureResult.Key<>(name, classForValueType(valueType));
+        @SuppressWarnings("unchecked")
+        public CaptureResult.Key<Object> toCaptureResultKey() {
+            return new CaptureResult.Key<Object>(name, (Class<Object>) classForValueType(valueType));
         }
 
         public static String valueTypeForClass(Class<?> valueClass) {
@@ -126,22 +127,48 @@ public class VendorTagUtils {
             }
         }
 
+        /** The four array shapes a tunable key can carry, spelled out rather
+         * than walked with java.lang.reflect.Array. */
         public static String valueToString(Class<?> valueClass, Object value) {
             if (value == null) return "0";
-            if (valueClass != null && valueClass.isArray()) {
-                StringBuilder sb = new StringBuilder();
-                int len = Array.getLength(value);
-                for (int i = 0; i < len; i++) {
+            StringBuilder sb = new StringBuilder();
+            if (value instanceof int[]) {
+                int[] a = (int[]) value;
+                for (int i = 0; i < a.length; i++) {
                     if (i > 0) sb.append(",");
-                    sb.append(Array.get(value, i));
+                    sb.append(a[i]);
+                }
+                return sb.toString();
+            }
+            if (value instanceof byte[]) {
+                byte[] a = (byte[]) value;
+                for (int i = 0; i < a.length; i++) {
+                    if (i > 0) sb.append(",");
+                    sb.append(a[i]);
+                }
+                return sb.toString();
+            }
+            if (value instanceof long[]) {
+                long[] a = (long[]) value;
+                for (int i = 0; i < a.length; i++) {
+                    if (i > 0) sb.append(",");
+                    sb.append(a[i]);
+                }
+                return sb.toString();
+            }
+            if (value instanceof float[]) {
+                float[] a = (float[]) value;
+                for (int i = 0; i < a.length; i++) {
+                    if (i > 0) sb.append(",");
+                    sb.append(a[i]);
                 }
                 return sb.toString();
             }
             return String.valueOf(value);
         }
 
-        public static Object parseValue(String valueType, String value) {
-            if (value == null) value = "";
+        public static Object parseValue(String valueType, String rawValue) {
+            String value = rawValue == null ? "" : rawValue;
             String vt = valueType == null ? "Integer" : valueType;
             switch (vt) {
                 case "Long": return Long.parseLong(value.trim());
@@ -197,7 +224,7 @@ public class VendorTagUtils {
                 continue;
             }
             try {
-                CaptureRequest.Key<?> key = tunableKey.toCaptureRequestKey();
+                CaptureRequest.Key<Object> key = tunableKey.toCaptureRequestKey();
                 boolean supported = isSupported(builder, key);
                 tunableKey.supported = supported;
                 if (supported) {
@@ -219,24 +246,24 @@ public class VendorTagUtils {
     public static void builderSessionApply(CaptureRequest.Builder builder, boolean burst, boolean useMaximumResolutionKey, String physicalId) {
         try {
             byte enable = 1;
-             var clientName = new CaptureRequest.Key<>("com.xiaomi.sessionparams.clientName", String.class);
+             CaptureRequest.Key<String> clientName = new CaptureRequest.Key<>("com.xiaomi.sessionparams.clientName", String.class);
             if(isSupported(builder,clientName)) {
                 Log.d(TAG, "com.xiaomi.sessionparams.clientName supported");
                 builder.set(clientName, "com.android.camera");
                 setPhysical(builder, clientName, "com.android.camera", physicalId);
             }
             if(burst) {
-                var remosaicEnabled = new CaptureRequest.Key<>("xiaomi.remosaic.enabled", Byte.class);
+                CaptureRequest.Key<Byte> remosaicEnabled = new CaptureRequest.Key<>("xiaomi.remosaic.enabled", Byte.class);
                 if (isSupported(builder, remosaicEnabled)) {
                     builder.set(remosaicEnabled, enable);
                     setPhysical(builder, remosaicEnabled, enable, physicalId);
                 }
-                var remosaicQuadEnabled = new CaptureRequest.Key<>("xiaomi.quadcfa.enabled", Byte.class);
+                CaptureRequest.Key<Byte> remosaicQuadEnabled = new CaptureRequest.Key<>("xiaomi.quadcfa.enabled", Byte.class);
                 if (isSupported(builder, remosaicQuadEnabled)) {
                     builder.set(remosaicQuadEnabled, enable);
                     setPhysical(builder, remosaicQuadEnabled, enable, physicalId);
                 }
-                var remosaicEnabled2 = new CaptureRequest.Key<>("com.mediatek.control.capture.remosaicenable", int[].class);
+                CaptureRequest.Key<int[]> remosaicEnabled2 = new CaptureRequest.Key<>("com.mediatek.control.capture.remosaicenable", int[].class);
                 if (isSupported(builder, remosaicEnabled2)) {
                     builder.set(remosaicEnabled2, new int[]{1});
                     setPhysical(builder, remosaicEnabled2, new int[]{1}, physicalId);
@@ -295,7 +322,8 @@ public class VendorTagUtils {
      * @param physicalId physical camera ID
      * @return true if hardware OIS is confirmed available and working
      */
-    public static boolean isOisSupported(Context context, CameraCharacteristics chars, String physicalId) {
+    public static boolean isOisSupported(Context context, CameraCharacteristics characteristics, String physicalId) {
+        CameraCharacteristics chars = characteristics;
         if (chars == null && context != null && physicalId != null && !physicalId.isEmpty()) {
             try {
                 CameraManager manager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);

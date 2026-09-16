@@ -97,23 +97,31 @@ public class SensorSpecifics {
                 SpecificSettingSensor current = specificSettingSensor[count - 1];
                 switch (valsIn[0]) {
                     case "NoiseModelA": {
-                        for (int i = 0; i < 4; i++)
-                            current.NoiseModelerArr[0][i] = Double.parseDouble(istr[i]);
+                        double[][] noiseModel = current.NoiseModelerArr;
+                        if (noiseModel != null)
+                            for (int i = 0; i < 4; i++)
+                                noiseModel[0][i] = Double.parseDouble(istr[i]);
                         break;
                     }
                     case "NoiseModelB": {
-                        for (int i = 0; i < 4; i++)
-                            current.NoiseModelerArr[1][i] = Double.parseDouble(istr[i]);
+                        double[][] noiseModel = current.NoiseModelerArr;
+                        if (noiseModel != null)
+                            for (int i = 0; i < 4; i++)
+                                noiseModel[1][i] = Double.parseDouble(istr[i]);
                         break;
                     }
                     case "NoiseModelC": {
-                        for (int i = 0; i < 4; i++)
-                            current.NoiseModelerArr[2][i] = Double.parseDouble(istr[i]);
+                        double[][] noiseModel = current.NoiseModelerArr;
+                        if (noiseModel != null)
+                            for (int i = 0; i < 4; i++)
+                                noiseModel[2][i] = Double.parseDouble(istr[i]);
                         break;
                     }
                     case "NoiseModelD": {
-                        for (int i = 0; i < 4; i++)
-                            current.NoiseModelerArr[3][i] = Double.parseDouble(istr[i]);
+                        double[][] noiseModel = current.NoiseModelerArr;
+                        if (noiseModel != null)
+                            for (int i = 0; i < 4; i++)
+                                noiseModel[3][i] = Double.parseDouble(istr[i]);
                         current.ModelerExists = true;
                         break;
                     }
@@ -129,45 +137,51 @@ public class SensorSpecifics {
                         break;
                     }
                     case "calibrationTransform1": {
-                        current.CalibrationTransform1 = new float[3][3];
+                        float[][] m = new float[3][3];
                         for (int i = 0; i < 3; i++)
                             for (int j = 0; j < 3; j++)
-                                current.CalibrationTransform1[i][j] = (float) Double.parseDouble(istr[i * 3 + j]);
+                                m[i][j] = (float) Double.parseDouble(istr[i * 3 + j]);
+                        current.CalibrationTransform1 = m;
                         break;
                     }
                     case "calibrationTransform2": {
-                        current.CalibrationTransform2 = new float[3][3];
+                        float[][] m = new float[3][3];
                         for (int i = 0; i < 3; i++)
                             for (int j = 0; j < 3; j++)
-                                current.CalibrationTransform2[i][j] = (float) Double.parseDouble(istr[i * 3 + j]);
+                                m[i][j] = (float) Double.parseDouble(istr[i * 3 + j]);
+                        current.CalibrationTransform2 = m;
                         break;
                     }
                     case "colorTransform1": {
-                        current.ColorTransform1 = new float[3][3];
+                        float[][] m = new float[3][3];
                         for (int i = 0; i < 3; i++)
                             for (int j = 0; j < 3; j++)
-                                current.ColorTransform1[i][j] = (float) Double.parseDouble(istr[i * 3 + j]);
+                                m[i][j] = (float) Double.parseDouble(istr[i * 3 + j]);
+                        current.ColorTransform1 = m;
                         break;
                     }
                     case "colorTransform2": {
-                        current.ColorTransform2 = new float[3][3];
+                        float[][] m = new float[3][3];
                         for (int i = 0; i < 3; i++)
                             for (int j = 0; j < 3; j++)
-                                current.ColorTransform2[i][j] = (float) Double.parseDouble(istr[i * 3 + j]);
+                                m[i][j] = (float) Double.parseDouble(istr[i * 3 + j]);
+                        current.ColorTransform2 = m;
                         break;
                     }
                     case "forwardMatrix1": {
-                        current.ForwardMatrix1 = new float[3][3];
+                        float[][] m = new float[3][3];
                         for (int i = 0; i < 3; i++)
                             for (int j = 0; j < 3; j++)
-                                current.ForwardMatrix1[i][j] = (float) Double.parseDouble(istr[i * 3 + j]);
+                                m[i][j] = (float) Double.parseDouble(istr[i * 3 + j]);
+                        current.ForwardMatrix1 = m;
                         break;
                     }
                     case "forwardMatrix2": {
-                        current.ForwardMatrix2 = new float[3][3];
+                        float[][] m = new float[3][3];
                         for (int i = 0; i < 3; i++)
                             for (int j = 0; j < 3; j++)
-                                current.ForwardMatrix2[i][j] = (float) Double.parseDouble(istr[i * 3 + j]);
+                                m[i][j] = (float) Double.parseDouble(istr[i * 3 + j]);
+                        current.ForwardMatrix2 = m;
                         break;
                     }
                     case "referenceIlluminant1":

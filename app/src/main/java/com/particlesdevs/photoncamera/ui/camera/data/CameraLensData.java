@@ -99,11 +99,11 @@ public class CameraLensData {
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        CameraLensData that = (CameraLensData) o;
-        return facing == that.facing && Float.compare(that.cameraFocalLength, cameraFocalLength) == 0 && Float.compare(that.cameraAperture, cameraAperture) == 0 && flashSupported == that.flashSupported;
+    public boolean equals(Object other) {
+        if (this == other) return true;
+        if (other == null || getClass() != other.getClass()) return false;
+        CameraLensData that = (CameraLensData) other;
+        return facing == that.facing && Float.valueOf(that.cameraFocalLength).compareTo(cameraFocalLength) == 0 && Float.valueOf(that.cameraAperture).compareTo(cameraAperture) == 0 && flashSupported == that.flashSupported;
     }
 
     @Override

@@ -5,8 +5,6 @@ import androidx.annotation.StringRes;
 import com.particlesdevs.photoncamera.R;
 import com.particlesdevs.photoncamera.app.PhotonCamera;
 
-import java.util.stream.Stream;
-
 public enum CameraMode {
     UNLIMITED(R.string.mode_unlimited),
     RAWVIDEO(R.string.mode_rawvideo),
@@ -31,7 +29,12 @@ public enum CameraMode {
     }
 
     public static Integer[] nameIds() {
-        return Stream.of(values()).map(mode -> mode.stringId).toArray(Integer[]::new);
+        CameraMode[] modes = values();
+        Integer[] ids = new Integer[modes.length];
+        for (int i = 0; i < modes.length; i++) {
+            ids[i] = modes[i].stringId;
+        }
+        return ids;
     }
 
 }

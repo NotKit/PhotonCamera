@@ -16,8 +16,6 @@ import com.particlesdevs.photoncamera.capture.CaptureController;
 import com.particlesdevs.photoncamera.processing.opengl.GLDrawParams;
 import com.particlesdevs.photoncamera.processing.parameters.ExposureIndex;
 
-import java.lang.reflect.Field;
-
 import static android.hardware.camera2.CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE;
 import static android.hardware.camera2.CameraCharacteristics.LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION;
 import static android.hardware.camera2.CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE;
@@ -82,7 +80,7 @@ public class Camera2ApiAutoFix {
         fix.whitePoint();
         fix.CCM();
         /*Camera2ApiAutoFix.WhiteLevel(CameraFragment.mCaptureResult, (int)oldWL);
-        Camera2ApiAutoFix.BlackLevel(CameraFragment.mCaptureResult, PhotonCamera.getParameters().blackLevel, 1.f);
+        Camera2ApiAutoFix.BlackLevel(CameraFragment.mCaptureResult, PhotonCamera.getParameters().blackLevel, 1.0f);
         oldWL = -1.0;*/
     }
 
@@ -107,20 +105,21 @@ public class Camera2ApiAutoFix {
         CameraReflectionApi.set(CaptureController.mCameraCharacteristics, TONEMAP_MAX_CURVE_POINTS, 128);
     }
 
-    boolean checkdouble(double in) {
+    boolean checkdouble(float in) {
         return (((int) in * 100) % 100 == 0);
     }
 
     private void ExposureTime() {
-        Range exprange = characteristics.get(SENSOR_INFO_EXPOSURE_TIME_RANGE);
+        Range<Long> exprange = characteristics.get(SENSOR_INFO_EXPOSURE_TIME_RANGE);
         if (exprange == null) return;
-        if ((long) exprange.getUpper() < ExposureIndex.sec / 7) {
+        final long upper = exprange.getUpper();
+        if (upper < ExposureIndex.sec / 7) {
             Log.d(TAG, "Applied Fix ExposureTime no CIT");
-            Range nrange = new Range(exprange.getLower(), ExposureIndex.sec / 3);
+            Range<Long> nrange = new Range<>(exprange.getLower(), (long) (ExposureIndex.sec / 3));
             CameraReflectionApi.set(characteristics, SENSOR_INFO_EXPOSURE_TIME_RANGE, nrange);
-        } else if ((long) exprange.getUpper() > ExposureIndex.sec * 5 / 6 && (long) exprange.getUpper() < ExposureIndex.sec * 2) {
+        } else if (upper > ExposureIndex.sec * 5 / 6 && upper < ExposureIndex.sec * 2) {
             Log.d(TAG, "Applied Fix ExposureTime2 CIT SHIFT");
-            Range nrange = new Range(exprange.getLower(), (long) (ExposureIndex.sec * 5.2));
+            Range<Long> nrange = new Range<>(exprange.getLower(), (long) (ExposureIndex.sec * 5.2));
             CameraReflectionApi.set(characteristics, SENSOR_INFO_EXPOSURE_TIME_RANGE, nrange);
         }
         var keys = CameraReflectionApi.getCameraCharacteristicsKeys(characteristics, null, true);
@@ -143,18 +142,18 @@ public class Camera2ApiAutoFix {
                         } catch (Exception e) {
                             try {
                                 int[] ival = (int[]) res;
-                                vals[0] = ival[0];
-                                vals[1] = ival[1];
+                                vals[0] = (long) ival[0];
+                                vals[1] = (long) ival[1];
                             } catch (Exception ex) {
-                                Log.w(TAG, "Unsupported exposureTimeRange type: " + res.getClass().getName());
+                                Log.w(TAG, "Unsupported exposureTimeRange type: " + res);
                                 continue;
                             }
                         }
                         vals[0] *= mpy;
                         vals[1] *= mpy;
-                        if((long)exprange.getUpper() < vals[1]) {
+                        if(upper < vals[1]) {
                             Log.d(TAG, "Applied Fix ExposureTime vendor update");
-                            Range nrange = new Range(vals[0], vals[1]);
+                            Range<Long> nrange = new Range<>(vals[0], vals[1]);
                             CameraReflectionApi.set(characteristics, SENSOR_INFO_EXPOSURE_TIME_RANGE, nrange);
                             break;
                         }
@@ -166,8 +165,9 @@ public class Camera2ApiAutoFix {
     }
 
     private void ISO() {
-        Range exprange = characteristics.get(SENSOR_INFO_SENSITIVITY_RANGE);
+        Range<Integer> exprange = characteristics.get(SENSOR_INFO_SENSITIVITY_RANGE);
         if (exprange == null) return;
+        final int upper = exprange.getUpper();
         var keys = CameraReflectionApi.getCameraCharacteristicsKeys(characteristics, null, true);
         for (Object keyObj : keys) {
             try {
@@ -176,9 +176,9 @@ public class Camera2ApiAutoFix {
                     if (key.getName().contains("sensitivityRange") && !key.getName().contains("android")) {
                         Object res = characteristics.get(key);
                         int[] vals = (int[]) res;
-                        if((int)exprange.getUpper() < vals[1]) {
+                        if(upper < vals[1]) {
                             Log.d(TAG, "Applied Fix sensitivityRange vendor update");
-                            Range nrange = new Range(vals[0], vals[1]);
+                            Range<Integer> nrange = new Range<>(vals[0], vals[1]);
                             CameraReflectionApi.set(characteristics, SENSOR_INFO_SENSITIVITY_RANGE, nrange);
                             break;
                         }
@@ -189,7 +189,7 @@ public class Camera2ApiAutoFix {
         }
     }
     private void ExposureCompensation(){
-        Range nrange = new Range(-24, 24);
+        Range<Integer> nrange = new Range<>(-24, 24);
         CameraReflectionApi.set(CaptureController.mCameraCharacteristics, CONTROL_AE_COMPENSATION_RANGE,nrange);
     }
 
@@ -209,7 +209,7 @@ public class Camera2ApiAutoFix {
         if (patchWL != 0) {
             WhiteLevel(captureResult, PhotonCamera.getParameters().whiteLevel);
             BlackLevel(characteristics, captureResult, PhotonCamera.getParameters().blackLevel,
-                    1.f);
+                    1.0f);
         }
     }*/
 
@@ -234,7 +234,7 @@ public class Camera2ApiAutoFix {
         float[] dynBL = res.get(CaptureResult.SENSOR_DYNAMIC_BLACK_LEVEL);
         if (dynBL != null) {
             for (int i = 0; i < dynBL.length; i++) {
-                dynBL[i] = blacklevel[i];
+                dynBL[i] = (float) blacklevel[i];
             }
             CameraReflectionApi.set(CaptureResult.SENSOR_DYNAMIC_BLACK_LEVEL, dynBL, res);
         }
@@ -262,7 +262,7 @@ public class Camera2ApiAutoFix {
                     if (blacklevel[i] >= 0)
                         dynBL[i] = blacklevel[i] * mpy;
                     else {
-                        dynBL[i] = 0.f;
+                        dynBL[i] = 0.0f;
                     }
                 }
                 CameraReflectionApi.set(CaptureResult.SENSOR_DYNAMIC_BLACK_LEVEL, dynBL, res);
@@ -282,25 +282,17 @@ public class Camera2ApiAutoFix {
             CameraReflectionApi.set(COLOR_CORRECTION_GAINS, new RggbChannelVector(WB[0].floatValue() * 1.3f, WB[1].floatValue() / 1.78f, WB[1].floatValue() / 1.78f, WB[2].floatValue() * 2f));
         }
         Log.d(TAG, "Initial channelVector:" + rggbChannelVector.toString());
-        if (checkdouble(rggbChannelVector.getRed()) && checkdouble(rggbChannelVector.getGreenEven()) && checkdouble(rggbChannelVector.getGreenOdd()) && checkdouble(rggbChannelVector.getBlue()))
-            try {
-                Field field = rggbChannelVector.getClass().getDeclaredField("mRed");
-                field.setAccessible(true);
-                field.set(rggbChannelVector, 1f / WB[0].floatValue());
-                field = rggbChannelVector.getClass().getDeclaredField("mGreenEven");
-                field.setAccessible(true);
-                field.set(rggbChannelVector, 1f / WB[1].floatValue());
-                field = rggbChannelVector.getClass().getDeclaredField("mGreenOdd");
-                field.setAccessible(true);
-                field.set(rggbChannelVector, 1f / WB[1].floatValue());
-                field = rggbChannelVector.getClass().getDeclaredField("mBlue");
-                field.setAccessible(true);
-                field.set(rggbChannelVector, 1f / WB[2].floatValue());
-                CameraReflectionApi.set(COLOR_CORRECTION_GAINS, null);
-                CameraReflectionApi.set(COLOR_CORRECTION_GAINS, rggbChannelVector);
-            } catch (IllegalAccessException | NoSuchFieldException e) {
-                e.printStackTrace();
-            }
+        // the four channels used to be written in place by reflection; an
+        // RggbChannelVector is immutable, and a fresh one is the same value
+        if (checkdouble(rggbChannelVector.getRed()) && checkdouble(rggbChannelVector.getGreenEven())
+                && checkdouble(rggbChannelVector.getGreenOdd()) && checkdouble(rggbChannelVector.getBlue())) {
+            rggbChannelVector = new RggbChannelVector(
+                    1f / WB[0].floatValue(),
+                    1f / WB[1].floatValue(),
+                    1f / WB[1].floatValue(),
+                    1f / WB[2].floatValue());
+            CameraReflectionApi.set(COLOR_CORRECTION_GAINS, rggbChannelVector);
+        }
         Log.d(TAG, "Overrided channelVector:" + rggbChannelVector.toString());
     }
 
@@ -312,7 +304,7 @@ public class Camera2ApiAutoFix {
         if (level == null) {
             level = new float[4];
             for (int i = 0; i < 4; i++) {
-                level[i] = ptr.getOffsetForIndex(i % 2, i / 2);
+                level[i] = (float) ptr.getOffsetForIndex(i % 2, i / 2);
             }
             CameraReflectionApi.set(SENSOR_DYNAMIC_BLACK_LEVEL, level);
         }

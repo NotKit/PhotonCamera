@@ -17,8 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.ArrayDeque;
 
 import com.particlesdevs.photoncamera.util.SimpleStorageHelper;
 
@@ -87,7 +86,7 @@ public class Gyro {
     };
     public float[] mAngles;
     private boolean gyroburst = false;
-    private float burstout = 0.f;
+    private float burstout = 0.0f;
     private long timeCount = 0;
     private GyroBurst gyroBurst;
     private int filter = -1;
@@ -111,9 +110,9 @@ public class Gyro {
     private static final int MOVING_AVERAGE_SIZE = 10;
     private final Sensor mRotationVectorSensor;
     private final float[] mRotationVector = new float[5]; // Use 5 for compatibility
-    private final Queue<Float> mYawHistory = new LinkedList<>();
-    private final Queue<Float> mPitchHistory = new LinkedList<>();
-    private final Queue<Float> mRollHistory = new LinkedList<>();
+    private final ArrayDeque<Float> mYawHistory = new ArrayDeque<>();
+    private final ArrayDeque<Float> mPitchHistory = new ArrayDeque<>();
+    private final ArrayDeque<Float> mRollHistory = new ArrayDeque<>();
     private float mYawSum = 0f;
     private float mPitchSum = 0f;
     private float mRollSum = 0f;
@@ -209,13 +208,13 @@ public class Gyro {
     public int capturingNumber = 0;
     boolean integrate = false;
     float x,y,z;
-    private ArrayList<GyroBurst> BurstShakiness;
+    private ArrayList<GyroBurst> burstShakiness;
     public void PrepareGyroBurst(long[] capturingTimes,ArrayList<GyroBurst> burstShakiness) {
         lock = true;
         capturingNumber = 0;
-        x = 0.f;
-        y = 0.f;
-        z = 0.f;
+        x = 0.0f;
+        y = 0.0f;
+        z = 0.0f;
         this.capturingTimes = new long[capturingTimes.length];
         long maxTime = Long.MIN_VALUE;
         for(long time : capturingTimes){
@@ -227,7 +226,7 @@ public class Gyro {
         Log.d(TAG,"Gyro DelayUs:"+delayUs);
         gyroBurst = new GyroBurst(requiredSamples);
         System.arraycopy(capturingTimes, 0, this.capturingTimes, 0, capturingTimes.length);
-        BurstShakiness = burstShakiness;
+        this.burstShakiness = burstShakiness;
         unregister();
         register();
         lock = false;
@@ -255,12 +254,12 @@ public class Gyro {
             gyroBurst.integrated[0] = -x;
             gyroBurst.integrated[1] = y;
             gyroBurst.integrated[2] = z;
-            BurstShakiness.add(gyroBurst.clone());
-            //Log.d(TAG, "GyroBurst counter:" + BurstShakiness.size()+" sampleCount:"+counter+" shakiness:"+gyroBurst.shakiness);
+            burstShakiness.add(gyroBurst.clone());
+            //Log.d(TAG, "GyroBurst counter:" + burstShakiness.size()+" sampleCount:"+counter+" shakiness:"+gyroBurst.shakiness);
         }
     }
     /**
-     * Fills BurstShakiness for ZSL captures by extracting per-frame gyro motion from the
+     * Fills burstShakiness for ZSL captures by extracting per-frame gyro motion from the
      * continuous circle buffer, matching each frame's sensor timestamp window.
      *
      * @param frameTimestamps sensor timestamps (nanoseconds) for each pre-captured ZSL frame
@@ -268,7 +267,7 @@ public class Gyro {
      * @param result          list to receive one GyroBurst entry per frame
      */
     public void buildZslBurstShakiness(long[] frameTimestamps, long exposureTimeNs, ArrayList<GyroBurst> result) {
-        this.BurstShakiness = result;
+        this.burstShakiness = result;
         for (long frameTs : frameTimestamps) {
             long windowStart = frameTs - Math.max(exposureTimeNs, 1);
             long windowEnd = frameTs;
@@ -294,49 +293,51 @@ public class Gyro {
         delayUs = delayPreview;
         unregister();
         register();
+        // one read of the field: the burst list is replaced from the capture thread
+        final ArrayList<GyroBurst> bursts = burstShakiness;
         int avgSize = 0;
-        for (GyroBurst burst : BurstShakiness) {
+        for (GyroBurst burst : bursts) {
             avgSize += burst.samples;
         }
-        if (!BurstShakiness.isEmpty()) {
-            avgSize/=BurstShakiness.size();
+        if (!bursts.isEmpty()) {
+            avgSize/=bursts.size();
         }
-        for(int i =0; i<BurstShakiness.size();i++) {
-            int shakeInteg = BurstShakiness.get(i).samples;
-            if(BurstShakiness.get(i).samples > avgSize*2){
+        for(int i =0; i<bursts.size();i++) {
+            int shakeInteg = bursts.get(i).samples;
+            if(bursts.get(i).samples > avgSize*2){
                 shakeInteg = Math.min(avgSize,shakeInteg);
             }
             float shakiness = 0;
             for (int j = 0; j < shakeInteg; j++) {
-                shakiness += Math.abs(BurstShakiness.get(i).movementss[0][j]);
-                shakiness += Math.abs(BurstShakiness.get(i).movementss[1][j]);
-                shakiness += Math.abs(BurstShakiness.get(i).movementss[2][j]);
+                shakiness += Math.abs(bursts.get(i).movementss[0][j]);
+                shakiness += Math.abs(bursts.get(i).movementss[1][j]);
+                shakiness += Math.abs(bursts.get(i).movementss[2][j]);
             }
-            BurstShakiness.get(i).shakiness = shakiness;
-            BurstShakiness.get(i).samples = shakeInteg;
+            bursts.get(i).shakiness = shakiness;
+            bursts.get(i).samples = shakeInteg;
         }
-        for(int i =0; i<BurstShakiness.size();i++){
-            float shakinessP = 0.f;
-            float shakinessA = 0.f;
+        for(int i =0; i<bursts.size();i++){
+            float shakinessP = 0.0f;
+            float shakinessA = 0.0f;
             int sizeP = 0;
             int sizeA = 0;
             if(i > 0) {
-                shakinessP = BurstShakiness.get(i - 1).shakiness;
-                sizeP = BurstShakiness.get(i - 1).samples;
+                shakinessP = bursts.get(i - 1).shakiness;
+                sizeP = bursts.get(i - 1).samples;
             }
-            if(i < BurstShakiness.size()-1) {
-                shakinessA = BurstShakiness.get(i + 1).shakiness;
-                sizeA = BurstShakiness.get(i + 1).samples;
+            if(i < bursts.size()-1) {
+                shakinessA = bursts.get(i + 1).shakiness;
+                sizeA = bursts.get(i + 1).samples;
             }
-            float shakiness = BurstShakiness.get(i).shakiness;
-            int size = BurstShakiness.get(i).samples;
+            float shakiness = bursts.get(i).shakiness;
+            int size = bursts.get(i).samples;
             if(size < (sizeP+sizeA)/3){
                 size = Math.max(size,1);
                 sizeP = Math.max(sizeP,1);
                 sizeA = Math.max(sizeA,1);
-                BurstShakiness.get(i).shakiness = (shakinessP*sizeP + shakinessA*sizeA + shakiness*size)/(sizeP+size+sizeA);
+                bursts.get(i).shakiness = (shakinessP*sizeP + shakinessA*sizeA + shakiness*size)/(sizeP+size+sizeA);
             }
-            Log.d(TAG, "GyroBurst Shakiness["+i+"]:" + BurstShakiness.get(i).shakiness+" sampleCount:"+ BurstShakiness.get(i).samples);
+            Log.d(TAG, "GyroBurst Shakiness["+i+"]:" + bursts.get(i).shakiness+" sampleCount:"+ bursts.get(i).samples);
         }
     }
 
@@ -359,7 +360,7 @@ public class Gyro {
             tripodShakiness = (int) (temp);
             temp = 0;
         } else {
-            temp = Math.max(output,temp);
+            temp = Math.max((long) output, temp);
         }
         return output;
     }
@@ -382,29 +383,29 @@ public class Gyro {
         float[] orientationAngles = new float[3];
         SensorManager.getOrientation(remappedRotationMatrix, orientationAngles);
 
-        float currentYaw = (float) Math.toDegrees(orientationAngles[0]);
-        float currentPitch = (float) Math.toDegrees(orientationAngles[1]);
-        float currentRoll = (float) Math.toDegrees(orientationAngles[2]);
+        float currentYaw = (float) Math.toDegrees((double) orientationAngles[0]);
+        float currentPitch = (float) Math.toDegrees((double) orientationAngles[1]);
+        float currentRoll = (float) Math.toDegrees((double) orientationAngles[2]);
 
         // Update Yaw history
         mYawHistory.add(currentYaw);
         mYawSum += currentYaw;
         if (mYawHistory.size() > MOVING_AVERAGE_SIZE) {
-            mYawSum -= mYawHistory.poll();
+            mYawSum -= mYawHistory.removeFirst();
         }
 
         // Update Pitch history
         mPitchHistory.add(currentPitch);
         mPitchSum += currentPitch;
         if (mPitchHistory.size() > MOVING_AVERAGE_SIZE) {
-            mPitchSum -= mPitchHistory.poll();
+            mPitchSum -= mPitchHistory.removeFirst();
         }
 
         // Update Roll history
         mRollHistory.add(currentRoll);
         mRollSum += currentRoll;
         if (mRollHistory.size() > MOVING_AVERAGE_SIZE) {
-            mRollSum -= mRollHistory.poll();
+            mRollSum -= mRollHistory.removeFirst();
         }
     }
 
@@ -459,8 +460,12 @@ public class Gyro {
         recMz = new float[MAX_REC_SAMPLES];
         recCount  = 0;
         recHasMag = false;
-        latestAx = latestAy = latestAz = 0f;
-        latestMx = latestMy = latestMz = 0f;
+        latestAx = 0f;
+        latestAy = 0f;
+        latestAz = 0f;
+        latestMx = 0f;
+        latestMy = 0f;
+        latestMz = 0f;
 
         if (mAccelSensor == null)
             mAccelSensor = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
@@ -517,9 +522,15 @@ public class Gyro {
         final long    wallTimeMs = videoStartWallTimeMs;
 
         recTimestamps = null;
-        recGx = recGy = recGz = null;
-        recAx = recAy = recAz = null;
-        recMx = recMy = recMz = null;
+        recGx = null;
+        recGy = null;
+        recGz = null;
+        recAx = null;
+        recAy = null;
+        recAz = null;
+        recMx = null;
+        recMy = null;
+        recMz = null;
 
         new Thread(() -> writeGcsv(outPath, timestamps, gx, gy, gz, ax, ay, az,
                 mx, my, mz, hasMag, count, originTs, frameRate, wallTimeMs),
@@ -564,8 +575,8 @@ public class Gyro {
             Log.e(TAG, "Cannot open GCSV output: " + outPath);
             return;
         }
-        // PrintWriter silently swallows write errors; use checkError() at the end.
-        try (PrintWriter p = pw) {
+        final PrintWriter p = pw;
+        try {
             p.println("GYROFLOW IMU LOG");
             p.println("version,1.3");
             p.println("id,photoncamera_android");
@@ -609,11 +620,9 @@ public class Gyro {
                 p.println(sb);
             }
 
-            if (p.checkError()) {
-                Log.e(TAG, "GCSV write error (disk full or SAF fault): " + outPath);
-            } else {
-                Log.d(TAG, "GCSV written: " + count + " samples → " + outPath);
-            }
+            Log.d(TAG, "GCSV written: " + count + " samples -> " + outPath);
+        } finally {
+            p.close();
         }
     }
 }

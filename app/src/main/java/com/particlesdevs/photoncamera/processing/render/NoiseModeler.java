@@ -12,15 +12,17 @@ public class NoiseModeler {
     public int AnalogueISO;
     public int SensivityISO;
     double adaptiveMpy = 1.0;
+    /** The three entries are always replaced before they are read. */
+    private static final Pair<Double, Double> ZERO_MODEL = new Pair<>(0.0, 0.0);
     public NoiseModeler(Pair<Double,Double>[] inModel, Integer analogISO, Integer ISO, int bayer, SpecificSettingSensor specificSettingSensor) {
         AnalogueISO = analogISO;
         SensivityISO = ISO;
-        baseModel = new Pair[3];
-        computeModel = new Pair[3];
+        baseModel = new Pair[]{ZERO_MODEL, ZERO_MODEL, ZERO_MODEL};
+        computeModel = new Pair[]{ZERO_MODEL, ZERO_MODEL, ZERO_MODEL};
         //inModel = null;
         if (inModel == null || inModel.length == 0 || inModel[0].first == 0.0 || (specificSettingSensor != null && specificSettingSensor.ModelerExists)) {
-            Pair<Double, Double> CustomGeneratorS;
-            Pair<Double, Double> CustomGeneratorO;
+            Pair<Double, Double> CustomGeneratorS = ZERO_MODEL;
+            Pair<Double, Double> CustomGeneratorO = ZERO_MODEL;
             if(specificSettingSensor != null) {
                 double[] avrdouble = new double[4];
                 int cnt = 0;

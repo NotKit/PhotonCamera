@@ -15,7 +15,6 @@ package com.particlesdevs.photoncamera.capture;
  * limitations under the License.
  */
 
-import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
@@ -58,9 +57,7 @@ import android.util.Range;
 import android.util.Rational;
 import android.util.Size;
 import android.util.SparseIntArray;
-import android.view.Display;
 import android.view.Surface;
-import android.view.TextureView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -89,10 +86,7 @@ import com.particlesdevs.photoncamera.processing.parameters.ColorTemperatureConv
 import com.particlesdevs.photoncamera.settings.PreferenceKeys;
 import com.particlesdevs.photoncamera.settings.SensorConfigInjector;
 import com.particlesdevs.photoncamera.settings.annotations.SensorConfig;
-import com.particlesdevs.photoncamera.ui.camera.CameraFragment;
 import com.particlesdevs.photoncamera.ui.camera.viewmodel.TimerFrameCountViewModel;
-import com.particlesdevs.photoncamera.ui.camera.views.viewfinder.AutoFitPreviewView;
-import com.particlesdevs.photoncamera.ui.camera.views.viewfinder.GLPreview;
 import com.particlesdevs.photoncamera.util.log.Logger;
 
 import org.jetbrains.annotations.NotNull;
@@ -400,7 +394,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                     mZslRingBuffer.addLast(img);
                     int maxFrames = Math.min(PhotonCamera.getSettings().frameCount, 37);
                     while (mZslRingBuffer.size() > maxFrames) {
-                        Image old = mZslRingBuffer.pollFirst();
+                        Image old = (mZslRingBuffer.isEmpty() ? null : mZslRingBuffer.removeFirst());
                         if (old != null) old.close();
                     }
                 }
@@ -443,7 +437,8 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
     /**
      * An {@link AutoFitPreviewView} for camera preview.
      */
-    private GLPreview mTextureView;
+    private static final String CAMERA_PERMISSION = "android.permission.CAMERA";
+    private PreviewSurface mTextureView;
     /**
      * A {@link CameraCaptureSession } for camera preview.
      */
@@ -577,13 +572,13 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
         public void onCaptureCompleted(@NonNull CameraCaptureSession session,
                                        @NonNull CaptureRequest request,
                                        @NonNull TotalCaptureResult result) {
-            Object exposure = result.get(CaptureResult.SENSOR_EXPOSURE_TIME);
-            Object iso = result.get(CaptureResult.SENSOR_SENSITIVITY);
-            Object focus = result.get(CaptureResult.LENS_FOCUS_DISTANCE);
+            Long exposure = result.get(CaptureResult.SENSOR_EXPOSURE_TIME);
+            Integer iso = result.get(CaptureResult.SENSOR_SENSITIVITY);
+            Float focus = result.get(CaptureResult.LENS_FOCUS_DISTANCE);
             Rational[] mTemp = result.get(CaptureResult.SENSOR_NEUTRAL_COLOR_POINT);
-            if (exposure != null) mPreviewExposureTime = (long) exposure;
-            if (iso != null) mPreviewIso = (int) iso;
-            if (focus != null) mFocus = (float) focus;
+            if (exposure != null) mPreviewExposureTime = exposure;
+            if (iso != null) mPreviewIso = iso;
+            if (focus != null) mFocus = focus;
             if (mTemp != null) mPreviewTemp = mTemp;
             if (mPreviewTemp == null) {
                 mPreviewTemp = new Rational[3];
@@ -674,14 +669,13 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
         }
     };
     /**
-     * {@link TextureView.SurfaceTextureListener} handles several lifecycle events on a
-     * {@link TextureView}.
+     * The viewfinder's lifecycle: the camera is opened once its texture exists.
      */
-    public final TextureView.SurfaceTextureListener mSurfaceTextureListener
-            = new TextureView.SurfaceTextureListener() {
+    public final PreviewSurface.Listener mSurfaceTextureListener
+            = new PreviewSurface.Listener() {
 
         @Override
-        public void onSurfaceTextureAvailable(@NonNull SurfaceTexture texture, int width, int height) {
+        public void onPreviewSurfaceAvailable(SurfaceTexture texture, int width, int height) {
             // The availability callback is delivered through the main-thread
             // handler; if the GL surface was recreated in the meantime, verify
             // against an already active texture before dropping the request.
@@ -710,17 +704,17 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                     Log.e(TAG, "No characteristics for physicalID=" + physicalID
                             + " (mCameraID=" + PhotonCamera.getSettings().mCameraID + "). Falling back to first available.");
                     if (!mCameraCharacteristicsMap.isEmpty()) {
-                        Map.Entry<String, CameraCharacteristics> first = mCameraCharacteristicsMap.entrySet().iterator().next();
-                        physicalID = first.getKey();
+                        String firstId = mCameraCharacteristicsMap.keySet().iterator().next();
+                        physicalID = firstId;
                         logicalID = physicalID;
                         PhotonCamera.getSettings().mCameraID = physicalID;
-                        chars = first.getValue();
+                        chars = mCameraCharacteristicsMap.get(firstId);
                     } else {
                         showToast("No cameras available");
                         return;
                     }
                 }
-                Size optimal = getPreviewOutputSize(getSafeDisplay(), chars,
+                Size optimal = getPreviewOutputSize(getDisplaySize(), chars,
                         PhotonCamera.getSettings().selectedMode);
                 openCamera(optimal.getWidth(), optimal.getHeight());
             } catch (Exception e){
@@ -730,28 +724,22 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
         }
 
         @Override
-        public void onSurfaceTextureSizeChanged(@NonNull SurfaceTexture texture, int width, int height) {
+        public void onPreviewSurfaceSizeChanged(SurfaceTexture texture, int width, int height) {
             Log.d(TAG, " CHANGED SIZE:" + width + ' ' + height);
             configureTransform(width, height);
         }
 
         @Override
-
-        public boolean onSurfaceTextureDestroyed(@NonNull SurfaceTexture texture) {
+        public boolean onPreviewSurfaceDestroyed(SurfaceTexture texture) {
             return true;
         }
-
-        @Override
-        public void onSurfaceTextureUpdated(@NonNull SurfaceTexture texture) {
-        }
-
     };
     /**
      * @param previewView the viewfinder to open the camera against. It is passed in
      *                    rather than looked up by id: the Compose screen attaches it
      *                    when it first composes, which is after this constructor runs.
      */
-    public CaptureController(Activity activity, GLPreview previewView, ExecutorService processExecutor, CameraEventsListener cameraEventsListener) {
+    public CaptureController(Activity activity, PreviewSurface previewView, ExecutorService processExecutor, CameraEventsListener cameraEventsListener) {
         if(PhotonCamera.getSettings().previewFormat != 0) {
             mPreviewTargetFormat = PhotonCamera.getSettings().previewFormat;
         } else {
@@ -854,13 +842,24 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
         // Pick the smallest of those big enough.
         // If there is no one big enough, pick the largest of those not big enough.
         if (!bigEnough.isEmpty()) {
-            return Collections.min(bigEnough, new CompareSizesByArea());
+            return extremeByArea(bigEnough, true);
         } else if (!notBigEnough.isEmpty()) {
-            return Collections.max(notBigEnough, new CompareSizesByArea());
+            return extremeByArea(notBigEnough, false);
         } else {
             Log.e(TAG, "Couldn't find any suitable preview size");
             return choices[0];
         }
+    }
+
+    /** The smallest (or largest) of the sizes by sensor area. */
+    private static Size extremeByArea(List<Size> sizes, boolean smallest) {
+        CompareSizesByArea byArea = new CompareSizesByArea();
+        Size best = sizes.get(0);
+        for (Size size : sizes) {
+            int order = byArea.compare(size, best);
+            if (smallest ? order < 0 : order > 0) best = size;
+        }
+        return best;
     }
 
     private Size getCameraOutputSize(Size[] sizes) {
@@ -1109,7 +1108,8 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
         }
         try {
 //            mCaptureSession.stopRepeating();
-            mCaptureSession.setRepeatingRequest(mPreviewInputRequest = mPreviewRequestBuilder.build(), mCaptureCallback, mBackgroundHandler);
+            mPreviewInputRequest = mPreviewRequestBuilder.build();
+            mCaptureSession.setRepeatingRequest(mPreviewInputRequest, mCaptureCallback, mBackgroundHandler);
         } catch (IllegalStateException | IllegalArgumentException | NullPointerException e) {
             Logger.warnShort(TAG, "Cannot rebuildPreviewBuilder()!", e);
         } catch (CameraAccessException e) {
@@ -1146,8 +1146,8 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
         }
         int rotation = PhotonCamera.getGravity().getRotation();//activity.getWindowManager().getDefaultDisplay().getRotation();
         Matrix matrix = new Matrix();
-        RectF viewRect = new RectF(0, 0, viewWidth, viewHeight);
-        RectF bufferRect = new RectF(0, 0, mPreviewSize.getHeight(), mPreviewSize.getWidth());
+        RectF viewRect = new RectF(0f, 0f, (float) viewWidth, (float) viewHeight);
+        RectF bufferRect = new RectF(0f, 0f, (float) mPreviewSize.getHeight(), (float) mPreviewSize.getWidth());
         float centerX = viewRect.centerX();
         float centerY = viewRect.centerY();
         /*
@@ -1235,7 +1235,6 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
     @SuppressLint("MissingPermission")
     public void restartCamera() {
         Log.d(TAG, "restartCamera() called from \"" + Thread.currentThread().getName() + "\" Thread");
-        CameraFragment.mSelectedMode = PhotonCamera.getSettings().selectedMode;
         if (paramController != null) {
             paramController.onCameraChanged();
         }
@@ -1320,7 +1319,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
             mCameraCharacteristics = mCameraCharacteristicsMap.get(physicalID);
         }
 
-        Size optimal = getPreviewOutputSize(getSafeDisplay(), mCameraCharacteristics, CameraFragment.mSelectedMode);
+        Size optimal = getPreviewOutputSize(getDisplaySize(), mCameraCharacteristics, PhotonCamera.getSettings().selectedMode);
 
         setUpCameraOutputs(optimal.getWidth(), optimal.getHeight());
         configureTransform(optimal.getWidth(), optimal.getHeight());
@@ -1335,23 +1334,17 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
         return aspectRatio;
     }
 
-    private Display getSafeDisplay() {
-        if (mTextureView != null) {
-            Display d = mTextureView.getDisplay();
-            if (d != null) return d;
-        }
-        //noinspection deprecation
-        return activity.getWindowManager().getDefaultDisplay();
+    /** (0, 0) until the viewfinder is on a display. */
+    private Point getDisplaySize() {
+        return mTextureView != null ? mTextureView.getDisplaySize() : new Point();
     }
 
     //Size for preview drawing
     private Size getTextureOutputSize(
-            Display display,
+            Point displayPoint,
             CameraMode targetMode
     ) {
         Size aspectRatio = getAspect(targetMode);
-        Point displayPoint = new Point();
-        display.getRealSize(displayPoint);
         int shortSide = Math.min(displayPoint.x, displayPoint.y);
         int longSide = shortSide * aspectRatio.getHeight() / aspectRatio.getWidth();
 
@@ -1360,10 +1353,11 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
 
     //Size for preview buffer
     private Size getPreviewOutputSize(
-            Display display,
-            CameraCharacteristics characteristics,
+            Point displayPoint,
+            CameraCharacteristics wanted,
             CameraMode targetMode
     ) {
+        CameraCharacteristics characteristics = wanted;
         if (characteristics == null) {
             if (mCameraCharacteristicsMap == null || mCameraCharacteristicsMap.isEmpty()) {
                 fillInCameraCharacteristics();
@@ -1375,8 +1369,6 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
         }
 
         Size aspectRatio = getAspect(targetMode);
-        Point displayPoint = new Point();
-        display.getRealSize(displayPoint);
         int shortSide = Math.min(displayPoint.x, displayPoint.y);
         int longSide = shortSide / aspectRatio.getWidth() * aspectRatio.getHeight();
 
@@ -1481,8 +1473,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
         }
         //Open camera in non ui thread
         processExecutor.execute(()->{
-            CameraFragment.mSelectedMode = PhotonCamera.getSettings().selectedMode;
-            if (ContextCompat.checkSelfPermission(activity, Manifest.permission.CAMERA)
+            if (ContextCompat.checkSelfPermission(activity, CAMERA_PERMISSION)
                     != PackageManager.PERMISSION_GRANTED) {
                 //requestCameraPermission();
                 mCameraOpening.set(false);
@@ -1569,7 +1560,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
 
         mImageReaderPreview = ImageReader.newInstance(preview.getWidth(), preview.getHeight(), mPreviewTargetFormat, maxjpg);
         mImageReaderPreview.setOnImageAvailableListener(mOnYuvImageAvailableListener, mBackgroundHandler);
-            mBufferSize = getPreviewOutputSize(getSafeDisplay(),characteristics,PhotonCamera.getSettings().selectedMode);
+            mBufferSize = getPreviewOutputSize(getDisplaySize(),characteristics,PhotonCamera.getSettings().selectedMode);
 
         if(mImageReaderRaw != null)
             mImageReaderRaw.close();
@@ -1594,8 +1585,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
         mSensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
         Range<Integer>[] ranges = characteristics.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
         if (ranges == null) {
-            ranges = new Range[1];
-            ranges[0] = new Range<>(14, 30);
+            ranges = new Range[]{new Range<>(14, 30)};
         }
         int minLower = Integer.MAX_VALUE;
         for (Range<Integer> range : ranges) {
@@ -1674,7 +1664,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
         }
         activity.runOnUiThread(() -> {
             //Preview drawing size changing
-            mPreviewSize = getTextureOutputSize(getSafeDisplay(), PhotonCamera.getSettings().selectedMode);
+            mPreviewSize = getTextureOutputSize(getDisplaySize(), PhotonCamera.getSettings().selectedMode);
             mTextureView.setAspectRatio(
                     mPreviewSize.getHeight(), mPreviewSize.getWidth());
             updatePreviewMirror();
@@ -1691,7 +1681,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
             SurfaceTexture texture = mTextureView.getSurfaceTexture();
             if (texture == null) {
                 Log.w(TAG, "createCameraPreviewSession(): SurfaceTexture not ready, waiting for surface");
-                mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
+                mTextureView.setListener(mSurfaceTextureListener);
                 return;
             }
             // We configure the size of default buffer to be the size of camera preview we want.
@@ -1757,7 +1747,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                                 getSelectedFpsRange());
                         mPreviewInputRequest = mPreviewRequestBuilder.build();
                         if (isBurstSession && isDualSession) {
-                            switch (CameraFragment.mSelectedMode) {
+                            switch (PhotonCamera.getSettings().selectedMode) {
                                 case NIGHT:
                                 case PHOTO:
                                 case MOTION:
@@ -1766,6 +1756,8 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                                 case UNLIMITED:
                                 case RAWVIDEO:
                                     mCaptureSession.setRepeatingBurst(captures, CaptureCallback, mBackgroundHandler);
+                                    break;
+                                default:
                                     break;
                             }
                         } else {
@@ -1846,7 +1838,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
         mPreviewRequestBuilder.addTarget(surface);
         synchronized (mZslBufferLock) {
             while (!mZslRingBuffer.isEmpty()) {
-                Image img = mZslRingBuffer.pollFirst();
+                Image img = (mZslRingBuffer.isEmpty() ? null : mZslRingBuffer.removeFirst());
                 if (img != null) img.close();
             }
         }
@@ -2001,7 +1993,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                                              long timestamp,
                                              long frameNumber) {
 
-                    if (baseFrameNumber[0] == 0) {
+                    if (baseFrameNumber[0] == 0L) {
                         baseFrameNumber[0] = frameNumber - 1L;
                         Log.v("BurstCounter", "CaptureStarted with FirstFrameNumber:" + frameNumber);
                     } else {
@@ -2023,11 +2015,11 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
 
                     int frameCount = (int) (result.getFrameNumber() - baseFrameNumber[0]);
                     Log.v("BurstCounter", "CaptureCompleted! FrameCount:" + frameCount);
-                    long frametime = 100;
-                    Object time = result.get(CaptureResult.SENSOR_EXPOSURE_TIME);
-                    if(time != null) frametime = (long)time;
+                    long frametime = 100L;
+                    Long time = result.get(CaptureResult.SENSOR_EXPOSURE_TIME);
+                    if (time != null) frametime = time;
                     cameraEventsListener.onFrameCaptureCompleted(
-                            new TimerFrameCountViewModel.FrameCntTime(frameCount, maxFrameCount[0], frametime));
+                            new TimerFrameCountViewModel.FrameCntTime(frameCount, maxFrameCount[0], (double) frametime));
                     mCaptureResult = result;
                 }
 
@@ -2041,7 +2033,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                     Log.v("BurstCounter", "CaptureSequenceCompleted! LastFrameNumber:" + lastFrameNumber);
                     Log.d(TAG, "SequenceCompleted");
                     mBackgroundHandler.postDelayed(() -> {
-                        while(mImageSaver.implementation.IMAGE_BUFFER.size() > PhotonCamera.getSettings().frameCount/2) {
+                        while(SaverImplementation.IMAGE_BUFFER.size() > PhotonCamera.getSettings().frameCount/2) {
                             try {
                                 Thread.sleep(1);
                             } catch (InterruptedException ignored) {}
@@ -2056,7 +2048,9 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                         unlockFocus();
                     else
                         createCameraPreviewSession(false);
-                    taskResults.removeIf(Future::isDone); //remove already completed results
+                    //remove already completed results
+                    for (java.util.Iterator<Future<?>> it = taskResults.iterator(); it.hasNext(); )
+                        if (it.next().isDone()) it.remove();
                     Future<?> result = processExecutor.submit(() -> mImageSaver.runRaw(mCameraCharacteristics, mCaptureResult, mCaptureRequest, new ArrayList<>(BurstShakiness), cameraRotation, mExposures));
                     taskResults.add(result);
                 }
@@ -2332,8 +2326,8 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
             //IsoExpoSelector.HDR = (!manualParamModel.isManualMode()) && (PhotonCamera.getSettings().alignAlgorithm == 0);
             //IsoExpoSelector.HDR = (PhotonCamera.getSettings().alignAlgorithm == 1);
             Log.d(TAG, "HDR:" + IsoExpoSelector.HDR);
-            Object mode = mPreviewRequestBuilder.get(CONTROL_AF_MODE);
-            if(mode != null && (int) mode != CaptureRequest.CONTROL_AF_MODE_AUTO || PreferenceKeys.getAfMode() == CaptureRequest.CONTROL_AF_MODE_AUTO && !PhotonCamera.getSettings().selectedMode.equals(CameraMode.RAWVIDEO)) {
+            Integer mode = mPreviewRequestBuilder.get(CONTROL_AF_MODE);
+            if(mode != null && mode != CaptureRequest.CONTROL_AF_MODE_AUTO || PreferenceKeys.getAfMode() == CaptureRequest.CONTROL_AF_MODE_AUTO && !PhotonCamera.getSettings().selectedMode.equals(CameraMode.RAWVIDEO)) {
                 captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_AUTO);
                 captureBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CaptureRequest.CONTROL_AF_TRIGGER_CANCEL);
             }
@@ -2416,7 +2410,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                                              long timestamp,
                                              long frameNumber) {
 
-                    if (baseFrameNumber[0] == 0) {
+                    if (baseFrameNumber[0] == 0L) {
                         baseFrameNumber[0] = frameNumber;
                         if (maxFrameCount[0] != -1) PhotonCamera.getGyro().CaptureGyroBurst();
                         Log.v("BurstCounter", "CaptureStarted with FirstFrameNumber:" + frameNumber);
@@ -2444,7 +2438,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
 
                     int frameCount = (int) (result.getFrameNumber() - baseFrameNumber[0]);
                     Log.v("BurstCounter", "CaptureCompleted! FrameCount:" + frameCount);
-                    Object time = result.get(CaptureResult.SENSOR_TIMESTAMP);
+                    Long time = result.get(CaptureResult.SENSOR_TIMESTAMP);
                     Log.d(TAG, "Timestamp:" + time);
                     if (paramController != null && paramController.WB != 0) {
                         RggbChannelVector stillGains = result.get(CaptureResult.COLOR_CORRECTION_GAINS);
@@ -2459,17 +2453,17 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                     }
                     if (time != null) {
                         // get exposure multiply ISO and exposure time
-                        Object isoKey = result.get(CaptureResult.SENSOR_SENSITIVITY);
+                        Integer isoKey = result.get(CaptureResult.SENSOR_SENSITIVITY);
                         int iso = 100;
                         if (isoKey != null) {
-                            iso = (int) isoKey;
+                            iso = isoKey;
                         }
-                        Object timeKey = result.get(CaptureResult.SENSOR_EXPOSURE_TIME);
-                        double exposureTime = ExposureIndex.time2sec((long) timeKey);
-                        mExposures.put((long) time, exposureTime * iso);
+                        Long timeKey = result.get(CaptureResult.SENSOR_EXPOSURE_TIME);
+                        double exposureTime = ExposureIndex.time2sec(timeKey);
+                        mExposures.put(time, exposureTime * iso);
                     }
                     cameraEventsListener.onFrameCaptureCompleted(
-                            new TimerFrameCountViewModel.FrameCntTime(frameCount, maxFrameCount[0], frametime));
+                            new TimerFrameCountViewModel.FrameCntTime(frameCount, maxFrameCount[0], (double) frametime));
 
                     if (onUnlimited && !unlimitedStarted) {
                         mImageSaver.processStart(mCameraCharacteristics, result, request, cameraRotation);
@@ -2580,6 +2574,8 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                     case PHOTO:
                     case MOTION:
                         mCaptureSession.captureBurst(captures, CaptureCallback, mBackgroundHandler);
+                        break;
+                    default:
                         break;
                 }
             }
@@ -2810,7 +2806,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
         Date currentDate = new Date();
         DateFormat dateFormat = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US);
         String dateText = dateFormat.format(currentDate);
-        File dir = new File(Environment.getExternalStorageDirectory() + "//DCIM//Camera//");
+        File dir = new File(Environment.getExternalStorageDirectory(), "DCIM/Camera");
         vid = new File(dir.getAbsolutePath(), "VID_" + dateText + ".mp4");
         try {
             vid.createNewFile();
@@ -2853,28 +2849,20 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
     }
 
     private void mul(Rect in, double k) {
-        in.bottom *= k;
-        in.left *= k;
-        in.right *= k;
-        in.top *= k;
+        in.bottom = (int) (in.bottom * k);
+        in.left = (int) (in.left * k);
+        in.right = (int) (in.right * k);
+        in.top = (int) (in.top * k);
     }
 
     @TestOnly
     private static void mulForTest(Rect in, double k) {
-        in.bottom *= k;
-        in.left *= k;
-        in.right *= k;
-        in.top *= k;
+        in.bottom = (int) (in.bottom * k);
+        in.left = (int) (in.left * k);
+        in.right = (int) (in.right * k);
+        in.top = (int) (in.top * k);
     }
 
-    @Override
-    protected void finalize() throws Throwable {
-        activity = null;
-        cameraEventsListener = null;
-        mCameraManager = null;
-        mTextureView = null;
-        super.finalize();
-    }
     public void resumeCamera() {
         isCameraResumed = true;
         if(PhotonCamera.getSettings().previewFormat != 0) {
@@ -2892,18 +2880,18 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                 // fire on resume), so open the camera directly against the
                 // existing SurfaceTexture instead of waiting for a callback.
                 Log.d(TAG,"ID:"+mCameraCharacteristicsMap.get(physicalID));
-                Size optimal = getPreviewOutputSize(getSafeDisplay(),
+                Size optimal = getPreviewOutputSize(getDisplaySize(),
                         mCameraCharacteristicsMap.get(physicalID),
                         PhotonCamera.getSettings().selectedMode);
                 openCamera(optimal.getWidth(), optimal.getHeight());
             } else {
-                mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
+                mTextureView.setListener(mSurfaceTextureListener);
                 // The availability callback is delivered through the main-thread
                 // handler; it may have fired between the check above and arming
                 // the listener. Re-check so the camera is never left waiting for
                 // an event that already happened.
                 if (mTextureView.isAvailable()) {
-                    Size optimal = getPreviewOutputSize(getSafeDisplay(),
+                    Size optimal = getPreviewOutputSize(getDisplaySize(),
                             mCameraCharacteristicsMap.get(physicalID),
                             PhotonCamera.getSettings().selectedMode);
                     openCamera(optimal.getWidth(), optimal.getHeight());
@@ -2920,8 +2908,9 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
         @Override
         public int compare(Size lhs, Size rhs) {
             // We cast here to ensure the multiplications won't overflow
-            return Long.signum((long) lhs.getWidth() * lhs.getHeight() -
-                    (long) rhs.getWidth() * rhs.getHeight());
+            long diff = (long) lhs.getWidth() * lhs.getHeight()
+                    - (long) rhs.getWidth() * rhs.getHeight();
+            return diff < 0 ? -1 : (diff > 0 ? 1 : 0);
         }
 
     }
