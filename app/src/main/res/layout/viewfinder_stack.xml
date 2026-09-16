@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The rendering surfaces of the viewfinder, the one part of the camera screen that
+  is not chrome: the GL preview the capture session draws into and the overlays that
+  paint on top of it. CameraScreenHost puts this inside the Compose screen's
+  viewfinder slot; everything else that used to be in layout_main_viewfinder.xml is
+  drawn by ViewfinderOverlay.
+-->
+<androidx.constraintlayout.widget.ConstraintLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
+        android:id="@+id/texture_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+    <com.particlesdevs.photoncamera.ui.camera.views.viewfinder.GLPreview
+            android:id="@+id/texture"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+    <com.particlesdevs.photoncamera.ui.camera.views.FocusCircleView
+            android:id="@+id/touchFocus"
+            android:layout_width="@dimen/focus_circle_size"
+            android:layout_height="0dp"
+            android:color="@color/focus_circle_color"
+            android:thickness="1.5dp"
+            android:visibility="invisible"
+            app:layout_constraintBottom_toBottomOf="@id/texture"
+            app:layout_constraintDimensionRatio="1:1"
+            app:layout_constraintEnd_toEndOf="@id/texture"
+            app:layout_constraintStart_toStartOf="@id/texture"
+            app:layout_constraintTop_toTopOf="@id/texture" />
+
+    <com.particlesdevs.photoncamera.ui.camera.views.SpotWbIndicatorView
+            android:id="@+id/spotWbIndicator"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:color="@color/focus_circle_color"
+            android:thickness="1.5dp"
+            android:visibility="invisible"
+            app:layout_constraintBottom_toBottomOf="@id/texture"
+            app:layout_constraintEnd_toEndOf="@id/texture"
+            app:layout_constraintStart_toStartOf="@id/texture"
+            app:layout_constraintTop_toTopOf="@id/texture" />
+
+    <com.particlesdevs.photoncamera.ui.camera.views.viewfinder.SurfaceViewOverViewfinder
+            android:id="@+id/surfaceView"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="#00000000"
+            app:layout_constraintBottom_toBottomOf="@id/texture"
+            app:layout_constraintEnd_toEndOf="@id/texture"
+            app:layout_constraintStart_toStartOf="@id/texture"
+            app:layout_constraintTop_toTopOf="@id/texture" />
+
+    <com.particlesdevs.photoncamera.ui.camera.views.viewfinder.HorizonIndicatorView
+            android:id="@+id/horizon_indicator_view"
+            android:layout_width="420dp"
+            android:layout_height="420dp"
+            app:layout_constraintBottom_toBottomOf="@+id/texture"
+            app:layout_constraintEnd_toEndOf="@+id/texture"
+            app:layout_constraintStart_toStartOf="@+id/texture"
+            app:layout_constraintTop_toTopOf="@+id/texture" />
+
+    <com.particlesdevs.photoncamera.ui.camera.views.viewfinder.ViewfinderHudView
+            android:id="@+id/viewfinder_hud_view"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            app:layout_constraintBottom_toBottomOf="@id/texture"
+            app:layout_constraintEnd_toEndOf="@id/texture"
+            app:layout_constraintStart_toStartOf="@id/texture"
+            app:layout_constraintTop_toTopOf="@id/texture" />
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -29,7 +29,6 @@ import com.particlesdevs.photoncamera.settings.SettingType;
 import com.particlesdevs.photoncamera.ui.camera.model.SettingsBarButtonModel;
 import com.particlesdevs.photoncamera.ui.camera.model.SettingsBarEntryModel;
 import com.particlesdevs.photoncamera.ui.camera.model.TopBarSettingsData;
-import com.particlesdevs.photoncamera.ui.camera.views.settingsbar.SettingsBarLayout;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -99,9 +98,8 @@ public class SettingsBarEntryProvider extends ViewModel {
         allEntries.forEach(settingsBarEntryModel -> settingsBarEntryModel.getTopBarSettingsData().removeObserver(observer));
     }
 
-    public void addEntries(SettingsBarLayout settingsBarLayout) {
-        settingsBarLayout.removeEntries();
-        allEntries.forEach(settingsBarLayout::addEntry);
+    public List<SettingsBarEntryModel> getAllEntries() {
+        return allEntries;
     }
 
     private void createHdrxEntry() {

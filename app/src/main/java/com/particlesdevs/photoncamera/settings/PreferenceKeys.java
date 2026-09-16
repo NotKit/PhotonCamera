@@ -201,6 +201,10 @@ public class PreferenceKeys {
         return getAfDataValue() == 3;
     }
 
+    public static boolean isShowGradientOn() {
+        return preferenceKeys.settingsManager.getBoolean(SCOPE_GLOBAL, Key.KEY_SHOW_GRADIENT);
+    }
+
     public static boolean isHorizonOn() {
         return preferenceKeys.settingsManager.getBoolean(SCOPE_GLOBAL, Key.KEY_SHOW_HORIZON);
     }

@@ -61,7 +61,7 @@ import androidx.annotation.StringRes;
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
-import androidx.databinding.DataBindingUtil;
+import androidx.databinding.Observable;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
@@ -80,7 +80,6 @@ import com.particlesdevs.photoncamera.circularbarlib.api.ManualInstanceProvider;
 import com.particlesdevs.photoncamera.circularbarlib.api.ManualModeConsole;
 import com.particlesdevs.photoncamera.control.Swipe;
 import com.particlesdevs.photoncamera.control.TouchFocus;
-import com.particlesdevs.photoncamera.databinding.CameraFragmentBinding;
 import com.particlesdevs.photoncamera.gallery.ui.GalleryActivity;
 import com.particlesdevs.photoncamera.pro.SupportedDevice;
 import com.particlesdevs.photoncamera.processing.ProcessingEventsListener;
@@ -89,8 +88,12 @@ import com.particlesdevs.photoncamera.processing.parameters.ExposureIndex;
 import com.particlesdevs.photoncamera.processing.parameters.IsoExpoSelector;
 import com.particlesdevs.photoncamera.settings.PreferenceKeys;
 import com.particlesdevs.photoncamera.settings.SettingsManager;
-import com.particlesdevs.photoncamera.ui.camera.binding.CustomBinding;
+import com.particlesdevs.photoncamera.composeui.state.CameraUiEvent;
+import com.particlesdevs.photoncamera.ui.camera.compose.CameraScreenHost;
 import com.particlesdevs.photoncamera.ui.camera.data.CameraLensData;
+import com.particlesdevs.photoncamera.ui.camera.model.AuxButtonsModel;
+import com.particlesdevs.photoncamera.ui.camera.model.CameraFragmentModel;
+import com.particlesdevs.photoncamera.ui.camera.model.TimerFrameCountModel;
 import com.particlesdevs.photoncamera.ui.camera.viewmodel.*;
 import com.particlesdevs.photoncamera.ui.camera.views.viewfinder.GLPreview;
 import com.particlesdevs.photoncamera.ui.camera.views.viewfinder.SurfaceViewOverViewfinder;
@@ -101,6 +104,7 @@ import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -146,7 +150,7 @@ public class CameraFragment extends Fragment implements BaseActivity.BackPressed
     public CaptureController captureController;
     private CameraFragmentViewModel cameraFragmentViewModel;
     public AuxButtonsViewModel auxButtonsViewModel;
-    public CameraFragmentBinding cameraFragmentBinding;
+    public CameraScreenHost cameraUiHost;
     private TouchFocus mTouchFocus;
     public Swipe mSwipe;
     // Created on an AsyncTask thread in onResume and consumed from the camera
@@ -198,12 +202,11 @@ public class CameraFragment extends Fragment implements BaseActivity.BackPressed
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        //create the ui binding
-        this.cameraFragmentBinding = DataBindingUtil.inflate(inflater, R.layout.camera_fragment, container, false);
+        this.cameraUiHost = new CameraScreenHost(requireContext());
         Log.d(TAG, "onCreateView: ");
         initMembers();
-        setModelsToLayout();
-        return cameraFragmentBinding.getRoot();
+        observeModels();
+        return cameraUiHost.createView();
     }
     private void initMembers() {
         //create the viewmodel which updates the model
@@ -217,78 +220,76 @@ public class CameraFragment extends Fragment implements BaseActivity.BackPressed
         manualModeConsole = ManualInstanceProvider.getNewManualModeConsole();
         settingsBarEntryProvider = new ViewModelProvider(this).get(SettingsBarEntryProvider.class);
         auxButtonsViewModel = new ViewModelProvider(this).get(AuxButtonsViewModel.class);
-        surfaceView = cameraFragmentBinding.layoutViewfinder.surfaceView;
-        textureView = cameraFragmentBinding.layoutViewfinder.texture;
-        mViewfinderHudView = cameraFragmentBinding.layoutViewfinder.viewfinderHudView;
-    }
-
-    private void setModelsToLayout() {
-        //bind the model to the ui, it applies changes when the model values get changed
-        cameraFragmentBinding.setUimodel(cameraFragmentViewModel.getCameraFragmentModel());
-        cameraFragmentBinding.layoutTopbar.setUimodel(cameraFragmentViewModel.getCameraFragmentModel());
-        cameraFragmentBinding.layoutBottombar.bottomButtons.setUimodel(cameraFragmentViewModel.getCameraFragmentModel());
-        // associating timer model with layouts
-        cameraFragmentBinding.layoutBottombar.bottomButtons.setTimermodel(timerFrameCountViewModel.getTimerFrameCountModel());
-        cameraFragmentBinding.layoutViewfinder.setTimermodel(timerFrameCountViewModel.getTimerFrameCountModel());
-        // associating AuxButtonsModel with layout
-        cameraFragmentBinding.setAuxmodel(auxButtonsViewModel.getAuxButtonsModel());
+        View stack = cameraUiHost.getViewfinderStack();
+        surfaceView = stack.findViewById(R.id.surfaceView);
+        textureView = stack.findViewById(R.id.texture);
+        mViewfinderHudView = stack.findViewById(R.id.viewfinder_hud_view);
     }
 
     /**
-     * Applies the same default layout configuration that the data-binding pipeline
-     * applies at runtime via {@link #setModelsToLayout()} and the adapters in
-     * {@link CustomBinding}:
-     * <ul>
-     * <li>{@code uimodel.dummyAspectRatio} -&gt; {@code dummy_reference_view} aspect ratio</li>
-     * <li>{@code uimodel.settingsBarVisibility == false} -&gt; settings bar hidden</li>
-     * <li>{@code uimodel.screenAspectRatio} -&gt; topbar notch margin and camera container anchor</li>
-     * </ul>
-     * The layout editor preview never runs fragments, viewmodels or data binding,
-     * so {@link com.particlesdevs.photoncamera.ui.camera.CameraLayout} invokes this
-     * during inflation to render the same UI. No logic is duplicated; it reuses the
-     * exact binding adapters used at runtime.
-     *
-     * @param rootLayout the inflated camera_fragment root view
+     * The observable models are unchanged - the orientation listener, the capture
+     * callbacks and the gallery thumbnail loader still write to them. Where data
+     * binding used to pick the change up, these callbacks copy it into the Compose
+     * state instead.
      */
-    static void preparePreviewLayout(View rootLayout) {
-        // The bottom-bar anchor uses a portrait 3:4 ratio in photo mode (CameraUIViewImpl).
-        CustomBinding.setAspectRatio(rootLayout.findViewById(R.id.dummy_reference_view), "3:4");
-        // The viewfinder is a 3:4 portrait block on the phone; the layout editor can't
-        // measure it from the camera, so give it the same ratio for the preview.
-        View viewfinder = rootLayout.findViewById(R.id.layout_viewfinder);
-        if (viewfinder != null && viewfinder.getLayoutParams() instanceof ConstraintLayout.LayoutParams) {
-            ConstraintLayout.LayoutParams params = (ConstraintLayout.LayoutParams) viewfinder.getLayoutParams();
-            params.height = 0;
-            params.dimensionRatio = "3:4";
-            viewfinder.setLayoutParams(params);
-        }
-        // settingsBarVisibility defaults to false -> the settings bar is hidden
-        View settingsBar = rootLayout.findViewById(R.id.settings_bar);
-        if (settingsBar != null) {
-            settingsBar.setVisibility(View.INVISIBLE);
-        }
-        // screenAspectRatio (the device display ratio) drives the topbar notch
-        // margin and the camera container's top anchor via the same binding
-        // adapters used at runtime. The layout editor exposes the preview device
-        // metrics, so compute it the same way as CameraFragment#onViewCreated.
-        DisplayMetrics dm = rootLayout.getResources().getDisplayMetrics();
-        float displayAspectRatio = (float) Math.max(dm.heightPixels, dm.widthPixels)
-                / Math.min(dm.heightPixels, dm.widthPixels);
-        CustomBinding.adjustTopBar(rootLayout.findViewById(R.id.layout_topbar), displayAspectRatio);
-        CustomBinding.adjustCameraContainer(rootLayout.findViewById(R.id.camera_container), displayAspectRatio);
+    private void observeModels() {
+        CameraFragmentModel uiModel = cameraFragmentViewModel.getCameraFragmentModel();
+        uiModel.addOnPropertyChangedCallback(new Observable.OnPropertyChangedCallback() {
+            @Override
+            public void onPropertyChanged(Observable sender, int propertyId) {
+                if (cameraUiHost == null) return;
+                cameraUiHost.setOrientation(uiModel.getOrientation());
+                cameraUiHost.setGalleryThumbnail(uiModel.getBitmap());
+                cameraUiHost.setSettingsBarVisible(uiModel.isSettingsBarVisibility());
+            }
+        });
+
+        TimerFrameCountModel timerModel = timerFrameCountViewModel.getTimerFrameCountModel();
+        timerModel.addOnPropertyChangedCallback(new Observable.OnPropertyChangedCallback() {
+            @Override
+            public void onPropertyChanged(Observable sender, int propertyId) {
+                if (cameraUiHost == null) return;
+                cameraUiHost.setFrameCount(timerModel.getFrameCount());
+                cameraUiHost.setTimerCount(timerModel.getTimerCount());
+            }
+        });
+
+        AuxButtonsModel auxModel = auxButtonsViewModel.getAuxButtonsModel();
+        auxModel.addOnPropertyChangedCallback(new Observable.OnPropertyChangedCallback() {
+            @Override
+            public void onPropertyChanged(Observable sender, int propertyId) {
+                pushAuxLenses();
+            }
+        });
     }
+
+    /** AuxButtonsLayout picked the front or back list by which one holds the active id. */
+    private void pushAuxLenses() {
+        if (cameraUiHost == null) return;
+        AuxButtonsModel auxModel = auxButtonsViewModel.getAuxButtonsModel();
+        List<CameraLensData> front = auxModel.getFrontCameras();
+        List<CameraLensData> back = auxModel.getBackCameras();
+        String activeId = auxModel.getCurrentCameraId();
+        if (front == null || back == null || activeId == null) return;
+        boolean isFront = front.stream().anyMatch(d -> d.getCameraId().equals(activeId));
+        cameraUiHost.setAuxLenses(isFront ? front : back, activeId);
+    }
+
     @Override
     public void onViewCreated(@NonNull final View view, Bundle savedInstanceState) {
-        this.mCameraUIView = new CameraUIViewImpl(this);
+        this.mCameraUIView = cameraUiHost;
         this.mCameraUIEventsListener = new CameraUIController(this);
-        this.mCameraUIView.setCameraUIEventsListener(mCameraUIEventsListener);
-        this.captureController = new CaptureController(activity, processExecutorService, new CameraEventsListenerImpl());
+        cameraUiHost.setEventListener(mCameraUIEventsListener::onEvent);
+        cameraUiHost.syncFromPreferences();
+        cameraUiHost.applyMode(CameraMode.valueOf(PreferenceKeys.getCameraModeOrdinal()),
+                PreferenceKeys.isQuadBayerOn(), displayAspectRatio);
+        this.captureController = new CaptureController(activity, textureView, processExecutorService, new CameraEventsListenerImpl());
         this.captureController.setManualModeConsole(manualModeConsole);
         this.manualModeConsole.addParamObserver(captureController.getParamController());
         this.textureView.setManualModeConsole(manualModeConsole);
         PhotonCamera.setCaptureController(captureController);
         captureController.isDualSession = supportedDevice.specific.specificSetting.isDualSessionSupported;
-        mHorizonIndicatorView = cameraFragmentBinding.layoutViewfinder.horizonIndicatorView;
+        mHorizonIndicatorView = cameraUiHost.getViewfinderStack().findViewById(R.id.horizon_indicator_view);
         this.mSwipe = new Swipe(this);
         var gyro = PhotonCamera.getGyro();
         if ((mHorizonIndicatorView != null) && (gyro != null)) {
@@ -304,12 +305,37 @@ public class CameraFragment extends Fragment implements BaseActivity.BackPressed
     private void initSettingsBar() {
         settingsBarEntryProvider.createEntries();
         settingsBarEntryProvider.addObserver(mCameraUIEventsListener);
-        settingsBarEntryProvider.addEntries(cameraFragmentBinding.settingsBar);
+        pushSettingsBarEntries();
+    }
+
+    /** Applies a mode's chrome to the screen, as the CameraModeState classes did. */
+    public void applyCameraMode(CameraMode mode) {
+        if (cameraUiHost == null) return;
+        cameraUiHost.applyMode(mode, PreferenceKeys.isQuadBayerOn(), displayAspectRatio);
+        pushSettingsBarEntries();
+    }
+
+    /** The volume keys fire the shutter; CameraActivity routes them here. */
+    public void onShutterKey() {
+        if (mCameraUIEventsListener != null && cameraUiHost != null
+                && cameraUiHost.getState().getShutterEnabled()) {
+            mCameraUIEventsListener.onEvent(CameraUiEvent.Shutter.INSTANCE);
+        }
+    }
+
+    public void setManualBarExpanded(boolean expanded) {
+        if (cameraUiHost != null) cameraUiHost.setManualBarExpanded(expanded);
+    }
+
+    private void pushSettingsBarEntries() {
+        if (cameraUiHost == null) return;
+        cameraUiHost.setSettingsBarEntries(settingsBarEntryProvider.getAllEntries(),
+                PreferenceKeys.isQuadBayerOn());
     }
 
     public void updateSettingsBar(){
         settingsBarEntryProvider.updateAllEntries();
-        settingsBarEntryProvider.addEntries(cameraFragmentBinding.settingsBar);
+        pushSettingsBarEntries();
         this.mCameraUIView.refresh(CaptureController.isProcessing);
     }
 
@@ -362,7 +388,6 @@ public class CameraFragment extends Fragment implements BaseActivity.BackPressed
             cameraFragmentViewModel.updateGalleryThumb(null);
         });
         cameraFragmentViewModel.onResume();
-        auxButtonsViewModel.setAuxButtonListener(mCameraUIEventsListener);
         if (mHorizonIndicatorView != null) {
             mHorizonIndicatorView.setVisible(PreferenceKeys.isHorizonOn());
         }
@@ -374,9 +399,9 @@ public class CameraFragment extends Fragment implements BaseActivity.BackPressed
     }
 
     private void initTouchFocus() {
-        if (cameraFragmentBinding != null && captureController != null) {
-            View focusCircle = cameraFragmentBinding.layoutViewfinder.touchFocus;
-            View spotWbIndicator = cameraFragmentBinding.layoutViewfinder.spotWbIndicator;
+        if (cameraUiHost != null && captureController != null) {
+            View focusCircle = cameraUiHost.getViewfinderStack().findViewById(R.id.touchFocus);
+            View spotWbIndicator = cameraUiHost.getViewfinderStack().findViewById(R.id.spotWbIndicator);
             textureView.post(() -> {
                 mTouchFocus = new TouchFocus(captureController, focusCircle, spotWbIndicator, textureView);
                 captureController.mTouchFocus = mTouchFocus;
@@ -396,7 +421,6 @@ public class CameraFragment extends Fragment implements BaseActivity.BackPressed
 //        stopBackgroundThread();
         cameraFragmentViewModel.onPause();
         mCameraUIEventsListener.onPause();
-        auxButtonsViewModel.setAuxButtonListener(null);
         // The players are created asynchronously in onResume, so they may still
         // be null when the app is backgrounded again quickly.
         MediaPlayer burst = burstPlayer;
@@ -444,7 +468,7 @@ public class CameraFragment extends Fragment implements BaseActivity.BackPressed
             }
         }
         settingsBarEntryProvider.removeObserver(mCameraUIEventsListener);
-        cameraFragmentBinding = null;
+        cameraUiHost = null;
         mCameraUIView.destroy();
         mCameraUIView = null;
         mCameraUIEventsListener = null;
@@ -889,34 +913,6 @@ public class CameraFragment extends Fragment implements BaseActivity.BackPressed
         }
     }
 
-    /**
-     * Returns the ConstraintLayout object after adjusting the LayoutParams of Views contained in it.
-     * Adjusts the relative position of layout_top-bar and camera_container (= viewfinder + rest of the buttons excluding layout_topbar)
-     * depending on the aspect ratio of device.
-     * This is done in order to re-organise the camera layout for long displays (having aspect ratio > 16:9)
-     *
-     * @param aspectRatio     the aspect ratio of device display given by (height in pixels / width in pixels)
-     * @param activity_layout here, the layout of activity_main
-     * @return Object of {@param activity_layout} after adjustments.
-     */
-    private ConstraintLayout getAdjustedLayout(float aspectRatio, ConstraintLayout activity_layout) {
-        ConstraintLayout camera_container = activity_layout.findViewById(R.id.camera_container);
-        ConstraintLayout.LayoutParams camera_containerLP = (ConstraintLayout.LayoutParams) camera_container.getLayoutParams();
-        if (aspectRatio > 16f / 9f) {
-            DisplayMetrics displayMetrics = activity.getResources().getDisplayMetrics();
-            float dpHeight = displayMetrics.heightPixels / displayMetrics.density;
-            float dpWidth = displayMetrics.widthPixels / displayMetrics.density;
-
-            float dpmargin = (dpHeight - (dpWidth / 9f * 16f));
-            ConstraintLayout.LayoutParams layout_topbarLP = ((ConstraintLayout.LayoutParams) activity_layout.findViewById(R.id.layout_topbar).getLayoutParams());
-
-            layout_topbarLP.topMargin = (int) dpmargin;
-            camera_containerLP.bottomMargin = (int) dpmargin;
-            camera_containerLP.topToTop = -1;
-            camera_containerLP.topToBottom = R.id.layout_topbar;
-        }
-        return activity_layout;
-    }
 
     /**
      * Logs the device display properties
@@ -1216,7 +1212,9 @@ public class CameraFragment extends Fragment implements BaseActivity.BackPressed
             surfaceView.clear();
             if (mViewfinderHudView != null) mViewfinderHudView.clear();
             mCameraUIView.refresh(CaptureController.isProcessing);
-            mTouchFocus.resetFocusCircle();
+            // A restart can land before the preview surface exists, and TouchFocus
+            // is only built once it does.
+            if (mTouchFocus != null) mTouchFocus.resetFocusCircle();
         }
 
         @Override

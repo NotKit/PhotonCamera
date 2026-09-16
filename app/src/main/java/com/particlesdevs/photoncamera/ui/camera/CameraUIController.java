@@ -6,7 +6,6 @@ import android.os.CountDownTimer;
 
 import com.particlesdevs.photoncamera.processing.parameters.IsoExpoSelector;
 import com.particlesdevs.photoncamera.util.Log;
-import android.view.View;
 
 import androidx.lifecycle.Observer;
 
@@ -14,128 +13,165 @@ import com.particlesdevs.photoncamera.R;
 import com.particlesdevs.photoncamera.api.CameraMode;
 import com.particlesdevs.photoncamera.app.PhotonCamera;
 import com.particlesdevs.photoncamera.capture.CaptureController;
+import com.particlesdevs.photoncamera.composeui.state.CameraUiEvent;
+import com.particlesdevs.photoncamera.composeui.state.SettingType;
 import com.particlesdevs.photoncamera.control.CountdownTimer;
 import com.particlesdevs.photoncamera.settings.PreferenceKeys;
-import com.particlesdevs.photoncamera.settings.SettingType;
 import com.particlesdevs.photoncamera.ui.camera.model.TopBarSettingsData;
-import com.particlesdevs.photoncamera.ui.camera.views.AuxButtonsLayout;
-import com.particlesdevs.photoncamera.ui.camera.views.FlashButton;
-import com.particlesdevs.photoncamera.ui.camera.views.TimerButton;
 
 /**
- * Implementation of {@link CameraUIEventsListener}
+ * Turns what the user did on the camera screen into camera actions.
  * <p>
- * Responsible for converting user inputs into actions
+ * The screen sends a {@link CameraUiEvent} that says what was pressed, where the View
+ * tree could only say which id was clicked.
  */
 final class CameraUIController implements CameraUIEventsListener,
-        Observer<TopBarSettingsData<?, ?>>, AuxButtonsLayout.AuxButtonListener {
+        Observer<TopBarSettingsData<?, ?>> {
     private static final String TAG = "CameraUIController";
     private final CameraFragment cameraFragment;
     private CountDownTimer countdownTimer;
-    private View shutterButton;
 
     public CameraUIController(CameraFragment cameraFragment) {
         this.cameraFragment = cameraFragment;
     }
 
-    @SuppressLint("NonConstantResourceId")
     @Override
-    public void onClick(View view) {
-        switch (view.getId()) {
-            case R.id.shutter_button:
-                shutterButton = view;
-                switch (PhotonCamera.getSettings().selectedMode) {
-                    case PHOTO:
-                    case MOTION:
-                    case NIGHT:
-                        if (view.isHovered()) resetTimer();
-                        else startTimer();
-                        break;
-                    case UNLIMITED:
-                    case RAWVIDEO:
-                        if (!cameraFragment.captureController.onUnlimited) {
-                            cameraFragment.captureController.callUnlimitedStart();
-                            view.setActivated(false);
-                        } else {
-                            cameraFragment.captureController.callUnlimitedEnd();
-                            view.setActivated(true);
-                        }
-                        break;
-                    case VIDEO:
-                        if (!cameraFragment.captureController.mIsRecordingVideo) {
-                            cameraFragment.captureController.VideoStart();
-                            view.setActivated(false);
-                        } else {
-                            cameraFragment.captureController.VideoEnd();
-                            view.setActivated(true);
-                        }
-                        break;
+    public void onEvent(CameraUiEvent event) {
+        if (event instanceof CameraUiEvent.Shutter) {
+            onShutter();
+        } else if (event instanceof CameraUiEvent.OpenSettings) {
+            cameraFragment.launchSettings();
+        } else if (event instanceof CameraUiEvent.OpenGallery) {
+            cameraFragment.launchGallery();
+        } else if (event instanceof CameraUiEvent.FlipCamera) {
+            setID(cameraFragment.cycler(PreferenceKeys.getCameraID()));
+            restartCamera();
+        } else if (event instanceof CameraUiEvent.SelectAux) {
+            setID(((CameraUiEvent.SelectAux) event).getCameraId());
+            restartCamera();
+        } else if (event instanceof CameraUiEvent.SelectMode) {
+            onCameraModeChanged(CameraMode.valueOf(((CameraUiEvent.SelectMode) event).getMode().ordinal()));
+        } else if (event instanceof CameraUiEvent.ToggleHdrx) {
+            applySetting(SettingType.HDRX, PreferenceKeys.isHdrXOn() ? 0 : 1);
+            cameraFragment.showSnackBar(cameraFragment.getString(R.string.hdrx) + ':' + onOff(PreferenceKeys.isHdrXOn()));
+        } else if (event instanceof CameraUiEvent.ToggleEis) {
+            applySetting(SettingType.EIS, PreferenceKeys.isEisPhotoOn() ? 0 : 1);
+            cameraFragment.showSnackBar(cameraFragment.getString(R.string.eis_toggle_text) + ':' + onOff(PreferenceKeys.isEisPhotoOn()));
+        } else if (event instanceof CameraUiEvent.ToggleFps) {
+            applySetting(SettingType.FPS_60, (PreferenceKeys.getFpsMode() + 1) % 4);
+        } else if (event instanceof CameraUiEvent.ToggleQuad) {
+            applySetting(SettingType.QUAD, PreferenceKeys.isQuadBayerOn() ? 0 : 1);
+            cameraFragment.showSnackBar(cameraFragment.getString(R.string.quad_bayer_toggle_text) + ':' + onOff(PreferenceKeys.isQuadBayerOn()));
+        } else if (event instanceof CameraUiEvent.ToggleGrid) {
+            int count = cameraFragment.getResources().getStringArray(R.array.vf_grid_entryvalues).length;
+            applySetting(SettingType.GRID, (PreferenceKeys.getGridValue() + 1) % count);
+        } else if (event instanceof CameraUiEvent.ToggleFlash) {
+            applySetting(SettingType.FLASH, (PreferenceKeys.getAeMode() + 1) % 2);
+        } else if (event instanceof CameraUiEvent.ToggleTimer) {
+            int count = cameraFragment.getResources().getIntArray(R.array.countdowntimer_entryvalues).length;
+            applySetting(SettingType.TIMER, (PreferenceKeys.getCountdownTimerIndex() + 1) % count);
+        } else if (event instanceof CameraUiEvent.SetSetting) {
+            CameraUiEvent.SetSetting s = (CameraUiEvent.SetSetting) event;
+            applySetting(s.getType(), s.getValue());
+        } else if (event instanceof CameraUiEvent.SetSettingsBarVisible) {
+            cameraFragment.getCameraFragmentViewModel()
+                    .setSettingsBarVisible(((CameraUiEvent.SetSettingsBarVisible) event).getVisible());
+        } else if (event instanceof CameraUiEvent.ToggleManualBar) {
+            if (cameraFragment.getManualModeConsole().isPanelVisible()) cameraFragment.mSwipe.SwipeDown();
+            else cameraFragment.mSwipe.SwipeUp();
+        } else if (event instanceof CameraUiEvent.SwipeUp) {
+            cameraFragment.mSwipe.SwipeUp();
+        } else if (event instanceof CameraUiEvent.SwipeDown) {
+            cameraFragment.mSwipe.SwipeDown();
+        } else if (event instanceof CameraUiEvent.ViewfinderTap) {
+            CameraUiEvent.ViewfinderTap t = (CameraUiEvent.ViewfinderTap) event;
+            cameraFragment.mSwipe.onTap(t.getX(), t.getY());
+        } else if (event instanceof CameraUiEvent.ViewfinderLongPress) {
+            CameraUiEvent.ViewfinderLongPress t = (CameraUiEvent.ViewfinderLongPress) event;
+            cameraFragment.mSwipe.onLongPress(t.getX(), t.getY());
+        }
+    }
+
+    private void onShutter() {
+        switch (PhotonCamera.getSettings().selectedMode) {
+            case PHOTO:
+            case MOTION:
+            case NIGHT:
+                if (countdownTimer != null) resetTimer();
+                else startTimer();
+                break;
+            case UNLIMITED:
+            case RAWVIDEO:
+                if (!cameraFragment.captureController.onUnlimited) {
+                    cameraFragment.captureController.callUnlimitedStart();
+                    cameraFragment.cameraUiHost.setShutterActivated(false);
+                } else {
+                    cameraFragment.captureController.callUnlimitedEnd();
+                    cameraFragment.cameraUiHost.setShutterActivated(true);
                 }
                 break;
-            case R.id.settings_button:
-                cameraFragment.launchSettings();
-                break;
-
-            case R.id.hdrx_toggle_button:
-                PreferenceKeys.setHdrX(!PreferenceKeys.isHdrXOn());
-                if (PreferenceKeys.isHdrXOn())
-                    CaptureController.setTargetFormat(CaptureController.RAW_FORMAT);
-                else
-                    CaptureController.setTargetFormat(CaptureController.YUV_FORMAT);
-                cameraFragment.showSnackBar(cameraFragment.getString(R.string.hdrx) + ':' + onOff(PreferenceKeys.isHdrXOn()));
-                this.restartCamera();
-                break;
-
-            case R.id.gallery_image_button:
-                cameraFragment.launchGallery();
-                break;
-
-            case R.id.eis_toggle_button:
-                PreferenceKeys.setEisPhoto(!PreferenceKeys.isEisPhotoOn());
-                cameraFragment.showSnackBar(cameraFragment.getString(R.string.eis_toggle_text) + ':' + onOff(PreferenceKeys.isEisPhotoOn()));
-                cameraFragment.updateSettingsBar();
-                break;
-
-            case R.id.fps_toggle_button:
-                PreferenceKeys.setFpsMode((PreferenceKeys.getFpsMode() + 1) % 4);
-                cameraFragment.captureController.applyFpsRange();
-                cameraFragment.updateSettingsBar();
-                break;
-
-            case R.id.quad_res_toggle_button:
-                PreferenceKeys.setQuadBayer(!PreferenceKeys.isQuadBayerOn());
-                cameraFragment.showSnackBar(cameraFragment.getString(R.string.quad_bayer_toggle_text) + ':' + onOff(PreferenceKeys.isQuadBayerOn()));
-                this.restartCamera();
-                cameraFragment.updateSettingsBar();
-                break;
-
-            case R.id.flip_camera_button:
-                view.animate().rotationBy(180).setDuration(450).start();
-                //cameraFragment.textureView.animate().rotationBy(360).setDuration(450).start();
-                //PreferenceKeys.setCameraID(cycler(PreferenceKeys.getCameraID()));
-                setID(cameraFragment.cycler(PreferenceKeys.getCameraID()));
-                this.restartCamera();
-                break;
-            case R.id.grid_toggle_button:
-                PreferenceKeys.setGridValue((PreferenceKeys.getGridValue() + 1) % view.getResources().getStringArray(R.array.vf_grid_entryvalues).length);
-                view.setSelected(PreferenceKeys.getGridValue() != 0);
-                cameraFragment.invalidateSurfaceView();
-                cameraFragment.updateSettingsBar();
-                break;
-
-            case R.id.flash_button:
-                PreferenceKeys.setAeMode((PreferenceKeys.getAeMode() + 1) % 2); //cycles in 0 (torch), 1 (off)
-                ((FlashButton) view).setFlashValueState(PreferenceKeys.getAeMode());
-                cameraFragment.captureController.setPreviewAEModeRebuild(PreferenceKeys.getAeMode());
-                cameraFragment.updateSettingsBar();
-                break;
-
-            case R.id.countdown_timer_button:
-                PreferenceKeys.setCountdownTimerIndex((PreferenceKeys.getCountdownTimerIndex() + 1) % view.getResources().getIntArray(R.array.countdowntimer_entryvalues).length);
-                ((TimerButton) view).setTimerIconState(PreferenceKeys.getCountdownTimerIndex());
-                cameraFragment.updateSettingsBar();
+            case VIDEO:
+                if (!cameraFragment.captureController.mIsRecordingVideo) {
+                    cameraFragment.captureController.VideoStart();
+                    cameraFragment.cameraUiHost.setShutterActivated(false);
+                } else {
+                    cameraFragment.captureController.VideoEnd();
+                    cameraFragment.cameraUiHost.setShutterActivated(true);
+                }
                 break;
         }
+    }
+
+    /**
+     * One place where a setting is written and the camera told about it, whether the
+     * value came from a top-bar tap or from a settings-bar button.
+     */
+    private void applySetting(SettingType type, int value) {
+        switch (type) {
+            case FLASH:
+                PreferenceKeys.setAeMode(value);
+                cameraFragment.captureController.setPreviewAEModeRebuild(value);
+                break;
+            case HDRX:
+                PreferenceKeys.setHdrX(value == 1);
+                CaptureController.setTargetFormat(value == 1
+                        ? CaptureController.RAW_FORMAT : CaptureController.YUV_FORMAT);
+                restartCamera();
+                break;
+            case QUAD:
+                PreferenceKeys.setQuadBayer(value == 1);
+                restartCamera();
+                break;
+            case GRID:
+                PreferenceKeys.setGridValue(value);
+                cameraFragment.invalidateSurfaceView();
+                break;
+            case FPS_60:
+                PreferenceKeys.setFpsMode(value);
+                cameraFragment.captureController.applyFpsRange();
+                break;
+            case TIMER:
+                PreferenceKeys.setCountdownTimerIndex(value);
+                break;
+            case EIS:
+                PreferenceKeys.setEisPhoto(value == 1);
+                break;
+            case RAW:
+                PreferenceKeys.setSaveRaw(value);
+                break;
+            case BATTERY_SAVER:
+                PreferenceKeys.setBatterySaver(value == 1);
+                break;
+            case BRACKETING:
+                PreferenceKeys.setBracketingMode(value);
+                IsoExpoSelector.HDR = value > 0;
+                break;
+            case AE_METERING_STD:
+                PreferenceKeys.setAeMeteringStd(value);
+                cameraFragment.captureController.applyAeMetering();
+                break;
+        }
+        cameraFragment.updateSettingsBar();
     }
 
     private int getTimerValue(Context context) {
@@ -144,54 +180,34 @@ final class CameraUIController implements CameraUIEventsListener,
     }
 
     private void startTimer() {
-        if (this.shutterButton != null) {
-            this.shutterButton.setHovered(true);
-            this.countdownTimer = new CountdownTimer(
-                    cameraFragment.findViewById(R.id.frameTimer),
-                    getTimerValue(this.shutterButton.getContext()) * 1000L, 1000,
-                    this::onTimerFinished).start();
-        }
+        cameraFragment.cameraUiHost.setCounting(true);
+        this.countdownTimer = new CountdownTimer(
+                cameraFragment.cameraUiHost::setTimerCount,
+                getTimerValue(cameraFragment.requireContext()) * 1000L, 1000,
+                this::onTimerFinished).start();
     }
 
     private void resetTimer() {
         if (this.countdownTimer != null) this.countdownTimer.cancel();
-        if (this.shutterButton != null) this.shutterButton.setHovered(false);
-    }
-
-    @Override
-    public void onAuxButtonClicked(String id) {
-        Log.d(TAG, "onAuxButtonClicked() called with: id = [" + id + "]");
-        setID(id);
-        this.restartCamera();
-
-    }
-
-    private void setID(String input) {
-        PreferenceKeys.setCameraID(String.valueOf(input));
+        this.countdownTimer = null;
+        if (cameraFragment.cameraUiHost != null) cameraFragment.cameraUiHost.setCounting(false);
     }
 
     @Override
     public void onCameraModeChanged(CameraMode cameraMode) {
         PreferenceKeys.setCameraModeOrdinal(cameraMode.ordinal());
         Log.d(TAG, "onCameraModeChanged() called with: cameraMode = [" + cameraMode + "]");
-        switch (cameraMode) {
-            case PHOTO:
-            case MOTION:
-            case NIGHT:
-            case UNLIMITED:
-            case RAWVIDEO:
-            default:
-                break;
-            case VIDEO:
-                PreferenceKeys.setCameraModeOrdinal(CameraMode.VIDEO.ordinal());
-                break;
-        }
+        cameraFragment.applyCameraMode(cameraMode);
         this.restartCamera();
     }
 
     @Override
     public void onPause() {
         this.resetTimer();
+    }
+
+    private void setID(String input) {
+        PreferenceKeys.setCameraID(String.valueOf(input));
     }
 
     private void restartCamera() {
@@ -204,71 +220,25 @@ final class CameraUIController implements CameraUIEventsListener,
     }
 
     private void onTimerFinished() {
-        this.shutterButton.setHovered(false);
-        this.shutterButton.setActivated(false);
-        this.shutterButton.setClickable(false);
+        this.countdownTimer = null;
+        cameraFragment.cameraUiHost.setCounting(false);
+        cameraFragment.cameraUiHost.activateShutterButton(false);
         cameraFragment.captureController.takePicture();
     }
 
+    /**
+     * Still fed by SettingsBarEntryProvider's LiveData. The screen sends SetSetting
+     * directly, so this only carries values set from elsewhere.
+     */
     @Override
+    @SuppressLint("NonConstantResourceId")
     public void onChanged(TopBarSettingsData<?, ?> topBarSettingsData) {
-        if (topBarSettingsData != null && topBarSettingsData.getType() != null && topBarSettingsData.getValue() != null) {
-            if (topBarSettingsData.getType() instanceof SettingType) {
-                SettingType type = (SettingType) topBarSettingsData.getType();
-                Object value = topBarSettingsData.getValue();
-                switch (type) {
-                    case FLASH:
-                        PreferenceKeys.setAeMode((Integer) value); //cycles in 0,1,2,3
-                        cameraFragment.captureController.setPreviewAEModeRebuild(PreferenceKeys.getAeMode());
-                        cameraFragment.cameraFragmentBinding.layoutTopbar.flashButton.setFlashValueState((Integer) value);
-                        break;
-                    case HDRX:
-                        PreferenceKeys.setHdrX(value.equals(1));
-                        if (value.equals(1))
-                            CaptureController.setTargetFormat(CaptureController.RAW_FORMAT);
-                        else
-                            CaptureController.setTargetFormat(CaptureController.YUV_FORMAT);
-                        this.restartCamera();
-                        break;
-                    case QUAD:
-                        PreferenceKeys.setQuadBayer(value.equals(1));
-                        this.restartCamera();
-                        break;
-                    case GRID:
-                        PreferenceKeys.setGridValue((Integer) value);
-                        cameraFragment.invalidateSurfaceView();
-                        break;
-                    case FPS_60:
-                        PreferenceKeys.setFpsMode((Integer) value);
-                        cameraFragment.captureController.applyFpsRange();
-                        break;
-                    case TIMER:
-                        PreferenceKeys.setCountdownTimerIndex((Integer) value);
-                        cameraFragment.cameraFragmentBinding.layoutTopbar.countdownTimerButton.setTimerIconState((Integer) value);
-                        break;
-                    case EIS:
-                        PreferenceKeys.setEisPhoto(value.equals(1));
-                        break;
-                    case RAW:
-                        PreferenceKeys.setSaveRaw((Integer) value);
-                        break;
-                    case BATTERY_SAVER:
-                        PreferenceKeys.setBatterySaver(value.equals(1));
-                        break;
-                    case BRACKETING:
-                        PreferenceKeys.setBracketingMode((Integer) value);
-                        // Update HDR class to use the new bracketing mode
-                        IsoExpoSelector.HDR = (Integer) value > 0;
-                        break;
-                    case AE_METERING_STD:
-                        PreferenceKeys.setAeMeteringStd((Integer) value);
-                        cameraFragment.captureController.applyAeMetering();
-                        break;
-
-                }
-                cameraFragment.cameraFragmentBinding.layoutTopbar.invalidateAll();
-            }
-        }
-
+        if (topBarSettingsData == null || topBarSettingsData.getType() == null
+                || topBarSettingsData.getValue() == null) return;
+        if (!(topBarSettingsData.getType() instanceof com.particlesdevs.photoncamera.settings.SettingType)) return;
+        com.particlesdevs.photoncamera.settings.SettingType type =
+                (com.particlesdevs.photoncamera.settings.SettingType) topBarSettingsData.getType();
+        Object value = topBarSettingsData.getValue();
+        applySetting(SettingType.valueOf(type.name()), value instanceof Integer ? (Integer) value : 0);
     }
 }

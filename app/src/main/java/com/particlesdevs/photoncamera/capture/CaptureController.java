@@ -746,7 +746,12 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
         }
 
     };
-    public CaptureController(Activity activity, ExecutorService processExecutor, CameraEventsListener cameraEventsListener) {
+    /**
+     * @param previewView the viewfinder to open the camera against. It is passed in
+     *                    rather than looked up by id: the Compose screen attaches it
+     *                    when it first composes, which is after this constructor runs.
+     */
+    public CaptureController(Activity activity, GLPreview previewView, ExecutorService processExecutor, CameraEventsListener cameraEventsListener) {
         if(PhotonCamera.getSettings().previewFormat != 0) {
             mPreviewTargetFormat = PhotonCamera.getSettings().previewFormat;
         } else {
@@ -754,7 +759,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
         }
         this.activity = activity;
         this.cameraEventsListener = cameraEventsListener;
-        this.mTextureView = activity.findViewById(R.id.texture);
+        this.mTextureView = previewView;
         this.mCameraManager = (CameraManager) activity.getSystemService(Context.CAMERA_SERVICE);
         this.mCameraManager2 = new CameraManager2(mCameraManager, PhotonCamera.getInstance(activity).getSettingsManager());
         PreferenceKeys.addIds(mCameraManager2.getCameraIdList());
@@ -2878,8 +2883,10 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
             mPreviewTargetFormat = ImageFormat.JPEG;
         }
         processExecutor.execute(() -> {
-            if (mTextureView == null)
-                mTextureView = new GLPreview(activity);
+            if (mTextureView == null) {
+                Log.e(TAG, "onResume(): no preview view, cannot open the camera");
+                return;
+            }
             if (mTextureView.isAvailable()) {
                 // The GL surface survived backgrounding (no onSurfaceCreated will
                 // fire on resume), so open the camera directly against the

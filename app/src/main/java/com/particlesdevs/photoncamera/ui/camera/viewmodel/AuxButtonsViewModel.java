@@ -27,7 +27,6 @@ import androidx.lifecycle.ViewModel;
 import com.particlesdevs.photoncamera.ui.camera.CameraFragment;
 import com.particlesdevs.photoncamera.ui.camera.data.CameraLensData;
 import com.particlesdevs.photoncamera.ui.camera.model.AuxButtonsModel;
-import com.particlesdevs.photoncamera.ui.camera.views.AuxButtonsLayout;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -59,10 +58,6 @@ public class AuxButtonsViewModel extends ViewModel {
             auxButtonsModel.setFrontCameras(frontCameras);
             initialized = true;
         }
-    }
-
-    public void setAuxButtonListener(AuxButtonsLayout.AuxButtonListener auxButtonListener) {
-        auxButtonsModel.setAuxButtonListener(auxButtonListener);
     }
 
     public boolean isEnabled() {
