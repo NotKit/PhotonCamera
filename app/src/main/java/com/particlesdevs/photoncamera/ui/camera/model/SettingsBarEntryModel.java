@@ -25,7 +25,6 @@ import androidx.annotation.StringRes;
 import androidx.lifecycle.MutableLiveData;
 
 import com.particlesdevs.photoncamera.settings.SettingType;
-import com.particlesdevs.photoncamera.ui.camera.views.settingsbar.SettingsBarListener;
 
 public class SettingsBarEntryModel {
     private final int id;
@@ -60,7 +59,7 @@ public class SettingsBarEntryModel {
 
     public void setTypeAndData(Enum<SettingType> type) {
         this.type = type;
-        this.topBarSettingsData.setValue(new TopBarSettingsData<>(type));
+        this.topBarSettingsData.setValue(new TopBarSettingsData<Enum<SettingType>, String>(type));
     }
 
     public MutableLiveData<TopBarSettingsData<?, ?>> getTopBarSettingsData() {
@@ -96,7 +95,9 @@ public class SettingsBarEntryModel {
     }
 
     public void addSettingsBarButtonModels(SettingsBarButtonModel... settingsBarButtonModels) {
-        this.settingsBarButtonModels = settingsBarButtonModels;
+        this.settingsBarButtonModels = new SettingsBarButtonModel[settingsBarButtonModels.length];
+        System.arraycopy(settingsBarButtonModels, 0, this.settingsBarButtonModels, 0,
+                settingsBarButtonModels.length);
     }
 
     public void select(SettingsBarButtonModel buttonModel) {

@@ -118,7 +118,7 @@ public final class CameraManager2 {
         mCameraLensDataJSONSet = mSettingsManager.getStringSet(_CAMERAS, ALL_CAMERA_LENS_KEY, null);
         //Deserialize JSON and store CameraLensData objects into mCameraLensDataMap
         mCameraLensDataJSONSet.forEach(jsonString -> {
-            CameraLensData cameraLensData = GSON.fromJson(jsonString, CameraLensData.class);
+            CameraLensData cameraLensData = (CameraLensData) GSON.fromJson(jsonString, CameraLensData.class);
             mCameraLensDataMap.put(cameraLensData.getCameraId(), cameraLensData);
         });
         if(ids != null && mCameraLensDataJSONSet.size() < ids.length){

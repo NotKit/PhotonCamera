@@ -15,7 +15,7 @@ import com.particlesdevs.photoncamera.app.PhotonCamera;
 import com.particlesdevs.photoncamera.capture.CaptureController;
 import com.particlesdevs.photoncamera.settings.PreferenceKeys;
 import com.particlesdevs.photoncamera.api.VendorTagUtils;
-import com.particlesdevs.photoncamera.settings.SensorConfigPreferenceGenerator;
+import com.particlesdevs.photoncamera.settings.SensorConfigRegistry;
 
 import java.util.ArrayList;
 import java.util.Locale;
@@ -211,32 +211,32 @@ public class IsoExpoSelector {
             pair.curlayer = ExpoPair.exposureLayer.Low;
         }*/
         /*if(HDR) {
-            pair.ExpoCompensateLowerExpo(2.f);
-            pair.ExpoCompensateLower(1.f/2.f);
+            pair.ExpoCompensateLowerExpo(2.0f);
+            pair.ExpoCompensateLower(1.0f/2.0f);
         }*/
         if (step % patternSize == 0 && HDR) {
             // Set multiplier based on bracketing mode (0=Off, 1=Normal, 2=High)
             int bracketingMode = PreferenceKeys.getBracketingMode();
-            pair.layerMpy = 1.f;
+            pair.layerMpy = 1.0f;
             if (bracketingMode == 1) {
                 // Normal bracketing (1x, 4x)
-                pair.layerMpy = 4.f;
+                pair.layerMpy = 4.0f;
             } else if (bracketingMode == 2) {
                 // High bracketing (1x, 8x)
-                pair.layerMpy = 8.f;
+                pair.layerMpy = 8.0f;
             }
 
-            if (pair.layerMpy > 1.f) {
+            if (pair.layerMpy > 1.0f) {
                 pair.curlayer = ExpoPair.exposureLayer.High;
                 if (pair.ExpoCompensateLowerExpo2(1.0 / pair.layerMpy)) {
-                    pair.layerMpy = 1.f;
+                    pair.layerMpy = 1.0f;
                     pair.curlayer = ExpoPair.exposureLayer.Normal;
                 }
             } else {
                 pair.curlayer = ExpoPair.exposureLayer.Normal;
             }
         } else if (HDR) {
-            pair.layerMpy = 1.f;
+            pair.layerMpy = 1.0f;
             pair.curlayer = ExpoPair.exposureLayer.Normal;
         }
 
@@ -324,7 +324,7 @@ public class IsoExpoSelector {
             SizeF sensorSize = characteristics.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE);
             if (focalLengths != null && focalLengths.length > 0 && sensorSize != null) {
                 // Approximate 35mm equivalent: (36mm / sensorWidth) * focalLength
-                focalLength35mm = (36.0f / sensorSize.getWidth()) * focalLengths[0];
+                focalLength35mm = (double) ((36.0f / sensorSize.getWidth()) * focalLengths[0]);
             }
         }
 
@@ -386,13 +386,13 @@ public class IsoExpoSelector {
 
             SizeF sensorSize = characteristics.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE);
             if (sensorSize != null && sensorSize.getWidth() > 0) {
-                efl = (36.0f / sensorSize.getWidth()) * fl;
+                efl = (double) ((36.0f / sensorSize.getWidth()) * fl);
             }
 
             // Explicit and safe OIS capability check via unified VendorTagUtils
             Context context = PhotonCamera.getSettingsManagerStatic() != null
                     ? PhotonCamera.getSettingsManagerStatic().getContext() : null;
-            String physicalId = SensorConfigPreferenceGenerator.toPhysicalId(PhotonCamera.getSettings().mCameraID);
+            String physicalId = SensorConfigRegistry.toPhysicalId(PhotonCamera.getSettings().mCameraID);
             boolean hasHardwareOis = VendorTagUtils.isOisSupported(context, characteristics, physicalId);
 
             if (hasHardwareOis) {
@@ -417,7 +417,7 @@ public class IsoExpoSelector {
             High
         }
         public exposureLayer curlayer;
-        public float layerMpy = 1.f;
+        public float layerMpy = 1.0f;
         public long exposure;
         public int iso;
         long exposurehigh, exposurelow;
@@ -456,7 +456,8 @@ public class IsoExpoSelector {
         }
 
         public double normalizedIsoHigh() {
-            return (isolow > 0) ? isohigh * (100.0 / isolow) : isohigh;
+            if (isolow > 0) return isohigh * (100.0 / isolow);
+            return isohigh;
         }
 
         public double normalizedIsoLow() {
@@ -514,7 +515,7 @@ public class IsoExpoSelector {
                 exposure = (long) Math.round(origExposure / k);
                 if (normalizeCheck()) {
                     exposure = origExposure;
-                    layerMpy = 1.f;
+                    layerMpy = 1.0f;
                 }
             }
         }

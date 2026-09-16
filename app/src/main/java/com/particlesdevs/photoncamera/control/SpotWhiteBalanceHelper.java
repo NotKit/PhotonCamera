@@ -68,15 +68,15 @@ public class SpotWhiteBalanceHelper {
      * Geometrically maps the viewfinder touch point to the Bayer RAW sensel array
      * using the canonical SPOT_WB_FOV_RATIO field-of-view fraction.
      */
-    public static void measureSpotWbRaw(View viewfinderFrame,
+    public static void measureSpotWbRaw(FocusIndicator viewfinder,
                                        CaptureController captureController,
                                        float viewX,
                                        float viewY,
                                        SpotWbCallback callback) {
-        if (viewfinderFrame == null || captureController == null) return;
+        if (viewfinder == null || captureController == null) return;
 
-        int viewW = viewfinderFrame.getWidth();
-        int viewH = viewfinderFrame.getHeight();
+        int viewW = viewfinder.getPreviewWidth();
+        int viewH = viewfinder.getPreviewHeight();
         if (viewW <= 0 || viewH <= 0) return;
 
         final float clampedX = Math.max(0.0f, Math.min((float) viewW, viewX));
@@ -86,9 +86,9 @@ public class SpotWhiteBalanceHelper {
         // Query Display rotation directly from the viewfinder frame on the UI thread before background execution
         int initialGravityRotation = 90;
         try {
-            android.view.Display display = viewfinderFrame.getDisplay();
-            if (display != null) {
-                initialGravityRotation = display.getRotation() * 90 + 90;
+            int rotation = viewfinder.getDisplayRotation();
+            if (rotation >= 0) {
+                initialGravityRotation = rotation;
             } else if (PhotonCamera.getGravity() != null) {
                 initialGravityRotation = PhotonCamera.getGravity().getRotation();
             }
@@ -143,8 +143,8 @@ public class SpotWhiteBalanceHelper {
         if (pixelStride <= 0) pixelStride = 2;
 
         // 1. Exact geometric mapping from screen viewfinder to sensor raw array
-        int sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) != null
-                ? characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) : 90;
+        Integer sensorOrientationObj = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
+        int sensorOrientation = sensorOrientationObj != null ? sensorOrientationObj : 90;
         Integer facing = characteristics.get(CameraCharacteristics.LENS_FACING);
         boolean mirrored = (facing != null && facing == CameraCharacteristics.LENS_FACING_FRONT);
 
@@ -228,10 +228,10 @@ public class SpotWhiteBalanceHelper {
         }
         if (!usedDynamic) {
             if (blPattern != null) {
-                blackLevel[0] = blPattern.getOffsetForIndex(0, 0);
-                blackLevel[1] = blPattern.getOffsetForIndex(1, 0);
-                blackLevel[2] = blPattern.getOffsetForIndex(0, 1);
-                blackLevel[3] = blPattern.getOffsetForIndex(1, 1);
+                blackLevel[0] = (float) blPattern.getOffsetForIndex(0, 0);
+                blackLevel[1] = (float) blPattern.getOffsetForIndex(1, 0);
+                blackLevel[2] = (float) blPattern.getOffsetForIndex(0, 1);
+                blackLevel[3] = (float) blPattern.getOffsetForIndex(1, 1);
             } else {
                 blackLevel[0] = 64.0f;
                 blackLevel[1] = 64.0f;
@@ -278,8 +278,9 @@ public class SpotWhiteBalanceHelper {
             if (noiseProfile != null && noiseProfile.length > 0) {
                 double maxO = 0.0;
                 for (Pair<Double, Double> p : noiseProfile) {
-                    if (p != null && p.second != null && p.second > maxO) {
-                        maxO = p.second;
+                    Double sigma = p == null ? null : p.second;
+                    if (sigma != null && sigma > maxO) {
+                        maxO = sigma;
                     }
                 }
                 double linearScale = Math.max(1.0, (double) (whiteLevel - blackLevel[0]));
@@ -308,30 +309,30 @@ public class SpotWhiteBalanceHelper {
                     // MIPI Packed RAW10
                     int off0 = y * rowStride + (x / 4) * 5;
                     int sub0 = x % 4;
-                    raw00 = ((buffer.get(off0 + sub0) & 0xFF) << 2) | ((buffer.get(off0 + 4) >> (sub0 * 2)) & 0x03);
+                    raw00 = (((int) buffer.get(off0 + sub0) & 0xFF) << 2) | (((int) buffer.get(off0 + 4) >> (sub0 * 2)) & 0x03);
                     int off1 = y * rowStride + ((x + 1) / 4) * 5;
                     int sub1 = (x + 1) % 4;
-                    raw10 = ((buffer.get(off1 + sub1) & 0xFF) << 2) | ((buffer.get(off1 + 4) >> (sub1 * 2)) & 0x03);
+                    raw10 = (((int) buffer.get(off1 + sub1) & 0xFF) << 2) | (((int) buffer.get(off1 + 4) >> (sub1 * 2)) & 0x03);
                     int off2 = (y + 1) * rowStride + (x / 4) * 5;
                     int sub2 = x % 4;
-                    raw01 = ((buffer.get(off2 + sub2) & 0xFF) << 2) | ((buffer.get(off2 + 4) >> (sub2 * 2)) & 0x03);
+                    raw01 = (((int) buffer.get(off2 + sub2) & 0xFF) << 2) | (((int) buffer.get(off2 + 4) >> (sub2 * 2)) & 0x03);
                     int off3 = (y + 1) * rowStride + ((x + 1) / 4) * 5;
                     int sub3 = (x + 1) % 4;
-                    raw11 = ((buffer.get(off3 + sub3) & 0xFF) << 2) | ((buffer.get(off3 + 4) >> (sub3 * 2)) & 0x03);
+                    raw11 = (((int) buffer.get(off3 + sub3) & 0xFF) << 2) | (((int) buffer.get(off3 + 4) >> (sub3 * 2)) & 0x03);
                 } else {
                     // MIPI Packed RAW12
                     int off0 = y * rowStride + (x / 2) * 3;
                     int sub0 = x % 2;
-                    raw00 = ((buffer.get(off0 + sub0) & 0xFF) << 4) | (sub0 == 0 ? (buffer.get(off0 + 2) & 0x0F) : ((buffer.get(off0 + 2) >> 4) & 0x0F));
+                    raw00 = (((int) buffer.get(off0 + sub0) & 0xFF) << 4) | (sub0 == 0 ? ((int) buffer.get(off0 + 2) & 0x0F) : (((int) buffer.get(off0 + 2) >> 4) & 0x0F));
                     int off1 = y * rowStride + ((x + 1) / 2) * 3;
                     int sub1 = (x + 1) % 2;
-                    raw10 = ((buffer.get(off1 + sub1) & 0xFF) << 4) | (sub1 == 0 ? (buffer.get(off1 + 2) & 0x0F) : ((buffer.get(off1 + 2) >> 4) & 0x0F));
+                    raw10 = (((int) buffer.get(off1 + sub1) & 0xFF) << 4) | (sub1 == 0 ? ((int) buffer.get(off1 + 2) & 0x0F) : (((int) buffer.get(off1 + 2) >> 4) & 0x0F));
                     int off2 = (y + 1) * rowStride + (x / 2) * 3;
                     int sub2 = x % 2;
-                    raw01 = ((buffer.get(off2 + sub2) & 0xFF) << 4) | (sub2 == 0 ? (buffer.get(off2 + 2) & 0x0F) : ((buffer.get(off2 + 2) >> 4) & 0x0F));
+                    raw01 = (((int) buffer.get(off2 + sub2) & 0xFF) << 4) | (sub2 == 0 ? ((int) buffer.get(off2 + 2) & 0x0F) : (((int) buffer.get(off2 + 2) >> 4) & 0x0F));
                     int off3 = (y + 1) * rowStride + ((x + 1) / 2) * 3;
                     int sub3 = (x + 1) % 2;
-                    raw11 = ((buffer.get(off3 + sub3) & 0xFF) << 4) | (sub3 == 0 ? (buffer.get(off3 + 2) & 0x0F) : ((buffer.get(off3 + 2) >> 4) & 0x0F));
+                    raw11 = (((int) buffer.get(off3 + sub3) & 0xFF) << 4) | (sub3 == 0 ? ((int) buffer.get(off3 + 2) & 0x0F) : (((int) buffer.get(off3 + 2) >> 4) & 0x0F));
                 }
 
                 // Black level per sensel: indices 0=(0,0), 1=(1,0), 2=(0,1), 3=(1,1)

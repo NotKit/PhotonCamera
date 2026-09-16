@@ -3,7 +3,6 @@ package com.particlesdevs.photoncamera.control;
 import android.os.CountDownTimer;
 
 import java.util.Locale;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
@@ -23,7 +22,7 @@ public class CountdownTimer extends CountDownTimer {
 
     @Override
     public void onTick(long millisUntilFinished) {
-        long seconds = TimeUnit.MILLISECONDS.toSeconds(millisUntilFinished) + 1;
+        long seconds = millisUntilFinished / 1000L + 1;
         onTick.accept(String.format(Locale.ROOT, "%d", seconds));
     }
 

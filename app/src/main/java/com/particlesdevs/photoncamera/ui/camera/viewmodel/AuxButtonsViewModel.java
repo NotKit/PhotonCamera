@@ -29,6 +29,7 @@ import com.particlesdevs.photoncamera.ui.camera.data.CameraLensData;
 import com.particlesdevs.photoncamera.ui.camera.model.AuxButtonsModel;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +40,7 @@ import java.util.Map;
 public class AuxButtonsViewModel extends ViewModel {
     // Ascending by optical zoom so the horizontal pill reads ultra-wide on the
     // left through tele on the right (standard camera-app order).
-    private static final Comparator<CameraLensData> SORT_BY_ZOOM_FACTOR = (o1, o2) -> Double.compare(o1.getZoomFactor(), o2.getZoomFactor());
+    private static final Comparator<CameraLensData> SORT_BY_ZOOM_FACTOR = (o1, o2) -> Float.valueOf(o1.getZoomFactor()).compareTo(o2.getZoomFactor());
     private final AuxButtonsModel auxButtonsModel = new AuxButtonsModel();
     private boolean initialized = false;
     private boolean isEnabled = true;
@@ -63,8 +64,8 @@ public class AuxButtonsViewModel extends ViewModel {
                     frontCameras.add(cameraLensData);
             });
         }
-        backCameras.sort(SORT_BY_ZOOM_FACTOR);
-        frontCameras.sort(SORT_BY_ZOOM_FACTOR);
+        Collections.sort(backCameras, SORT_BY_ZOOM_FACTOR);
+        Collections.sort(frontCameras, SORT_BY_ZOOM_FACTOR);
         auxButtonsModel.setBackCameras(backCameras);
         auxButtonsModel.setFrontCameras(frontCameras);
         initialized = true;
@@ -85,8 +86,8 @@ public class AuxButtonsViewModel extends ViewModel {
                     frontCameras.add(member);
             }
         }
-        backCameras.sort(SORT_BY_ZOOM_FACTOR);
-        frontCameras.sort(SORT_BY_ZOOM_FACTOR);
+        Collections.sort(backCameras, SORT_BY_ZOOM_FACTOR);
+        Collections.sort(frontCameras, SORT_BY_ZOOM_FACTOR);
         auxButtonsModel.setBackCameras(backCameras);
         auxButtonsModel.setFrontCameras(frontCameras);
         initialized = true;

@@ -30,6 +30,7 @@ import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Rect;
 import android.graphics.RectF;
+import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
@@ -42,6 +43,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 
+import com.particlesdevs.photoncamera.ui.camera.views.ViewFocusIndicator;
 import com.particlesdevs.photoncamera.ui.camera.views.viewfinder.HorizonIndicatorView;
 import com.particlesdevs.photoncamera.ui.camera.views.viewfinder.ViewfinderHudView;
 import com.particlesdevs.photoncamera.util.Log;
@@ -141,7 +143,7 @@ public class CameraFragment extends Fragment {
     public static String sActiveBackCamId = "0";
     public static String sActiveFrontCamId = "1";
     public static CameraMode mSelectedMode;
-    private final Field[] metadataFields = CameraReflectionApi.getAllMetadataFields();
+    private final Field[] metadataFields = CameraMetadata.class.getFields();
     private final int NOTIFICATION_ID = 1;
     /*
     private final ExecutorService processExecutorService = Executors.newSingleThreadExecutor(r -> {
@@ -315,7 +317,9 @@ public class CameraFragment extends Fragment {
         cameraUiHost.syncFromPreferences();
         cameraUiHost.applyMode(CameraMode.valueOf(PreferenceKeys.getCameraModeOrdinal()),
                 PreferenceKeys.isQuadBayerOn(), displayAspectRatio);
-        this.captureController = new CaptureController(activity, textureView, processExecutorService, new CameraEventsListenerImpl());
+        this.captureController = new CaptureController(activity,
+                new com.particlesdevs.photoncamera.ui.camera.views.viewfinder.GLPreviewSurface(textureView, activity),
+                processExecutorService, new CameraEventsListenerImpl());
         this.captureController.setManualModeConsole(manualModeConsole);
         this.manualModeConsole.addParamObserver(captureController.getParamController());
         this.textureView.setManualModeConsole(manualModeConsole);
@@ -451,7 +455,7 @@ public class CameraFragment extends Fragment {
             View spotWbIndicator = cameraUiHost.getViewfinderStack().findViewById(R.id.spotWbIndicator);
             // The Compose box sizes the preview to the visible frame, so it is the frame.
             textureView.post(() -> {
-                mTouchFocus = new TouchFocus(captureController, focusCircle, spotWbIndicator, textureView);
+                mTouchFocus = new TouchFocus(captureController, new ViewFocusIndicator(textureView, focusCircle, spotWbIndicator));
                 captureController.mTouchFocus = mTouchFocus;
             });
         }

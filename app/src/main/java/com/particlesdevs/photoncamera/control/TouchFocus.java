@@ -9,10 +9,6 @@ import android.hardware.camera2.params.MeteringRectangle;
 import android.os.Handler;
 import android.os.SystemClock;
 import android.util.Size;
-import android.view.Display;
-import android.view.View;
-import android.view.View.OnTouchListener;
-import android.view.ViewGroup;
 
 import androidx.annotation.Nullable;
 
@@ -20,11 +16,8 @@ import com.particlesdevs.photoncamera.app.PhotonCamera;
 import com.particlesdevs.photoncamera.capture.CaptureController;
 import com.particlesdevs.photoncamera.circularbarlib.api.ManualModeConsole;
 import com.particlesdevs.photoncamera.circularbarlib.control.ManualParamModel;
-import com.particlesdevs.photoncamera.circularbarlib.util.Motion;
 import com.particlesdevs.photoncamera.manual.ParamController;
 import com.particlesdevs.photoncamera.settings.PreferenceKeys;
-import com.particlesdevs.photoncamera.ui.camera.views.FocusCircleView;
-import com.particlesdevs.photoncamera.ui.camera.views.SpotWbIndicatorView;
 import com.particlesdevs.photoncamera.util.Log;
 
 /**
@@ -112,27 +105,26 @@ public class TouchFocus {
             CameraMetadata.CONTROL_AF_STATE_FOCUSED_LOCKED};
 
     private final CaptureController captureController;
-    private final View viewfinderFrame;
-    private final View focusCircleView;
-    private final View spotWbIndicatorView;
+    /** The viewfinder: its geometry, its thread and the two indicators a tap draws. */
+    private final FocusIndicator viewfinder;
     private int currentOrientation = 0;
-    private final Runnable hideFocusCircleRunnable = this::hideFocusCircleView;
-    private final Runnable hideSpotWbRunnable = this::hideSpotWbIndicatorView;
+    private final Runnable hideFocusCircleRunnable = new Runnable() {
+        @Override
+        public void run() {
+            hideFocusCircleView();
+        }
+    };
+    private final Runnable hideSpotWbRunnable = new Runnable() {
+        @Override
+        public void run() {
+            hideSpotWbIndicatorView();
+        }
+    };
     public volatile boolean isTouchFocus = false;
 
-    public TouchFocus(CaptureController captureController, View focusCircle, View spotWbIndicator, View viewfinderFrame) {
+    public TouchFocus(CaptureController captureController, FocusIndicator viewfinder) {
         this.captureController = captureController;
-        this.focusCircleView = focusCircle;
-        this.spotWbIndicatorView = spotWbIndicator;
-        this.viewfinderFrame = viewfinderFrame;
-        if (focusCircleView != null) {
-            focusCircleView.setClickable(false);
-            focusCircleView.setFocusable(false);
-        }
-        if (spotWbIndicatorView != null) {
-            spotWbIndicatorView.setClickable(false);
-            spotWbIndicatorView.setFocusable(false);
-        }
+        this.viewfinder = viewfinder;
         resetFocusCircle();
         resetSpotWbIndicator();
     }
@@ -189,80 +181,42 @@ public class TouchFocus {
      * Displays a dedicated sampling reticle with "WB" label and handles real-time error feedback.
      */
     public void processSpotWb(float fx, float fy) {
-        if (viewfinderFrame == null || captureController == null) return;
-        if (isInsideSpotWbIndicator(fx, fy)) {
+        if (viewfinder == null || captureController == null) return;
+        if (viewfinder.isOnSpotWb(fx, fy)) {
             cancelSpotWb();
             return;
         }
 
         // 1. Tactile haptic feedback
-        viewfinderFrame.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+        viewfinder.hapticLongPress();
 
-        // 2. Position, animate and reset dedicated Spot WB indicator box to measuring state
-        if (spotWbIndicatorView != null) {
-            spotWbIndicatorView.removeCallbacks(hideSpotWbRunnable);
-            spotWbIndicatorView.post(() -> showSpotWbIndicator(fx, fy));
-        }
+        // 2. Position the dedicated Spot WB reticle in its measuring state
+        viewfinder.cancel(hideSpotWbRunnable);
+        viewfinder.post(() -> {
+            viewfinder.setOrientation(currentOrientation);
+            viewfinder.showSpotWb(fx, fy);
+        });
 
         // 3. Measure True Linear RAW Spot WB directly using canonical field-of-view ratio
         SpotWhiteBalanceHelper.measureSpotWbRaw(
-                viewfinderFrame,
+                viewfinder,
                 captureController,
                 fx, fy,
                 new SpotWhiteBalanceHelper.SpotWbCallback() {
                     @Override
                     public void onSpotWbMeasured(int kelvin, String tintStr) {
-                        if (spotWbIndicatorView != null) {
-                            spotWbIndicatorView.removeCallbacks(hideSpotWbRunnable);
-                            spotWbIndicatorView.postDelayed(hideSpotWbRunnable, 2000);
-                        }
+                        viewfinder.cancel(hideSpotWbRunnable);
+                        viewfinder.postDelayed(hideSpotWbRunnable, 2000);
                     }
 
                     @Override
                     public void onSpotWbFailed(String reason) {
-                        if (spotWbIndicatorView != null) {
-                            spotWbIndicatorView.removeCallbacks(hideSpotWbRunnable);
-                            if (spotWbIndicatorView instanceof SpotWbIndicatorView) {
-                                ((SpotWbIndicatorView) spotWbIndicatorView).setErrorState(reason);
-                            }
-                            spotWbIndicatorView.postDelayed(hideSpotWbRunnable, 1500);
-                        }
+                        viewfinder.cancel(hideSpotWbRunnable);
+                        viewfinder.setSpotWbError(reason);
+                        viewfinder.postDelayed(hideSpotWbRunnable, 1500);
                     }
                 }
         );
-    }
-
-    private void showSpotWbIndicator(float fx, float fy) {
-        if (spotWbIndicatorView == null) return;
-        if (spotWbIndicatorView instanceof SpotWbIndicatorView) {
-            ((SpotWbIndicatorView) spotWbIndicatorView).setMeasuringState();
-            ((SpotWbIndicatorView) spotWbIndicatorView).setOrientation(currentOrientation);
-        }
-        spotWbIndicatorView.setX(fx - spotWbIndicatorView.getMeasuredWidth() / 2.0f);
-        spotWbIndicatorView.setY(fy - spotWbIndicatorView.getMeasuredHeight() / 2.0f);
-        spotWbIndicatorView.setVisibility(View.VISIBLE);
-        spotWbIndicatorView.animate().scaleX(1.25f).scaleY(1.25f)
-                .setDuration(Motion.durationShort3(spotWbIndicatorView.getContext()))
-                .setInterpolator(Motion.emphasized(spotWbIndicatorView.getContext()))
-                .withEndAction(() -> spotWbIndicatorView.animate().scaleX(1.0f).scaleY(1.0f)
-                        .setDuration(Motion.durationShort3(spotWbIndicatorView.getContext()))
-                        .setInterpolator(Motion.emphasized(spotWbIndicatorView.getContext())).start())
-                .start();
-    }
-
-    /**
-     * True when the long-press lands inside the visible Spot WB indicator. The
-     * indicator is placed by {@link #showSpotWbIndicator} using the same
-     * viewfinder-translated coordinates the long-press arrives with, so bounds
-     * comparison is exact; the hit area is the full square view bounds.
-     */
-    private boolean isInsideSpotWbIndicator(float fx, float fy) {
-        if (spotWbIndicatorView == null) return false;
-        if (spotWbIndicatorView.getVisibility() != View.VISIBLE) return false;
-        return fx >= spotWbIndicatorView.getX()
-                && fx <= spotWbIndicatorView.getX() + spotWbIndicatorView.getWidth()
-                && fy >= spotWbIndicatorView.getY()
-                && fy <= spotWbIndicatorView.getY() + spotWbIndicatorView.getHeight();
     }
 
     /**
@@ -272,8 +226,8 @@ public class TouchFocus {
      * the indicator hides. A no-op safe to call with nothing selected.
      */
     public void cancelSpotWb() {
-        if (viewfinderFrame == null || captureController == null) return;
-        viewfinderFrame.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+        if (viewfinder == null || captureController == null) return;
+        viewfinder.hapticLongPress();
         SpotWhiteBalanceHelper.cancelPendingMeasurement();
         ParamController paramController = captureController.getParamController();
         if (paramController != null && paramController.isSpotWb) {
@@ -289,7 +243,7 @@ public class TouchFocus {
     }
 
     public void processTouchToFocus(float fx, float fy) {
-        if (isTapInsideFocusCircle(fx, fy)) {
+        if (viewfinder.isOnFocusCircle(fx, fy)) {
             // Tapping the visible focus circle cancels the touch focus and restores
             // full-frame 3A. The circle itself must stay non-clickable so taps and
             // long-presses pass through to the viewfinder gesture handler.
@@ -302,39 +256,12 @@ public class TouchFocus {
             Log.w(TAG, "processTouchToFocus(): camera or viewfinder not ready, ignoring tap");
             return;
         }
-        focusCircleView.removeCallbacks(hideFocusCircleRunnable);
-        focusCircleView.post(() -> showFocusCircle(fx, fy));
+        viewfinder.cancel(hideFocusCircleRunnable);
+        viewfinder.post(() -> viewfinder.showFocusCircle(fx, fy));
         startFocusSequence(region);
-        focusCircleView.postDelayed(hideFocusCircleRunnable, AUTO_HIDE_DELAY_MS);
+        viewfinder.postDelayed(hideFocusCircleRunnable, AUTO_HIDE_DELAY_MS);
     }
 
-    private void showFocusCircle(float fx, float fy) {
-        focusCircleView.setX(fx - focusCircleView.getMeasuredWidth() / 2.0f);
-        focusCircleView.setY(fy - focusCircleView.getMeasuredHeight() / 2.0f);
-        focusCircleView.setVisibility(View.VISIBLE);
-        focusCircleView.animate().scaleY(1.2f).scaleX(1.2f)
-                .setDuration(Motion.durationMedium1(focusCircleView.getContext()))
-                .setInterpolator(Motion.emphasized(focusCircleView.getContext()))
-                .withEndAction(() -> focusCircleView.animate().scaleY(1f).scaleX(1f)
-                        .setDuration(Motion.durationMedium1(focusCircleView.getContext()))
-                        .setInterpolator(Motion.emphasized(focusCircleView.getContext())).start())
-                .start();
-    }
-
-    /**
-     * True when the tap lands inside the visible focus circle view. The circle is
-     * placed by {@link #showFocusCircle} using the same viewfinder-translated
-     * coordinates the tap arrives with, so bounds comparison is exact. The hit
-     * area is the full square view bounds, matching the pre-pass-through behavior
-     * where the circle consumed touches across its whole view.
-     */
-    private boolean isTapInsideFocusCircle(float fx, float fy) {
-        if (focusCircleView.getVisibility() != View.VISIBLE) return false;
-        return fx >= focusCircleView.getX()
-                && fx <= focusCircleView.getX() + focusCircleView.getWidth()
-                && fy >= focusCircleView.getY()
-                && fy <= focusCircleView.getY() + focusCircleView.getHeight();
-    }
 
     /**
      * Sets state of focus circle view based on AF State. Also closes the scan-watch
@@ -348,7 +275,7 @@ public class TouchFocus {
                 Log.w(TAG, "lock after " + (SystemClock.elapsedRealtime() - scanAckAtElapsed)
                         + "ms of scan; lens " + focusAtScanAck + " -> " + captureController.mFocus + " diopters");
             }
-            ((FocusCircleView) focusCircleView).setAfState(afstate);
+            viewfinder.setAfState(afstate);
         }
     }
 
@@ -361,9 +288,7 @@ public class TouchFocus {
      */
     public void setOrientation(int orientation) {
         this.currentOrientation = orientation;
-        if (spotWbIndicatorView instanceof SpotWbIndicatorView) {
-            ((SpotWbIndicatorView) spotWbIndicatorView).setOrientation(orientation);
-        }
+        viewfinder.setOrientation(orientation);
     }
 
     // ------------------------------------------------------------------ mapping
@@ -381,11 +306,11 @@ public class TouchFocus {
         boolean mirrored = facing != null && facing == CameraCharacteristics.LENS_FACING_FRONT;
         int gravityRotation = currentGravityRotation();
         logPreCorrectionMismatch(characteristics);
-        int[] r = mapTapToCrop(viewX, viewY, viewfinderFrame.getWidth(), viewfinderFrame.getHeight(),
+        int[] r = mapTapToCrop(viewX, viewY, viewfinder.getPreviewWidth(), viewfinder.getPreviewHeight(),
                 crop.left, crop.top, crop.width(), crop.height(),
                 captureController.mSensorOrientation, gravityRotation, mirrored);
         if (r == null) return null;
-        Log.d(TAG, "tap (" + (int) viewX + "," + (int) viewY + ")v" + viewfinderFrame.getWidth() + "x" + viewfinderFrame.getHeight()
+        Log.d(TAG, "tap (" + (int) viewX + "," + (int) viewY + ")v" + viewfinder.getPreviewWidth() + "x" + viewfinder.getPreviewHeight()
                 + " so=" + captureController.mSensorOrientation + " rot=" + gravityRotation + " mirror=" + mirrored
                 + " crop=" + crop.width() + "x" + crop.height() + " -> rect=[" + r[0] + "," + r[1] + " " + r[2] + "x" + r[2] + "]");
         return new MeteringRectangle(r[0], r[1], r[2], r[2], REGION_WEIGHT);
@@ -397,11 +322,8 @@ public class TouchFocus {
      * to the gravity scale, where 90 = natural portrait upright.
      */
     private int currentGravityRotation() {
-        try {
-            Display display = viewfinderFrame.getDisplay();
-            if (display != null) return display.getRotation() * 90 + 90;
-        } catch (Exception ignored) {
-        }
+        int rotation = viewfinder.getDisplayRotation();
+        if (rotation >= 0) return rotation;
         Gravity gravity = PhotonCamera.getGravity();
         return gravity != null ? gravity.getRotation() : 90;
     }
@@ -454,7 +376,7 @@ public class TouchFocus {
         float u = viewX / viewWidth;
         float v = viewY / viewHeight;
         if (mirrored) u = 1f - u;
-        double rad = Math.toRadians(rotation);
+        double rad = Math.toRadians((double) rotation);
         double cos = Math.cos(rad);
         double sin = Math.sin(rad);
         float dx = u - 0.5f;
@@ -797,14 +719,14 @@ public class TouchFocus {
         Handler background = captureController.mBackgroundHandler;
         timeoutOnBackground = background != null;
         if (background != null) background.postDelayed(timeoutRunnable, STATE_DEADLINE_MS + 100);
-        else focusCircleView.postDelayed(timeoutRunnable, STATE_DEADLINE_MS + 100);
+        else viewfinder.postDelayed(timeoutRunnable, STATE_DEADLINE_MS + 100);
     }
 
     private void cancelTimeoutLocked() {
         if (timeoutRunnable == null) return;
         if (timeoutOnBackground && captureController.mBackgroundHandler != null)
             captureController.mBackgroundHandler.removeCallbacks(timeoutRunnable);
-        else focusCircleView.removeCallbacks(timeoutRunnable);
+        else viewfinder.cancel(timeoutRunnable);
         timeoutRunnable = null;
     }
 
@@ -924,53 +846,25 @@ public class TouchFocus {
     //Thread safe
     //call when focus circle needs to be hidden immediately
     public void resetFocusCircle() {
-        focusCircleView.removeCallbacks(hideFocusCircleRunnable);
-        focusCircleView.post(hideFocusCircleRunnable);
+        viewfinder.cancel(hideFocusCircleRunnable);
+        viewfinder.post(hideFocusCircleRunnable);
         resetAutoFocus();
     }
 
-    //Must be run on UI Thread
+    //Must be run on the viewfinder's thread
     private void hideFocusCircleView() {
-        if (focusCircleView.getVisibility() == View.VISIBLE) {
-            focusCircleView.animate().alpha(0f).scaleY(1.8f).scaleX(1.8f)
-                    .setDuration(Motion.durationShort2(focusCircleView.getContext()))
-                    .setInterpolator(Motion.emphasizedDecelerate(focusCircleView.getContext()))
-                    .withEndAction(() -> {
-                        focusCircleView.setVisibility(View.GONE);
-                        focusCircleView.setX((float) viewfinderFrame.getWidth() / 2.f);
-                        focusCircleView.setY((float) viewfinderFrame.getHeight() / 2.f);
-                        focusCircleView.setScaleY(1f);
-                        focusCircleView.setScaleX(1f);
-                        focusCircleView.setAlpha(1f);
-                    })
-                    .start();
-        }
+        viewfinder.hideFocusCircle();
     }
 
     //Thread safe
     //call when spot WB indicator needs to be hidden immediately
     public void resetSpotWbIndicator() {
-        if (spotWbIndicatorView != null) {
-            spotWbIndicatorView.removeCallbacks(hideSpotWbRunnable);
-            spotWbIndicatorView.post(hideSpotWbRunnable);
-        }
+        viewfinder.cancel(hideSpotWbRunnable);
+        viewfinder.post(hideSpotWbRunnable);
     }
 
-    //Must be run on UI Thread
+    //Must be run on the viewfinder's thread
     private void hideSpotWbIndicatorView() {
-        if (spotWbIndicatorView != null && spotWbIndicatorView.getVisibility() == View.VISIBLE) {
-            spotWbIndicatorView.animate().alpha(0f).scaleX(1.4f).scaleY(1.4f)
-                    .setDuration(Motion.durationShort2(spotWbIndicatorView.getContext()))
-                    .setInterpolator(Motion.emphasizedDecelerate(spotWbIndicatorView.getContext()))
-                    .withEndAction(() -> {
-                        spotWbIndicatorView.setVisibility(View.GONE);
-                        spotWbIndicatorView.setX((float) viewfinderFrame.getWidth() / 2.f);
-                        spotWbIndicatorView.setY((float) viewfinderFrame.getHeight() / 2.f);
-                        spotWbIndicatorView.setScaleX(1f);
-                        spotWbIndicatorView.setScaleY(1f);
-                        spotWbIndicatorView.setAlpha(1f);
-                    })
-                    .start();
-        }
+        viewfinder.hideSpotWb();
     }
 }
