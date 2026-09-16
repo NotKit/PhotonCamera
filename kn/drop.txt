@@ -1,0 +1,78 @@
+# Java files that are NOT converted to Kotlin: the Android View layer, which
+# Compose (ui-compose/) replaces.  Paths are relative to app/src/main/java and
+# are rsync exclude patterns.  Everything else is converted by convert.sh.
+# Add a file here only when it is View/Activity/Fragment/Preference glue with
+# no logic the port needs; say why in the commit.
+com/particlesdevs/photoncamera/app/base/BaseActivity.java
+com/particlesdevs/photoncamera/ui/SplashActivity.java
+com/particlesdevs/photoncamera/ui/camera/CameraActivity.java
+com/particlesdevs/photoncamera/ui/camera/CameraFragment.java
+com/particlesdevs/photoncamera/ui/camera/views/
+com/particlesdevs/photoncamera/ui/settings/SettingsActivity.java
+com/particlesdevs/photoncamera/ui/settings/custompreferences/
+com/particlesdevs/photoncamera/gallery/ui/
+com/particlesdevs/photoncamera/gallery/adapters/
+com/particlesdevs/photoncamera/gallery/views/
+com/particlesdevs/photoncamera/gallery/binding/
+com/particlesdevs/photoncamera/processing/opengl/preview/GLPreview.java
+# --- platform lane, round 1 -------------------------------------------------
+# androidx.fragment lifecycle logging; there are no Fragments on this port.
+com/particlesdevs/photoncamera/util/log/FragmentLifeCycleMonitor.java
+# androidx.preference generators: they build a Preference widget tree, which
+# ui-compose's settings screen replaces.  The tunable STORAGE stays (TunableInjector,
+# TunableSettingsManager, PreferenceKeys); only the UI builders go.
+com/particlesdevs/photoncamera/settings/TunablePreferenceGenerator.java
+com/particlesdevs/photoncamera/settings/SensorConfigPreferenceGenerator.java
+# SubsamplingScaleImageView glue for the dropped gallery views.
+com/particlesdevs/photoncamera/gallery/compare/SSIVListener.java
+# The old View-based camera UI surface and its orientation listener.
+com/particlesdevs/photoncamera/ui/camera/CameraUIView.java
+com/particlesdevs/photoncamera/ui/camera/CustomOrientationEventListener.java
+# Glide + Drawable + AttributeSet: the EXIF dialog's Android view model.
+com/particlesdevs/photoncamera/gallery/viewmodel/ExifDialogViewModel.java
+# Reflective @Tunable / @SensorConfig field injection: both walk
+# Class.getDeclaredFields() and Field.set(), which Kotlin/Native cannot do.
+# Ported by hand in src/commonMain/kotlin/com/particlesdevs/photoncamera/settings/
+# TunableInjectorKn.kt, which says what the port loses.
+com/particlesdevs/photoncamera/settings/TunableInjector.java
+com/particlesdevs/photoncamera/settings/SensorConfigInjector.java
+# The GLSurfaceView.Renderer for GLPreview, which is dropped above: the Compose
+# viewfinder replaces both.
+com/particlesdevs/photoncamera/processing/opengl/preview/MainRenderer.java
+# --- natives lane, round 1 --------------------------------------------------
+# An ART hidden-API bypass: it walks the runtime's ArtMethod/ArtField tables and
+# hands back java.lang.reflect objects.  There is no ART here, so the library is
+# not built (host/natives/photoncam_native.h reports it unavailable) and the
+# class converts to nothing but Method/Field it cannot have.  Nothing calls it
+# any more either, since CameraReflectionApi stopped using it.  Kept in the
+# Android build, where the bypass is the point.
+com/particlesdevs/photoncamera/api/NativeEngine.java
+# Gesture-to-action glue over CameraFragment and the manual-mode console; the
+# Compose screen routes gestures itself and there is no capture logic here.
+com/particlesdevs/photoncamera/control/Swipe.java
+# circularbarlib: the knob Views and their View observer/binding; the models stay
+com/particlesdevs/photoncamera/circularbarlib/ui/
+# The only class that knows both the console and the Android manual bar: it
+# hands each console a ViewObserver factory.  The port builds its own surface.
+com/particlesdevs/photoncamera/circularbarlib/api/ManualInstanceProvider.java
+# The event router and view model of the old View-based camera screen: both
+# talk only to CameraFragment (dropped above) -- its captureController,
+# cameraUiHost, mSwipe and Glide thumbnail loading.  ui-compose's
+# CameraScreenHost is the replacement, and it routes its own events.
+com/particlesdevs/photoncamera/ui/camera/CameraUIController.java
+com/particlesdevs/photoncamera/ui/camera/viewmodel/CameraFragmentViewModel.java
+# Java object serialization, which is reflective; nothing ever called
+# SaveObject/GetObject and PhotonCamera's field is now gone.
+com/particlesdevs/photoncamera/util/ObjectLoader.java
+# the exif dialog data class: only its dropped ViewModel and Fragment use it, and it names the Histogram View
+com/particlesdevs/photoncamera/gallery/model/ExifDialogModel.java
+# --- platform lane, round 2 ------------------------------------------------
+# The camera screen's event interface: only CameraFragment and CameraUIController
+# implemented it, and both are dropped above.  The Compose screen routes its own.
+com/particlesdevs/photoncamera/ui/camera/CameraUIEventsListener.java
+# The list of @Tunable-carrying classes that the Android preference screen walks.
+# One entry is ui/camera/compose/CameraScreenHost, which on this port is the host
+# lane's Kotlin under src/linuxMain and not visible from commonMain.  Ported by
+# hand beside TunableInjectorKn.kt as an empty registry: there is no preference
+# screen here and the injection is already a seam.
+com/particlesdevs/photoncamera/settings/TunableRegistry.java

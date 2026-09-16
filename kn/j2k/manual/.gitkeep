@@ -1,0 +1,5 @@
+Quarantine overlay for files the codemod cannot handle. Applied over the
+generated Kotlin after j2k.py runs.
+
+It is empty, and that is a result: nothing in GeckoView's 168 Java files
+defeated the converter outright. See README.md §9.
