@@ -1,0 +1,15 @@
+gen-atlas/
+gen/
+out/
+build/
+j2k/*.tsv
+j2k/**/__pycache__/
+
+# host lane: link-line artefacts, rebuilt by scripts/build-mgwl.sh and
+# scripts/fetch-arm64-extra.sh.  composeResources/ is NOT here -- it is
+# generated too, but a plain Gradle run has to find the drawables.
+hostlibs/
+armlibs/
+armlibs-extra/
+host/*/build-*/
+gen.old/
