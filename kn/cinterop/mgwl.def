@@ -1,0 +1,29 @@
+# Kotlin/Native cinterop for mgwl -- the raw Wayland + EGL/GLES host that already
+# puts a Compose window on Ubuntu Touch (firefox-atl/fenix-kn/host, originally
+# compose-ut/ut/host).  host/ here is a COPY of it, not a symlink: that lane
+# moves under its own passes and this one must build from a tree that does not.
+#
+# WHY THIS FILE EXISTS.  Aurora's JVM-free Compose fork ships its own window
+# layer, ak-window -- a Rust winit/glutin crate.  On the phone it dies in
+# eglCreateWindowSurface with EGL_BAD_ATTRIBUTE against libhybris, and on the
+# x86_64 desktop it never gets a window at all because its winit fork binds
+# wl_shell and qt_surface_extension.  mgwl.c has neither problem: it is
+# xdg_wm_base, and it is the code that actually runs on this phone today.  So the
+# bargain is Aurora's klibs for Compose, our host for the window -- and this is
+# the seam.
+#
+# The C API is already callback-shaped (mgwl_callbacks is plain function
+# pointers), so the Kotlin side binds it with staticCFunction and needs no
+# wrapper of its own.
+#
+# fenix-kn's mgwl_ime.h (Maliit OSK), mgwl_share.h (content-hub) and
+# mgwl_clip.h (clipboard) are NOT bound here: a camera has no text field.
+# mgwl_clip.c is still COMPILED, because mgwl.c calls mgwl_clip_note_serial on
+# every input event, but no Kotlin sees it.
+headers = mgwl.h
+headerFilter = mgwl.h
+package = net.thekit.mgwl
+
+# The include paths are passed as absolute -compiler-option flags from
+# build.gradle.kts, so this file does not care where cinterop is run from.
+linkerOpts = -lwayland-client -lwayland-egl -lEGL -lGLESv2 -lxkbcommon -lm -ldl
