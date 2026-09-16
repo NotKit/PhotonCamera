@@ -10,6 +10,7 @@ import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Build;
+import android.os.ParcelFileDescriptor;
 
 import androidx.core.content.ContextCompat;
 
@@ -17,9 +18,7 @@ import com.particlesdevs.photoncamera.app.PhotonCamera;
 import com.particlesdevs.photoncamera.util.Log;
 
 import java.io.File;
-import java.io.FileDescriptor;
 import java.io.FileOutputStream;
-import java.lang.reflect.Field;
 import java.util.Arrays;
 
 /**
@@ -53,6 +52,8 @@ public class FlacAudioRecorder {
 
     private AudioRecord audioRecord;
     private FileOutputStream outputFos;
+    /** A dup of {@link #outputFos}'s descriptor; what native writes through. */
+    private ParcelFileDescriptor outputPfd;
     private Thread recordThread;
     private volatile boolean recording = false;
     private long nativeCtx = 0;
@@ -70,11 +71,12 @@ public class FlacAudioRecorder {
             return false;
         }
 
-        audioRecord = createAudioRecord();
-        if (audioRecord == null || audioRecord.getState() != AudioRecord.STATE_INITIALIZED) {
+        final AudioRecord record = createAudioRecord();
+        audioRecord = record;
+        if (record == null || record.getState() != AudioRecord.STATE_INITIALIZED) {
             Log.e(TAG, "AudioRecord init failed");
-            if (audioRecord != null) {
-                audioRecord.release();
+            if (record != null) {
+                record.release();
                 audioRecord = null;
             }
             return false;
@@ -86,7 +88,7 @@ public class FlacAudioRecorder {
         int rawFd = openOutputFile(outputPath);
         if (rawFd < 0) {
             Log.e(TAG, "Cannot open output file: " + outputPath);
-            audioRecord.release();
+            record.release();
             audioRecord = null;
             return false;
         }
@@ -95,7 +97,7 @@ public class FlacAudioRecorder {
         if (nativeCtx == 0) {
             Log.e(TAG, "FLAC encoder init failed");
             closeOutputFile();
-            audioRecord.release();
+            record.release();
             audioRecord = null;
             return false;
         }
@@ -119,8 +121,9 @@ public class FlacAudioRecorder {
         recording = false;
 
         // Stop AudioRecord to unblock any pending read()
-        if (audioRecord != null) {
-            try { audioRecord.stop(); } catch (Exception ignored) {}
+        final AudioRecord record = audioRecord;
+        if (record != null) {
+            try { record.stop(); } catch (Exception ignored) {}
         }
 
         if (recordThread != null) {
@@ -136,8 +139,8 @@ public class FlacAudioRecorder {
         // Close the Java-side file handle AFTER native has flushed and closed its dup'd fd
         closeOutputFile();
 
-        if (audioRecord != null) {
-            audioRecord.release();
+        if (record != null) {
+            record.release();
             audioRecord = null;
         }
 
@@ -161,9 +164,8 @@ public class FlacAudioRecorder {
             File f = new File(path);
             if (f.getParentFile() != null) f.getParentFile().mkdirs();
             outputFos = new FileOutputStream(f);
-            Field field = FileDescriptor.class.getDeclaredField("descriptor");
-            field.setAccessible(true);
-            return (int) field.get(outputFos.getFD());
+            outputPfd = ParcelFileDescriptor.dup(outputFos.getFD());
+            return outputPfd.getFd();
         } catch (Exception e) {
             Log.e(TAG, "openOutputFile failed: " + e.getMessage());
             closeOutputFile();
@@ -172,6 +174,11 @@ public class FlacAudioRecorder {
     }
 
     private void closeOutputFile() {
+        final ParcelFileDescriptor pfd = outputPfd;
+        if (pfd != null) {
+            try { pfd.close(); } catch (Exception ignored) {}
+            outputPfd = null;
+        }
         if (outputFos != null) {
             try { outputFos.close(); } catch (Exception ignored) {}
             outputFos = null;
@@ -180,15 +187,17 @@ public class FlacAudioRecorder {
 
     private void recordLoop() {
         short[] buffer = new short[BLOCK_SAMPLES * actualChannels];
+        final AudioRecord record = audioRecord;
+        if (record == null) return;
         try {
-            audioRecord.startRecording();
+            record.startRecording();
         } catch (Exception e) {
             Log.e(TAG, "startRecording failed: " + e.getMessage());
             return;
         }
 
         while (recording) {
-            int read = audioRecord.read(buffer, 0, buffer.length);
+            int read = record.read(buffer, 0, buffer.length);
             if (read <= 0) break;
             if (nativeCtx != 0) {
                 nativeWriteFrame(nativeCtx, buffer, read / actualChannels, actualChannels);

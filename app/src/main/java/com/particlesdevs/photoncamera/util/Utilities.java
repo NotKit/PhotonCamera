@@ -1,14 +1,7 @@
 package com.particlesdevs.photoncamera.util;
 
-import android.content.Context;
-import android.content.res.Resources;
-import android.content.res.TypedArray;
 import android.graphics.*;
-import android.graphics.drawable.Drawable;
-import android.util.TypedValue;
 
-import androidx.annotation.ColorInt;
-import androidx.core.content.res.ResourcesCompat;
 
 import com.particlesdevs.photoncamera.processing.ImagePath;
 
@@ -42,8 +35,8 @@ public class Utilities {
                     int y = k/kernelSize.x;
                     int br = min((int)(inputKernels[i][j][k]*255),255);
                     pointPaint.setARGB(255,br,br,br);
-                    //canvas.drawPoint(i*kernelSize.x + kernelSize.x/2.f + x,j*kernelSize.y + kernelSize.y/2.f +y,pointPaint);
-                    canvas.drawCircle(i*kernelSize.x + x,j*kernelSize.y + y,5.f,pointPaint);
+                    //canvas.drawPoint(i*kernelSize.x + kernelSize.x/2.0f + x,j*kernelSize.y + kernelSize.y/2.0f +y,pointPaint);
+                    canvas.drawCircle(i*kernelSize.x + x,j*kernelSize.y + y,5.0f,pointPaint);
                 }
         pointPaint.setARGB(100, 255, 255, 0);
         for(int i =1; i<kernelCount.x;i++)
@@ -103,27 +96,27 @@ public class Utilities {
         }
     }
     public static void drawBL(float[] rgb, Bitmap io){
-        float max = 0.f;
+        float max = 0.0f;
         int width = io.getWidth();
         int height = io.getHeight();
         Canvas canvas = new Canvas(io);
         Paint wallPaint = new Paint();
         wallPaint.setAntiAlias(true);
         wallPaint.setStyle(Paint.Style.FILL);
-        wallPaint.setARGB(255, (int)(rgb[0]*255.f), (int)(rgb[1]*255.f), (int)(rgb[2]*255.f));
-        canvas.drawRect(width*0.50f, height, width*0.50f+32.f, height-32, wallPaint);
+        wallPaint.setARGB(255, (int)(rgb[0]*255.0f), (int)(rgb[1]*255.0f), (int)(rgb[2]*255.0f));
+        canvas.drawRect(width*0.50f, height, width*0.50f+32.0f, height-32, wallPaint);
     }
     public static void drawWB(float[] rgb, Bitmap io){
         float max = 1f;//max(max(rgb[0],rgb[1]),rgb[2]);
-        //max = 1.f;
+        //max = 1.0f;
         int width = io.getWidth();
         int height = io.getHeight();
         Canvas canvas = new Canvas(io);
         Paint wallPaint = new Paint();
         wallPaint.setAntiAlias(true);
         wallPaint.setStyle(Paint.Style.FILL);
-        wallPaint.setARGB(255, (int)(rgb[0]*255.f/max), (int)(rgb[1]*255.f/max), (int)(rgb[2]*255.f/max));
-        canvas.drawRect(height, width*0.50f, height-32, width*0.50f+32.f, wallPaint);
+        wallPaint.setARGB(255, (int)(rgb[0]*255.0f/max), (int)(rgb[1]*255.0f/max), (int)(rgb[2]*255.0f/max));
+        canvas.drawRect(height, width*0.50f, height-32, width*0.50f+32.0f, wallPaint);
     }
 
     static float[] convertToFloatArray(int[] input) {
@@ -135,7 +128,7 @@ public class Utilities {
     }
 
     static float findMaxValue(float[] data) {
-        float max = 0.f;
+        float max = 0.0f;
         for (float value : data) {
             if (value > max) {
                 max = value;
@@ -155,8 +148,8 @@ public class Utilities {
         int height = output.getHeight();
         Canvas canvas = new Canvas(output);
         canvas.drawRect(0, 0, width, height, wallPaint);
-        canvas.drawLine(width / 3.f, 0, width / 3.f, height, wallPaint);
-        canvas.drawLine(2.f * width / 3.f, 0, 2.f * width / 3.f, height, wallPaint);
+        canvas.drawLine(width / 3.0f, 0, width / 3.0f, height, wallPaint);
+        canvas.drawLine(2.0f * width / 3.0f, 0, 2.0f * width / 3.0f, height, wallPaint);
         return canvas;
     }
 
@@ -207,25 +200,25 @@ public class Utilities {
     }
 
     public static float linearRegressionK(float[] input){
-        float k = 0.f;
-        float cnt = 0.f;
+        float k = 0.0f;
+        float cnt = 0.0f;
         for(int i = 1; i<input.length;i++){
             float x = (float)(i)/input.length;
             k+=input[i]/x;
-            cnt+=1.f;
+            cnt+=1.0f;
         }
         k/=cnt;
         return k;
     }
     public static float linearRegressionC(float[] input){
         float k = linearRegressionK(input);
-        float cnt = 0.f;
-        float c = 0.f;
-        cnt = 0.f;
+        float cnt = 0.0f;
+        float c = 0.0f;
+        cnt = 0.0f;
         for(int i = 1; i<input.length;i++){
             float x = (float)(i)/input.length;
             c+=input[i] - x*k;
-            cnt+=1.f;
+            cnt+=1.0f;
         }
         c/=cnt;
         return c;
@@ -251,7 +244,7 @@ public class Utilities {
         mY = new ArrayList<>();
         mx = new ArrayList<>();
         for(int xi = 0; xi<in.length; xi+=2){
-            float line = xi / (in.length-1.f);
+            float line = xi / (in.length-1.0f);
             mx.add(in[xi]);
             mY.add((float) Math.pow(line,1.0/2.0));
         }
@@ -266,11 +259,11 @@ public class Utilities {
     public static float[] saturate(float[] in, float saturation){
         float br = luminocity(in);
         float[] vec = new float[]{in[0],in[1],in[2]};
-        vec[0]=br*(-saturation) + vec[0]*(1.f+saturation);
-        vec[1]=br*(-saturation) + vec[1]*(1.f+saturation);
-        vec[2]=br*(-saturation) + vec[2]*(1.f+saturation);
+        vec[0]=br*(-saturation) + vec[0]*(1.0f+saturation);
+        vec[1]=br*(-saturation) + vec[1]*(1.0f+saturation);
+        vec[2]=br*(-saturation) + vec[2]*(1.0f+saturation);
         float min = min(min(vec[0],vec[1]),vec[2]);
-        /*if(min < 0.f) {
+        /*if(min < 0.0f) {
             vec[0] -= min;
             vec[1] -= min;
             vec[2] -= min;
@@ -305,21 +298,6 @@ public class Utilities {
         return output;
     }
 
-    @ColorInt
-    public static int resolveColor(Context context, int attr) {
-        TypedValue typedValue = new TypedValue();
-        Resources.Theme theme = context.getTheme();
-        theme.resolveAttribute(attr, typedValue, true);
-        return typedValue.data;
-    }
 
-    public static Drawable resolveDrawable(Context context, int attr) {
-        TypedArray a = context.getTheme().obtainStyledAttributes(new int[]{attr});
-        int attributeResourceId = a.getResourceId(0, 0);
-        return ResourcesCompat.getDrawable(context.getResources(), attributeResourceId, context.getTheme());
-    }
 
-    public static int dpToPx(float dp) {
-        return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, Resources.getSystem().getDisplayMetrics());
-    }
 }

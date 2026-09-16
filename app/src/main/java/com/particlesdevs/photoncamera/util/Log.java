@@ -37,7 +37,7 @@ public class Log {
     private static Handler logHandler;
     private static BufferedWriter bufferedWriter = null;
     private static String currentDate = null;
-    private static final int BUFFER_FLUSH_INTERVAL = 1000; // Flush every 1 second
+    private static final long BUFFER_FLUSH_INTERVAL = 1000L; // Flush every 1 second
 
     static {
         initLogThread();
@@ -277,13 +277,7 @@ public class Log {
     }
 
     public static String getStackTraceString(Exception e) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(e.toString()).append("\n");
-        for (StackTraceElement element : e.getStackTrace()) {
-            sb.append("\tat ").append(element).append("\n");
-        }
-        String stackTrace = sb.toString();
-        e.printStackTrace();
+        String stackTrace = android.util.Log.getStackTraceString(e);
         writeToFile("E", "Exception", stackTrace);
         return stackTrace;
     }

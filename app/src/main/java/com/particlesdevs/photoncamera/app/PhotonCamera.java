@@ -1,14 +1,11 @@
 package com.particlesdevs.photoncamera.app;
 
-import android.app.Activity;
 import android.app.Application;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
-import android.graphics.drawable.Drawable;
 import android.hardware.SensorManager;
 import android.media.AudioManager;
 import android.os.Handler;
@@ -17,9 +14,13 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
-import androidx.core.content.ContextCompat;
 import androidx.core.os.HandlerCompat;
 
+import android.graphics.drawable.Drawable;
+
+import androidx.core.content.ContextCompat;
+
+import com.particlesdevs.photoncamera.BuildConfig;
 import com.particlesdevs.photoncamera.api.Settings;
 import com.particlesdevs.photoncamera.capture.CaptureController;
 import com.particlesdevs.photoncamera.control.Gravity;
@@ -35,25 +36,22 @@ import com.particlesdevs.photoncamera.processing.render.PreviewParameters;
 import com.particlesdevs.photoncamera.settings.MigrationManager;
 import com.particlesdevs.photoncamera.settings.PreferenceKeys;
 import com.particlesdevs.photoncamera.settings.SettingsManager;
-import com.particlesdevs.photoncamera.ui.SplashActivity;
 import com.particlesdevs.photoncamera.util.AssetLoader;
 import com.particlesdevs.photoncamera.util.Log;
 import com.particlesdevs.photoncamera.util.SimpleStorageHelper;
-import com.particlesdevs.photoncamera.util.ObjectLoader;
 import com.particlesdevs.photoncamera.util.log.ActivityLifecycleMonitor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class PhotonCamera extends Application {
     public static final boolean DEBUG = false;
+    /** The launcher activity, by name: not every build has an Activity class. */
+    private static final String SPLASH_ACTIVITY =
+            "com.particlesdevs.photoncamera.ui.SplashActivity";
     private static PhotonCamera sPhotonCamera;
     //    private final ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 //    private final ExecutorService executorService = Executors.newWorkStealingPool();
-    private final ExecutorService executorService = Executors.newSingleThreadExecutor(r -> {
-        Thread t = new Thread(r);
-        t.setPriority(Thread.MIN_PRIORITY);
-        return t;
-    });
+    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
     private final Handler mainThreadHandler = HandlerCompat.createAsync(Looper.getMainLooper());
     private Settings mSettings;
     private Gravity mGravity;
@@ -65,17 +63,14 @@ public class PhotonCamera extends Application {
     private SupportedDevice mSupportedDevice;
     private SettingsManager mSettingsManager;
     private AssetLoader mAssetLoader;
-    private ObjectLoader objectLoader;
     private Debugger mDebugger;
     private AudioManager audioManager;
 
     @Nullable
     public static PhotonCamera getInstance(Context context) {
-        if (context instanceof Activity) {
-            Application application = ((Activity) context).getApplication();
-            if (application instanceof PhotonCamera) {
-                return (PhotonCamera) application;
-            }
+        Context application = context == null ? null : context.getApplicationContext();
+        if (application instanceof PhotonCamera) {
+            return (PhotonCamera) application;
         }
         return null;
     }
@@ -146,7 +141,8 @@ public class PhotonCamera extends Application {
     }
 
     public static void restartApp(Context context) {
-        Intent intent = new Intent(context, SplashActivity.class);
+        Intent intent = new Intent();
+        intent.setComponent(new ComponentName(context, SPLASH_ACTIVITY));
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
@@ -166,6 +162,10 @@ public class PhotonCamera extends Application {
         getMainHandler().post(() -> Toast.makeText(sPhotonCamera, stringRes, Toast.LENGTH_SHORT).show());
     }
 
+    public static Drawable getDrawableStatic(int resID) {
+        return ContextCompat.getDrawable(sPhotonCamera, resID);
+    }
+
     public static Resources getResourcesStatic() {
         return sPhotonCamera.getResources();
     }
@@ -174,23 +174,8 @@ public class PhotonCamera extends Application {
         return sPhotonCamera.getResources().getString(stringRes);
     }
 
-    public static Drawable getDrawableStatic(int resID) {
-        return ContextCompat.getDrawable(sPhotonCamera, resID);
-    }
-
-    public static PackageInfo getPackageInfo() throws PackageManager.NameNotFoundException {
-        return sPhotonCamera.getPackageManager().getPackageInfo(sPhotonCamera.getPackageName(), 0);
-    }
-
     public static String getVersion() {
-        String version = "";
-        try {
-            PackageInfo pInfo = PhotonCamera.getPackageInfo();
-            version = pInfo.versionName + '(' + pInfo.versionCode + ')';
-        } catch (PackageManager.NameNotFoundException e) {
-            e.printStackTrace();
-        }
-        return version;
+        return BuildConfig.VERSION_NAME + '(' + BuildConfig.VERSION_CODE + ')';
     }
     public static String getLibsDirectory(){
         return sPhotonCamera.getApplicationInfo().nativeLibraryDir;

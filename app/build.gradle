@@ -17,6 +17,8 @@ android {
 
     buildFeatures {
         dataBinding true
+        // PhotonCamera.getVersion() and DngCreator read the app's own BuildConfig.
+        buildConfig true
         mlModelBinding true
         compose true
     }

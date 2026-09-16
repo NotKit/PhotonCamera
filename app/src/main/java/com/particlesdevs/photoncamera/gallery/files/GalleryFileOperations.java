@@ -21,10 +21,10 @@ import com.particlesdevs.photoncamera.settings.PreferenceKeys;
 
 import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 /**
  * Created by Vibhor Srivastava on October 13, 2021
@@ -58,7 +58,7 @@ public class GalleryFileOperations {
                 SELECTED_FOLDERS.add(imagesFolder);
             }
         }));
-        SELECTED_FOLDERS.sort(Comparator.comparing(o -> o.folderName));
+        Collections.sort(SELECTED_FOLDERS, (a, b) -> a.folderName.compareTo(b.folderName));
         return SELECTED_FOLDERS;
     }
 
@@ -111,7 +111,10 @@ public class GalleryFileOperations {
             cursor.close();
         }
 */
-        imageFiles.sort(Comparator.comparingLong(value -> -value.getLastModified()));
+        Collections.sort(imageFiles, (a, b) -> {
+            long x = b.getLastModified(), y = a.getLastModified();
+            return x < y ? -1 : (x > y ? 1 : 0);
+        });
         return imageFiles;
     }
 
@@ -163,7 +166,10 @@ public class GalleryFileOperations {
     }
 
     public static void deleteImageFiles(Activity activity, List<ImageFile> toDelete, ImagesDeletedCallback deletedCallback) {
-        List<Uri> toDeleteUriList = toDelete.stream().map(ImageFile::getFileUri).collect(Collectors.toList());
+        List<Uri> toDeleteUriList = new ArrayList<>();
+        for (ImageFile file : toDelete) {
+            toDeleteUriList.add(file.getFileUri());
+        }
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
             PendingIntent pi = MediaStore.createDeleteRequest(activity.getContentResolver(), toDeleteUriList);
             try {
@@ -291,10 +297,13 @@ public class GalleryFileOperations {
         }
         //find latest image:
         ALL_FOLDERS.forEach(imagesFolder -> {
-            imagesFolder.getAllImageFiles().sort(Comparator.comparingLong(value -> -value.getLastModified()));
+            Collections.sort(imagesFolder.getAllImageFiles(), (a, b) -> {
+                long x = b.getLastModified(), y = a.getLastModified();
+                return x < y ? -1 : (x > y ? 1 : 0);
+            });
             imagesFolder.topImage = imagesFolder.getAllImageFiles().get(0);
         });
-        ALL_FOLDERS.sort(Comparator.comparing(o -> o.folderName));
+        Collections.sort(ALL_FOLDERS, (a, b) -> a.folderName.compareTo(b.folderName));
         return ALL_FOLDERS;
     }
 

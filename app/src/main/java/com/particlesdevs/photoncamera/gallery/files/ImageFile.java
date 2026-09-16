@@ -64,10 +64,10 @@ public final class ImageFile extends MediaFile {
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        ImageFile imageFile = (ImageFile) o;
+    public boolean equals(Object other) {
+        if (this == other) return true;
+        if (other == null || getClass() != other.getClass()) return false;
+        ImageFile imageFile = (ImageFile) other;
         return id == imageFile.id && lastModified == imageFile.lastModified && displayName.equals(imageFile.displayName);
     }
 

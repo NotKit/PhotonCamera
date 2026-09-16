@@ -48,7 +48,7 @@ public class Logger {
         String str = null;
         for (int i = 1; i < stackTrace.length; i++) {
             StackTraceElement stackTraceElement = stackTrace[i];
-            if (!stackTraceElement.getClassName().equals(Logger.class.getName()) && stackTraceElement.getClassName().indexOf("java.lang.Thread") != 0) {
+            if (!stackTraceElement.getClassName().equals("Logger") && stackTraceElement.getClassName().indexOf("java.lang.Thread") != 0) {
                 if (str == null) {
                     str = stackTraceElement.getClassName();
                 } else if (!str.equals(stackTraceElement.getClassName())) {
@@ -71,10 +71,7 @@ public class Logger {
     }
 
     public static String getStackTrace(final Throwable throwable) {
-        final StringWriter sw = new StringWriter();
-        final PrintWriter pw = new PrintWriter(sw, true);
-        throwable.printStackTrace(pw);
-        return sw.getBuffer().toString();
+        return android.util.Log.getStackTraceString(throwable);
     }
 
 }
