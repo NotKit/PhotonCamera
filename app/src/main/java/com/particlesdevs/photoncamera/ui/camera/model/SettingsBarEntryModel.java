@@ -50,6 +50,10 @@ public class SettingsBarEntryModel {
         return new SettingsBarEntryModel(id, titleStringId, type);
     }
 
+    public Enum<SettingType> getType() {
+        return type;
+    }
+
     public void setType(Enum<SettingType> type) {
         this.type = type;
     }

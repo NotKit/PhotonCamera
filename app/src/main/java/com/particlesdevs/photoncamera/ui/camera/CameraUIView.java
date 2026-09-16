@@ -1,9 +1,5 @@
 package com.particlesdevs.photoncamera.ui.camera;
 
-import android.view.View;
-
-import com.particlesdevs.photoncamera.api.CameraMode;
-
 /**
  * Interface defining the functionality required to be implemented by the Camera User Interface
  * <p>
@@ -49,13 +45,6 @@ public interface CameraUIView {
     void setCaptureProgressBarOpacity(float alpha);
 
     void setCaptureProgressMax(int max);
-
-    /**
-     * Setter for CameraUIEventsListener
-     *
-     * @param cameraUIEventsListener instance of class which has implemented {@link CameraUIEventsListener}
-     */
-    void setCameraUIEventsListener(CameraUIEventsListener cameraUIEventsListener);
 
     void showFlashButton(boolean flashAvailable);
 

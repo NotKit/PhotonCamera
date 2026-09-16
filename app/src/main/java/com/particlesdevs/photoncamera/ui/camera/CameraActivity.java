@@ -384,9 +384,9 @@ public class CameraActivity extends BaseActivity {
             case KeyEvent.KEYCODE_VOLUME_UP:
             case KeyEvent.KEYCODE_VOLUME_DOWN:
                 if (action == KeyEvent.ACTION_DOWN) {
-                    View view = findViewById(R.id.shutter_button);
-                    if (view.isClickable())
-                        view.performClick();
+                    // The shutter is drawn by Compose, so there is no View to click.
+                    Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.container);
+                    if (fragment instanceof CameraFragment) ((CameraFragment) fragment).onShutterKey();
                 }
                 return true;
             default:

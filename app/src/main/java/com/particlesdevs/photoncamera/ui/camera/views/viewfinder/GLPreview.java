@@ -151,10 +151,8 @@ public class GLPreview extends GLSurfaceView {
         super.onLayout(changed, left, top, right, bottom);
     }
 
-    // The preview surface's size is owned by ViewfinderEdgeBlurController: it is
-    // the viewfinder frame by default, or the whole layout when the edge-blur
-    // option is on. Its measurement therefore follows the layout params, and the
-    // aspect-ratio logic lives in ViewfinderFrameView.
+    // The preview surface's size is owned by the Compose viewfinder box, which
+    // CameraScreenHost sizes to the mode's aspect; measurement follows the layout.
 
     public SurfaceTexture getSurfaceTexture() {
         return mRenderer == null ? null : mRenderer.getmSTexture();
