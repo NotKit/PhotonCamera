@@ -7,6 +7,8 @@ import android.graphics.Paint;
 import android.graphics.Paint.Style;
 import android.graphics.PointF;
 import android.graphics.Rect;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.StateListDrawable;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.util.Range;
@@ -14,11 +16,18 @@ import android.view.MotionEvent;
 import android.view.View;
 
 import com.particlesdevs.photoncamera.circularbarlib.R;
+import com.particlesdevs.photoncamera.circularbarlib.control.knob.KnobChangedListener;
+import com.particlesdevs.photoncamera.circularbarlib.control.knob.KnobHost;
+import com.particlesdevs.photoncamera.circularbarlib.control.knob.KnobIcon;
+import com.particlesdevs.photoncamera.circularbarlib.control.knob.KnobInfo;
+import com.particlesdevs.photoncamera.circularbarlib.control.knob.KnobItemInfo;
+import com.particlesdevs.photoncamera.circularbarlib.control.knob.RotationState;
 import com.particlesdevs.photoncamera.circularbarlib.util.Motion;
 
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * The manual value wheel. Besides the ruler of the currently selected control
@@ -27,8 +36,11 @@ import java.util.List;
  * centre, scaled by {@link #INNER_WHEEL_SCALE} — so both controls stay
  * adjustable at once. Touches are routed to a wheel by their radial distance
  * from the shared centre.
+ * <p>
+ * As a {@link KnobHost} it is the primary wheel. The items are plain data and
+ * the drawables are built here.
  */
-public class KnobView extends View {
+public class KnobView extends View implements KnobHost {
     private static final String TAG = KnobView.class.getSimpleName();
     private static final boolean dolog = false;
     /** Radius of the remembered (inner) ruler relative to the current one's. */
@@ -49,12 +61,14 @@ public class KnobView extends View {
     private Wheel m_Secondary;
     private Wheel m_TouchWheel;
     private float m_DomeProgress = 1f;
+    /** The drawable of each item; the items themselves are plain data. */
+    private final Map<KnobItemInfo, Drawable> m_ItemDrawables = new IdentityHashMap<>();
 
     /** State of one ruler: geometry, rotation, tick and the model listening to it. */
     private class Wheel {
         KnobInfo info;
         List<KnobItemInfo> items;
-        KnobViewChangedListener listener;
+        KnobChangedListener listener;
         double currentDegree;
         double lastDegree;
         int tick;
@@ -144,9 +158,10 @@ public class KnobView extends View {
             KnobItemInfo nextItem = i + 1 < wheel.items.size() ? wheel.items.get(i + 1) : null;
             drawRotation = (-wheel.currentDegree) + item.rotationCenter;
             canvas.rotate((float) drawRotation, this.m_RotationCenter.x, this.m_RotationCenter.y);
-            canvas.rotate(-this.m_KnobItemsSelfRotation, item.drawable.getBounds().exactCenterX(), item.drawable.getBounds().exactCenterY());
-            item.drawable.draw(canvas);
-            canvas.rotate(this.m_KnobItemsSelfRotation, item.drawable.getBounds().exactCenterX(), item.drawable.getBounds().exactCenterY());
+            Drawable drawable = drawableOf(item);
+            canvas.rotate(-this.m_KnobItemsSelfRotation, drawable.getBounds().exactCenterX(), drawable.getBounds().exactCenterY());
+            drawable.draw(canvas);
+            canvas.rotate(this.m_KnobItemsSelfRotation, drawable.getBounds().exactCenterX(), drawable.getBounds().exactCenterY());
             canvas.rotate((float) (-drawRotation), this.m_RotationCenter.x, this.m_RotationCenter.y);
             if (!(this.m_DashBounds == null || nextItem == null || (!this.m_DashAroundAutoEnabled && (item.tick == 0 || nextItem.tick == 0)))) {
                 if (item.rotationRight - item.rotationLeft > 0.001d) {
@@ -172,7 +187,7 @@ public class KnobView extends View {
      * Wires the ruler of the currently selected control (the outer, full-size
      * wheel) and snaps it to the model's current value.
      */
-    public void setPrimaryWheel(KnobInfo info, List<KnobItemInfo> items, double value, KnobViewChangedListener listener) {
+    public void setPrimaryWheel(KnobInfo info, List<KnobItemInfo> items, double value, KnobChangedListener listener) {
         this.m_Primary.info = info;
         this.m_Primary.listener = listener;
         setKnobItems(this.m_Primary, items);
@@ -183,7 +198,7 @@ public class KnobView extends View {
      * Shows the remembered previous control as the smaller inner ruler,
      * snapped to its current value.
      */
-    public void setSecondaryWheel(KnobInfo info, List<KnobItemInfo> items, double value, KnobViewChangedListener listener) {
+    public void setSecondaryWheel(KnobInfo info, List<KnobItemInfo> items, double value, KnobChangedListener listener) {
         this.m_Secondary = new Wheel();
         this.m_Secondary.info = info;
         this.m_Secondary.listener = listener;
@@ -211,6 +226,7 @@ public class KnobView extends View {
         return new PointF(((float) width) / 2.0f, (float) ((fanEdge / 2.0d) / (((double) height) / fanEdge)));
     }
 
+    @Override
     public KnobItemInfo getCurrentKnobItem() {
         return this.m_Primary.value;
     }
@@ -298,7 +314,7 @@ public class KnobView extends View {
         }
         double sum = 0;
         for (KnobItemInfo item : wheel.items) {
-            sum += this.m_RotationCenter.y - (this.m_IconPadding + item.drawable.getBounds().height() / 2.0);
+            sum += this.m_RotationCenter.y - (this.m_IconPadding + drawableOf(item).getBounds().height() / 2.0);
         }
         return sum / wheel.items.size();
     }
@@ -376,8 +392,10 @@ public class KnobView extends View {
         wheel.lastDegree = wheel.currentDegree;
         setTick(wheel, mapRotationToTick(wheel.currentDegree, wheel.info));
         setKnobViewRotation(wheel, mapTickToRotation(wheel.tick, wheel.info));
-        if (getKnobItemFromTick(wheel, wheel.tick) != null) {
-            getKnobItemFromTick(wheel, wheel.tick).drawable.setState(SELECTED_STATE_SET);
+        KnobItemInfo selected = getKnobItemFromTick(wheel, wheel.tick);
+        if (selected != null) {
+            selected.isSelected = true;
+            drawableOf(selected).setState(SELECTED_STATE_SET);
         }
         setRotationState(RotationState.IDLE, wheel);
     }
@@ -406,6 +424,12 @@ public class KnobView extends View {
     private void onSelectedKnobItemChanged(Wheel wheel, KnobItemInfo oldItem, KnobItemInfo newItem) {
         if (newItem != null && oldItem != newItem) {
             wheel.value = newItem;
+            if (oldItem != null) {
+                oldItem.isSelected = false;
+                drawableOf(oldItem).setState(EMPTY_STATE_SET);
+            }
+            newItem.isSelected = true;
+            drawableOf(newItem).setState(SELECTED_STATE_SET);
             if (wheel.listener != null) {
                 wheel.listener.onSelectedKnobItemChanged(this, oldItem, newItem);
             }
@@ -454,6 +478,55 @@ public class KnobView extends View {
             updateKnobItemsBounds(this.m_Secondary);
         }
         invalidate();
+    }
+
+    @Override
+    public void setKnobInfo(KnobInfo info) {
+        this.m_Primary.info = info;
+        updateKnobItemsBounds(this.m_Primary);
+        invalidate();
+    }
+
+    @Override
+    public void setKnobItems(List<KnobItemInfo> items) {
+        setKnobItems(this.m_Primary, items);
+    }
+
+    @Override
+    public void setTickByValue(double value) {
+        setTickByValue(this.m_Primary, value);
+    }
+
+    private Drawable drawableOf(KnobItemInfo item) {
+        Drawable drawable = this.m_ItemDrawables.get(item);
+        if (drawable == null) {
+            drawable = createDrawable(item);
+            this.m_ItemDrawables.put(item, drawable);
+        }
+        return drawable;
+    }
+
+    /** Text and icons are the View's business: the model only names them. */
+    private Drawable createDrawable(KnobItemInfo item) {
+        if (item.icon == KnobIcon.FOCUS_NEAR) {
+            return getContext().getDrawable(R.drawable.manual_icon_focus_near);
+        }
+        if (item.icon == KnobIcon.FOCUS_FAR) {
+            return getContext().getDrawable(R.drawable.manual_icon_focus_far);
+        }
+        ShadowTextDrawable plain = new ShadowTextDrawable();
+        plain.setTextAppearance(getContext(), R.style.ManualModeKnobText);
+        ShadowTextDrawable selected = new ShadowTextDrawable();
+        selected.setTextAppearance(getContext(), R.style.ManualModeKnobTextSelected);
+        if (item.label != null && !item.label.isEmpty()) {
+            plain.setText(item.label);
+            selected.setText(item.label);
+        }
+        StateListDrawable stateDrawable = new StateListDrawable();
+        stateDrawable.addState(new int[]{-android.R.attr.state_selected}, plain);
+        stateDrawable.addState(new int[]{android.R.attr.state_selected}, selected);
+        stateDrawable.setState(item.isSelected ? SELECTED_STATE_SET : EMPTY_STATE_SET);
+        return stateDrawable;
     }
 
     public void setKnobItemsRotation(Rotation rotation) {
@@ -538,20 +611,21 @@ public class KnobView extends View {
         log("updateKnobItemsBounds");
         if (wheel.items != null) {
             for (KnobItemInfo item : wheel.items) {
-                int left = (getWidth() / 2) - (item.drawable.getIntrinsicWidth() / 2);
+                Drawable drawable = drawableOf(item);
+                int left = (getWidth() / 2) - (drawable.getIntrinsicWidth() / 2);
                 int top = this.m_IconPadding;
                 if (this.m_KnobItemsSelfRotation % 180.0f != 0.0f) {
-                    top = (this.m_IconPadding + (item.drawable.getIntrinsicWidth() / 2)) - (item.drawable.getIntrinsicHeight() / 2);
+                    top = (this.m_IconPadding + (drawable.getIntrinsicWidth() / 2)) - (drawable.getIntrinsicHeight() / 2);
                 }
-                item.drawable.setBounds(left, top, left + item.drawable.getIntrinsicWidth(), top + item.drawable.getIntrinsicHeight());
+                drawable.setBounds(left, top, left + drawable.getIntrinsicWidth(), top + drawable.getIntrinsicHeight());
                 if (wheel.info != null) {
                     double includedAngle = ((double) ((wheel.info.angleMax - wheel.info.angleMin) - wheel.info.autoAngle)) / ((double) (wheel.info.tickMax - wheel.info.tickMin));
                     double radius = this.m_RotationCenter.y;
-                    double edgeY = item.drawable.getIntrinsicWidth() / 2.0;
-                    double edgeX = (radius - ((double) this.m_IconPadding)) - ((double) (item.drawable.getIntrinsicHeight() / 2));
+                    double edgeY = drawable.getIntrinsicWidth() / 2.0;
+                    double edgeX = (radius - ((double) this.m_IconPadding)) - ((double) (drawable.getIntrinsicHeight() / 2));
                     if (this.m_KnobItemsSelfRotation % 180.0f != 0.0f) {
-                        edgeY = item.drawable.getIntrinsicHeight() / 2.0;
-                        edgeX = (radius - ((double) this.m_IconPadding)) - ((double) (item.drawable.getIntrinsicWidth() / 2));
+                        edgeY = drawable.getIntrinsicHeight() / 2.0;
+                        edgeX = (radius - ((double) this.m_IconPadding)) - ((double) (drawable.getIntrinsicWidth() / 2));
                     }
                     double drawableAngleHalf = Math.toDegrees(Math.atan(edgeY / edgeX));
                     item.rotationCenter = (((double) item.tick) * includedAngle) + ((double) ((Integer.signum(item.tick) * wheel.info.autoAngle) / 2));
@@ -574,6 +648,7 @@ public class KnobView extends View {
                 } else {
                     item.isSelected = false;
                 }
+                drawableOf(item).setState(item.isSelected ? SELECTED_STATE_SET : EMPTY_STATE_SET);
             }
         }
     }
@@ -601,12 +676,5 @@ public class KnobView extends View {
             tick = info.tickMin;
         }
         return tick;
-    }
-
-    public enum RotationState {
-        IDLE,
-        STARTING,
-        ROTATING,
-        STOPPING
     }
 }

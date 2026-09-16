@@ -21,10 +21,10 @@ public class IsoExpoSelector {
     }
 
     private static int getISOHIGH(CameraCharacteristics cameraCharacteristics) {
-        Object key = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE);
+        Range<Integer> key = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE);
         if (key == null) return 3200;
         else {
-            return (int) ((Range) (key)).getUpper();
+            return key.getUpper();
         }
     }
 
@@ -33,18 +33,18 @@ public class IsoExpoSelector {
     }
 
     private static int getISOLOW(CameraCharacteristics cameraCharacteristics) {
-        Object key = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE);
+        Range<Integer> key = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE);
         if (key == null) return 100;
         else {
-            return (int) ((Range) (key)).getLower();
+            return key.getLower();
         }
     }
 
     public static int getISOAnalog(CameraCharacteristics cameraCharacteristics) {
-        Object key = cameraCharacteristics.get(CameraCharacteristics.SENSOR_MAX_ANALOG_SENSITIVITY);
+        Integer key = cameraCharacteristics.get(CameraCharacteristics.SENSOR_MAX_ANALOG_SENSITIVITY);
         if (key == null) return 100;
         else {
-            return (int) (key);
+            return key;
         }
     }
 
@@ -53,18 +53,18 @@ public class IsoExpoSelector {
     }
 
     public static long getEXPHIGH(CameraCharacteristics cameraCharacteristics) {
-        Object key = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE);
+        Range<Long> key = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE);
         if (key == null) return sec;
         else {
-            return (long) ((Range) (key)).getUpper();
+            return key.getUpper();
         }
     }
 
     public static long getEXPLOW(CameraCharacteristics cameraCharacteristics) {
-        Object key = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE);
+        Range<Long> key = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_EXPOSURE_TIME_RANGE);
         if (key == null) return sec / 1000;
         else {
-            return (long) ((Range) (key)).getLower();
+            return key.getLower();
         }
     }
 

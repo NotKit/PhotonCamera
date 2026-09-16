@@ -8,7 +8,7 @@ import android.util.Range;
  * Created by vibhorSrv
  */
 public class CameraProperties {
-    private static final String TAG = CameraProperties.class.getSimpleName();
+    private static final String TAG = "CameraProperties";
     private final Float maxFocal;
     private final Float minFocal;
     public Range<Float> focusRange;
@@ -24,8 +24,8 @@ public class CameraProperties {
         float evStep = cameraCharacteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_STEP).floatValue();
         this.isoRange = new Range<>(IsoExpoSelector.getISOLOWExt(cameraCharacteristics), IsoExpoSelector.getISOHIGHExt(cameraCharacteristics));
         this.expRange = new Range<>(IsoExpoSelector.getEXPLOW(cameraCharacteristics), IsoExpoSelector.getEXPHIGH(cameraCharacteristics));
-        this.evRange = new Range<>((cameraCharacteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE).getLower() * evStep),
-                (cameraCharacteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE).getUpper() * evStep));
+        Range<Integer> evCompRange = cameraCharacteristics.get(CameraCharacteristics.CONTROL_AE_COMPENSATION_RANGE);
+        this.evRange = new Range<>(evCompRange.getLower() * evStep, evCompRange.getUpper() * evStep);
         logIt();
     }
 

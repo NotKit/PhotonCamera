@@ -1,16 +1,10 @@
 package com.particlesdevs.photoncamera.circularbarlib.model;
 
-import android.view.View;
-
-import com.particlesdevs.photoncamera.circularbarlib.R;
-
 import java.util.Observable;
 
 /**
- * The Observable data class responsible for the behaviour and appearance of {@link R.id#manual_mode} layout and its child elements
- * <p>
- * This model is attached to the said layout through DataBinding
- * for more information {@link R.layout#manual_palette }
+ * The Observable data class holding what the manual bar shows: the five value
+ * texts, which parameter is selected, and where taps go.
  * <p>
  * Authors - Vibhor, KillerInk
  */
@@ -20,36 +14,32 @@ public class ManualModeModel extends Observable {
     private String isoText;
     private String evText;
     private String wbText;
-    private View.OnClickListener focusTextClicked;
-    private View.OnClickListener exposureTextClicked;
-    private View.OnClickListener evTextClicked;
-    private View.OnClickListener isoTextClicked;
-    private View.OnClickListener wbTextClicked;
+    private ParamClickListener paramClickListener;
     private boolean manualPanelVisible;
-    private int selectedTextViewId;
-    private int secondaryTextViewId = -1;
+    private ManualParam selectedParam;
+    private ManualParam secondaryParam;
 
-    public int getSelectedTextViewId() {
-        return selectedTextViewId;
+    public ManualParam getSelectedParam() {
+        return selectedParam;
     }
 
-    /** View id of the remembered control shown as the inner ruler, or -1. */
-    public int getSecondaryTextViewId() {
-        return secondaryTextViewId;
+    /** The remembered control shown as the inner ruler, or null. */
+    public ManualParam getSecondaryParam() {
+        return secondaryParam;
     }
 
-    public void setCheckedTextViewId(int selectedTextViewId) {
-        setCheckedTextViewIds(selectedTextViewId, -1);
+    public void setSelectedParam(ManualParam selectedParam) {
+        setSelectedParams(selectedParam, null);
     }
 
     /**
      * Selected renders the filled selection pill; secondary (the remembered
      * control riding the inner ruler) renders the same pill as a thin ring.
      */
-    public void setCheckedTextViewIds(int selectedTextViewId, int secondaryTextViewId) {
-        this.selectedTextViewId = selectedTextViewId;
-        this.secondaryTextViewId = secondaryTextViewId;
-        notifyObservers(ManualModelFields.SELECTED_TV);
+    public void setSelectedParams(ManualParam selectedParam, ManualParam secondaryParam) {
+        this.selectedParam = selectedParam;
+        this.secondaryParam = secondaryParam;
+        notifyObservers(ManualModelFields.SELECTED_PARAM);
     }
 
     public boolean isManualPanelVisible() {
@@ -61,49 +51,13 @@ public class ManualModeModel extends Observable {
         notifyObservers(ManualModelFields.PANEL_VISIBILITY);
     }
 
-    public View.OnClickListener getFocusTextClicked() {
-        return focusTextClicked;
+    public ParamClickListener getParamClickListener() {
+        return paramClickListener;
     }
 
-    public void setFocusTextClicked(View.OnClickListener focusTextClicked) {
-        this.focusTextClicked = focusTextClicked;
-        notifyObservers(ManualModelFields.FOCUS_LISTENER);
-    }
-
-    public View.OnClickListener getExposureTextClicked() {
-        return exposureTextClicked;
-    }
-
-    public void setExposureTextClicked(View.OnClickListener exposureTextClicked) {
-        this.exposureTextClicked = exposureTextClicked;
-        notifyObservers(ManualModelFields.EXP_LISTENER);
-    }
-
-    public View.OnClickListener getEvTextClicked() {
-        return evTextClicked;
-    }
-
-    public void setEvTextClicked(View.OnClickListener evTextClicked) {
-        this.evTextClicked = evTextClicked;
-        notifyObservers(ManualModelFields.EV_LISTENER);
-    }
-
-    public View.OnClickListener getIsoTextClicked() {
-        return isoTextClicked;
-    }
-
-    public void setIsoTextClicked(View.OnClickListener isoTextClicked) {
-        this.isoTextClicked = isoTextClicked;
-        notifyObservers(ManualModelFields.ISO_LISTENER);
-    }
-
-    public View.OnClickListener getWbTextClicked() {
-        return wbTextClicked;
-    }
-
-    public void setWbTextClicked(View.OnClickListener wbTextClicked) {
-        this.wbTextClicked = wbTextClicked;
-        notifyObservers(ManualModelFields.WB_LISTENER);
+    public void setParamClickListener(ParamClickListener paramClickListener) {
+        this.paramClickListener = paramClickListener;
+        notifyObservers(ManualModelFields.CLICK_LISTENER);
     }
 
     public String getFocusText() {
@@ -159,6 +113,6 @@ public class ManualModeModel extends Observable {
     }
 
     public enum ManualModelFields {
-        FOCUS_TEXT, EXP_TEXT, ISO_TEXT, EV_TEXT, WB_TEXT, PANEL_VISIBILITY, SELECTED_TV, FOCUS_LISTENER, EXP_LISTENER, EV_LISTENER, ISO_LISTENER, WB_LISTENER
+        FOCUS_TEXT, EXP_TEXT, ISO_TEXT, EV_TEXT, WB_TEXT, PANEL_VISIBILITY, SELECTED_PARAM, CLICK_LISTENER
     }
 }

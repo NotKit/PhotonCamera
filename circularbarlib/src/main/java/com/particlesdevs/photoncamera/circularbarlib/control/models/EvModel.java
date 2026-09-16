@@ -1,18 +1,14 @@
 package com.particlesdevs.photoncamera.circularbarlib.control.models;
 
-import android.content.Context;
-import android.graphics.drawable.StateListDrawable;
 import android.hardware.camera2.CameraCharacteristics;
 import android.os.Vibrator;
 import android.util.Log;
 import android.util.Range;
 
-import com.particlesdevs.photoncamera.circularbarlib.R;
 import com.particlesdevs.photoncamera.circularbarlib.control.ManualParamModel;
-import com.particlesdevs.photoncamera.circularbarlib.ui.views.knobview.KnobInfo;
-import com.particlesdevs.photoncamera.circularbarlib.ui.views.knobview.KnobItemInfo;
-import com.particlesdevs.photoncamera.circularbarlib.ui.views.knobview.KnobView;
-import com.particlesdevs.photoncamera.circularbarlib.ui.views.knobview.ShadowTextDrawable;
+import com.particlesdevs.photoncamera.circularbarlib.control.knob.KnobAngles;
+import com.particlesdevs.photoncamera.circularbarlib.control.knob.KnobInfo;
+import com.particlesdevs.photoncamera.circularbarlib.control.knob.KnobItemInfo;
 
 import java.util.ArrayList;
 import java.util.Locale;
@@ -22,12 +18,12 @@ import java.util.Locale;
  */
 public class EvModel extends ManualModel<Float> {
 
-    private final String TAG = EvModel.class.getSimpleName();
+    private static final String TAG = "EvModel";
     private float evStep;
 
-    public EvModel(Context context, CameraCharacteristics cameraCharacteristics, Range<Float> range,
+    public EvModel(CameraCharacteristics cameraCharacteristics, Range<Float> range,
                    ManualParamModel manualParamModel, ValueChangedEvent valueChangedEvent, Vibrator v) {
-        super(context, cameraCharacteristics, range, manualParamModel, valueChangedEvent,v);
+        super(cameraCharacteristics, range, manualParamModel, valueChangedEvent, v);
     }
 
     public void setEvStep(float evStep) {
@@ -65,40 +61,26 @@ public class EvModel extends ManualModel<Float> {
         for (int tick = 0; tick < values.size(); tick++) {
             float value = values.get(tick);
             if (!isZero(value)) {
-                ShadowTextDrawable drawable = new ShadowTextDrawable();
-                drawable.setTextAppearance(context, R.style.ManualModeKnobText);
-                ShadowTextDrawable drawableSelected = new ShadowTextDrawable();
-                drawableSelected.setTextAppearance(context, R.style.ManualModeKnobTextSelected);
+                String label = null;
                 if (isInteger(value)) {
-                    String valueStr = String.valueOf((int) value);
+                    label = String.valueOf((int) value);
                     if (value > 0.0f) {
-                        valueStr = "+" + valueStr;
+                        label = "+" + label;
                     }
-                    drawable.setText(valueStr);
-                    drawableSelected.setText(valueStr);
                 }
-                StateListDrawable stateDrawable = new StateListDrawable();
-                stateDrawable.addState(new int[]{-android.R.attr.state_selected}, drawable);
-                stateDrawable.addState(new int[]{android.R.attr.state_selected}, drawableSelected);
                 String text = String.format(Locale.ROOT, "%.2f", value);
                 if (value > 0.0f) {
-                    getKnobInfoList().add(new KnobItemInfo(stateDrawable, text, positiveValueCount - tick, value));
+                    getKnobInfoList().add(new KnobItemInfo(text, label, positiveValueCount - tick, (double) value));
                 } else {
-                    getKnobInfoList().add(new KnobItemInfo(stateDrawable, text, negativeValueCount - tick, value));
+                    getKnobInfoList().add(new KnobItemInfo(text, label, negativeValueCount - tick, (double) value));
                 }
             }
         }
-        int angle = context.getResources().getInteger(R.integer.manual_ev_knob_view_angle_half);
-        knobInfo = new KnobInfo(-angle, angle, -negativeValueCount, positiveValueCount, context.getResources().getInteger(R.integer.manual_ev_knob_view_auto_angle));
+        knobInfo = new KnobInfo(-KnobAngles.EV_HALF, KnobAngles.EV_HALF, -negativeValueCount, positiveValueCount, KnobAngles.EV_AUTO);
     }
 
     @Override
-    public void onRotationStateChanged(KnobView knobView, KnobView.RotationState rotationState) {
-
-    }
-
-    @Override
-    public void onSelectedKnobItemChanged(KnobItemInfo knobItemInfo) {
+    public void onItemSelected(KnobItemInfo knobItemInfo) {
         currentInfo = knobItemInfo;
         manualParamModel.setCurrentEvValue((int) (knobItemInfo.value / evStep));
     }

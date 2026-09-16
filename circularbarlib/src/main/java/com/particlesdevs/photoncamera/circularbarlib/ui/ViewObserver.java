@@ -10,27 +10,27 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import com.particlesdevs.photoncamera.circularbarlib.R;
+import com.particlesdevs.photoncamera.circularbarlib.api.ManualUi;
 import com.particlesdevs.photoncamera.circularbarlib.model.KnobModel;
 import com.particlesdevs.photoncamera.circularbarlib.model.ManualModeModel;
+import com.particlesdevs.photoncamera.circularbarlib.model.ManualParam;
+import com.particlesdevs.photoncamera.circularbarlib.model.ParamClickListener;
 import com.particlesdevs.photoncamera.circularbarlib.ui.views.knobview.KnobView;
 
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Observable;
-import java.util.Observer;
 
 /**
  * Created by vibhorSrv
  */
-public class ViewObserver implements Observer {
+public class ViewObserver implements ManualUi {
     private final Activity activity;
     private final RelativeLayout manualMode;
     private final KnobView knobView;
-    private final TextView isoOption;
-    private final TextView expOption;
-    private final TextView evOption;
-    private final TextView focusOption;
-    private final TextView wbOption;
+    private final Map<ManualParam, TextView> options = new EnumMap<>(ManualParam.class);
     private final List<TextView> textViews;
     private final OrientationEventListener orientationEventListener;
     private final LinearLayout buttonsContainer;
@@ -42,12 +42,12 @@ public class ViewObserver implements Observer {
         manualMode = findViewById(R.id.manual_mode);
         buttonsContainer = findViewById(R.id.buttons_container);
         knobView = findViewById(R.id.knobView);
-        isoOption = findViewById(R.id.iso_option_tv);
-        expOption = findViewById(R.id.exposure_option_tv);
-        evOption = findViewById(R.id.ev_option_tv);
-        focusOption = findViewById(R.id.focus_option_tv);
-        wbOption = findViewById(R.id.wb_option_tv);
-        textViews = Arrays.asList(isoOption, evOption, expOption, focusOption, wbOption);
+        options.put(ManualParam.ISO, findViewById(R.id.iso_option_tv));
+        options.put(ManualParam.EXPOSURE, findViewById(R.id.exposure_option_tv));
+        options.put(ManualParam.EV, findViewById(R.id.ev_option_tv));
+        options.put(ManualParam.FOCUS, findViewById(R.id.focus_option_tv));
+        options.put(ManualParam.WB, findViewById(R.id.wb_option_tv));
+        textViews = new ArrayList<>(options.values());
         orientationEventListener = new OrientationEventListener(activity.getBaseContext()) {
             private static final int ROT_DUR = 350;
             private int prevOrientation = OrientationEventListener.ORIENTATION_UNKNOWN;
@@ -84,13 +84,15 @@ public class ViewObserver implements Observer {
         };
     }
 
-    public void enableOrientationListener() {
+    @Override
+    public void onResume() {
         if (orientationEventListener != null && orientationEventListener.canDetectOrientation()) {
             orientationEventListener.enable();
         }
     }
 
-    public void disableOrientationListener() {
+    @Override
+    public void onPause() {
         if (orientationEventListener != null) {
             orientationEventListener.disable();
         }
@@ -122,6 +124,22 @@ public class ViewObserver implements Observer {
         }
     }
 
+    private void bindClicks(ParamClickListener listener) {
+        for (Map.Entry<ManualParam, TextView> entry : options.entrySet()) {
+            ManualParam param = entry.getKey();
+            TextView textView = entry.getValue();
+            if (listener == null) {
+                textView.setOnClickListener(null);
+                textView.setOnLongClickListener(null);
+                continue;
+            }
+            textView.setOnClickListener(v -> listener.onParamClicked(param));
+            textView.setOnLongClickListener(v -> {
+                listener.onParamLongClicked(param);
+                return true;
+            });
+        }
+    }
 
     @Override
     public void update(Observable o, Object arg) {
@@ -145,41 +163,31 @@ public class ViewObserver implements Observer {
                 ManualModeModel manualModeModel = (ManualModeModel) o;
                 switch ((ManualModeModel.ManualModelFields) arg) {
                     case EV_TEXT:
-                        evOption.setText(manualModeModel.getEvText());
+                        options.get(ManualParam.EV).setText(manualModeModel.getEvText());
                         break;
                     case EXP_TEXT:
-                        expOption.setText(manualModeModel.getExposureText());
+                        options.get(ManualParam.EXPOSURE).setText(manualModeModel.getExposureText());
                         break;
                     case ISO_TEXT:
-                        isoOption.setText(manualModeModel.getIsoText());
+                        options.get(ManualParam.ISO).setText(manualModeModel.getIsoText());
                         break;
                     case FOCUS_TEXT:
-                        focusOption.setText(manualModeModel.getFocusText());
+                        options.get(ManualParam.FOCUS).setText(manualModeModel.getFocusText());
                         break;
                     case WB_TEXT:
-                        wbOption.setText(manualModeModel.getWbText());
+                        options.get(ManualParam.WB).setText(manualModeModel.getWbText());
                         break;
-                    case EV_LISTENER:
-                        evOption.setOnClickListener(manualModeModel.getEvTextClicked());
+                    case CLICK_LISTENER:
+                        bindClicks(manualModeModel.getParamClickListener());
                         break;
-                    case EXP_LISTENER:
-                        expOption.setOnClickListener(manualModeModel.getExposureTextClicked());
-                        break;
-                    case FOCUS_LISTENER:
-                        focusOption.setOnClickListener(manualModeModel.getFocusTextClicked());
-                        break;
-                    case ISO_LISTENER:
-                        isoOption.setOnClickListener(manualModeModel.getIsoTextClicked());
-                        break;
-                    case WB_LISTENER:
-                        wbOption.setOnClickListener(manualModeModel.getWbTextClicked());
-                        break;
-                    case SELECTED_TV:
-                        View v = findViewById(manualModeModel.getSelectedTextViewId());
-                        View remembered = findViewById(manualModeModel.getSecondaryTextViewId());
+                    case SELECTED_PARAM:
+                        ManualParam selected = manualModeModel.getSelectedParam();
+                        ManualParam secondary = manualModeModel.getSecondaryParam();
+                        TextView selectedView = selected == null ? null : options.get(selected);
+                        TextView rememberedView = secondary == null ? null : options.get(secondary);
                         for (TextView textView : textViews) {
-                            setOptionSelected(textView, v != null && v.equals(textView));
-                            setOptionRemembered(textView, remembered != null && remembered.equals(textView));
+                            setOptionSelected(textView, textView == selectedView);
+                            setOptionRemembered(textView, textView == rememberedView);
                         }
                         break;
                     case PANEL_VISIBILITY:

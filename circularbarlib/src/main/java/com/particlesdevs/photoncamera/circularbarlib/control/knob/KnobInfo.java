@@ -1,4 +1,4 @@
-package com.particlesdevs.photoncamera.circularbarlib.ui.views.knobview;
+package com.particlesdevs.photoncamera.circularbarlib.control.knob;
 
 
 public class KnobInfo {
