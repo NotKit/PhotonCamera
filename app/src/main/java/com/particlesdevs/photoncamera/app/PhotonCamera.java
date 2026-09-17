@@ -254,7 +254,8 @@ public class PhotonCamera extends Application {
             // Get the hide gallery icon preference
             boolean hideGalleryIcon = mSettingsManager.getBoolean(
                     SettingsManager.SCOPE_GLOBAL,
-                    PreferenceKeys.Key.KEY_HIDE_GALLERY_ICON
+                    PreferenceKeys.Key.KEY_HIDE_GALLERY_ICON,
+                    false
             );
             
             Log.d("PhotonCamera", "Applying gallery icon visibility: hideGalleryIcon=" + hideGalleryIcon);
@@ -281,8 +282,7 @@ public class PhotonCamera extends Application {
             
             Log.d("PhotonCamera", "Gallery icon visibility applied successfully");
         } catch (Exception e) {
-            Log.e("PhotonCamera", "Error applying gallery icon visibility: " + e.getMessage());
-            e.printStackTrace();
+            Log.e("PhotonCamera", "Error applying gallery icon visibility", e);
         }
     }
     //  a MemoryInfo object for the device's current memory status.
