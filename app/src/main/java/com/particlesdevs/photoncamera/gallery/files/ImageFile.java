@@ -65,7 +65,8 @@ public final class ImageFile extends MediaFile {
 
     @Override
     public boolean equals(Object other) {
-        if (this == other) return true;
+        // No `this == other` fast path: it is only an optimisation, and
+        // comparing the fields of an object with itself gives the same answer.
         if (other == null || getClass() != other.getClass()) return false;
         ImageFile imageFile = (ImageFile) other;
         return id == imageFile.id && lastModified == imageFile.lastModified && displayName.equals(imageFile.displayName);

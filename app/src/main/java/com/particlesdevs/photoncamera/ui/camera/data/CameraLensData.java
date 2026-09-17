@@ -100,7 +100,8 @@ public class CameraLensData {
 
     @Override
     public boolean equals(Object other) {
-        if (this == other) return true;
+        // No `this == other` fast path: it is only an optimisation, and
+        // comparing the fields of an object with itself gives the same answer.
         if (other == null || getClass() != other.getClass()) return false;
         CameraLensData that = (CameraLensData) other;
         return facing == that.facing && Float.valueOf(that.cameraFocalLength).compareTo(cameraFocalLength) == 0 && Float.valueOf(that.cameraAperture).compareTo(cameraAperture) == 0 && flashSupported == that.flashSupported;
