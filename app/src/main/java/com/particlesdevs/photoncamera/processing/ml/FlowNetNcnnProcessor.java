@@ -52,16 +52,13 @@ public final class FlowNetNcnnProcessor {
      */
     public static FlowNetNcnnProcessor start(Context context) {
         FlowNetNcnnProcessor inst = sInstance;
-        if (inst == null) {
-            synchronized (sLock) {
-                inst = sInstance;
-                if (inst == null) {
-                    inst = new FlowNetNcnnProcessor(context);
-                    sInstance = inst;
-                }
+        if (inst != null) return inst;
+        synchronized (sLock) {
+            if (sInstance == null) {
+                sInstance = new FlowNetNcnnProcessor(context);
             }
+            return sInstance;
         }
-        return inst;
     }
 
     /** The process-wide processor, or null if {@link #start} was never called. */
