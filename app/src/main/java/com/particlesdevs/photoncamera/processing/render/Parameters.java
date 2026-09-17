@@ -295,7 +295,14 @@ public class Parameters {
             } catch (Exception e){
                 Log.d(TAG, "Error retrieving lens shading map, disabling gain map: " + Log.getStackTraceString(e));
             }
-            hotPixels = result.get(CaptureResult.STATISTICS_HOT_PIXEL_MAP);
+            // Optional, and absent on most HALs. Said through a local with a
+            // null test so the port's converter can see that null is a value
+            // here and not a fault: asserted, it throws on every HAL that does
+            // not publish the map, which is most of them.
+            Point[] hotPixelMap = result.get(CaptureResult.STATISTICS_HOT_PIXEL_MAP);
+            if (hotPixelMap != null) {
+                hotPixels = hotPixelMap;
+            }
 
             // Populate custom White Balance neutral point directly from the frame's CaptureRequest metadata
             Integer awbMode = (request != null) ? request.get(CaptureRequest.CONTROL_AWB_MODE) : null;
