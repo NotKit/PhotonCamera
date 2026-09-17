@@ -22,6 +22,8 @@ package com.particlesdevs.photoncamera.ui.camera.data;
 
 import androidx.annotation.NonNull;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.gson.annotations.SerializedName;
 
 import java.util.Objects;
@@ -100,6 +102,43 @@ public class CameraLensData {
 
     public void setFlashSupported(boolean flashSupported) {
         this.flashSupported = flashSupported;
+    }
+
+    /**
+     * This object as JSON, field by field.
+     *
+     * <p>Gson can do this by reflection from the {@link SerializedName}
+     * annotations above, and did; a build without reflection cannot, so the
+     * keys are written out here instead. They are the annotations' own, so a
+     * preference file written by either version is read by both.
+     *
+     * @see #fromJson(String)
+     */
+    public String toJson() {
+        JsonObject o = new JsonObject();
+        o.addProperty("id", cameraId);
+        o.addProperty("face", facing);
+        o.addProperty("fl", cameraFocalLength);
+        o.addProperty("ap", cameraAperture);
+        o.addProperty("fl35", camera35mmFocalLength);
+        o.addProperty("zf", zoomFactor);
+        o.addProperty("fs", flashSupported);
+        return o.toString();
+    }
+
+    /** The inverse of {@link #toJson()}; null when the text is not one of these. */
+    public static CameraLensData fromJson(String json) {
+        if (json == null || json.isEmpty()) return null;
+        JsonObject o = JsonParser.parseString(json).getAsJsonObject();
+        if (o == null || !o.has("id")) return null;
+        CameraLensData data = new CameraLensData(o.get("id").getAsString());
+        if (o.has("face")) data.facing = o.get("face").getAsInt();
+        if (o.has("fl")) data.cameraFocalLength = o.get("fl").getAsFloat();
+        if (o.has("ap")) data.cameraAperture = o.get("ap").getAsFloat();
+        if (o.has("fl35")) data.camera35mmFocalLength = o.get("fl35").getAsFloat();
+        if (o.has("zf")) data.zoomFactor = o.get("zf").getAsFloat();
+        if (o.has("fs")) data.flashSupported = o.get("fs").getAsBoolean();
+        return data;
     }
 
     @Override
