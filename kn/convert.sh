@@ -51,6 +51,38 @@ for f in pathlib.Path(sys.argv[1]).rglob("*.kt"):
 print(f"TODO() field initialisers defaulted: {n}")
 PYEOF
 
+# `null!!` IS A THROW, NOT A CHECK.  j2k's nullability pass asserts `!!` on
+# every argument, and on the literal `null` that is an unconditional
+# ThrowNullPointerException on a line where Java simply passed null.  r994 undoes
+# it where it can prove the position takes null -- a super/this delegation, or an
+# unqualified call in the same file -- and leaves the rest, which here is 70
+# calls into the shims.  Every one of them throws the moment it is reached, so
+# this can only turn a certain crash into the value Java passed; where the
+# position really is non-null it is a COMPILE error, which the build names.
+"$PY" - "$GEN_NEW" <<'PYEOF'
+import re, sys, pathlib
+# strings and line comments blanked, so a `null!!` inside either is left alone
+TOKEN = re.compile(r'(?<![\w.$])null!!')
+STR = re.compile(r'"(?:\\.|[^"\\])*"')
+def blank(line):
+    line = STR.sub(lambda m: '"' + " " * (len(m.group(0)) - 2) + '"', line)
+    c = line.find("//")
+    return line if c < 0 else line[:c] + " " * (len(line) - c)
+n = 0
+for f in pathlib.Path(sys.argv[1]).rglob("*.kt"):
+    out, hit = [], 0
+    for line in f.read_text().split("\n"):
+        spans = [m.span() for m in TOKEN.finditer(blank(line))]
+        for a, b in reversed(spans):
+            line = line[:a] + "null" + line[b:]
+        hit += len(spans)
+        out.append(line)
+    if hit:
+        f.write_text("\n".join(out))
+        n += hit
+print(f"literal null!! restored to null: {n}")
+PYEOF
+
 # j2k emits GeckoView's generated surface (aidl stand-ins, android.R, the JDK
 # TODO() stubs) for any --src.  The shims under src/commonMain are real
 # implementations, so the stub surface is not wanted; only the converted
