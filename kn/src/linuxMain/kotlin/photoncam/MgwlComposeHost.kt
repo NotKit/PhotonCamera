@@ -115,6 +115,11 @@ class MgwlComposeHost private constructor(private val handle: CPointer<cnames.st
 	private val shotPath = getenv("PC_SHOT")?.toKString()?.takeIf { it.isNotEmpty() }
 	private val shotFrame = getenv("PC_SHOT_FRAME")?.toKString()?.toIntOrNull() ?: 3
 
+	private val timing = getenv("PC_TIME") != null
+	private var sceneNanos = 0L
+	private var flushNanos = 0L
+	private var swapNanos = 0L
+
 	private val pointers = HashMap<Int, ComposeScenePointer>()
 	private var mouseButtons = 0
 	private var frames = 0L
@@ -146,6 +151,10 @@ class MgwlComposeHost private constructor(private val handle: CPointer<cnames.st
 				" GL_RENDERER=${mgwl_gl_renderer(handle)?.toKString()}" +
 				" size=${width}x$height scale=$scale density=$density"
 		)
+
+		// The panel, for whoever asks: the app's camera path sizes its preview
+		// buffer off the display and the shim's Resources cannot answer.
+		photoncam.host.HostWindow.set(bufWidth(), bufHeight(), density)
 
 		// ComposeUiMainDispatcher is Compose's own; it is public and, unlike
 		// Aurora's window layer, has no ak-window in it.
@@ -185,20 +194,42 @@ class MgwlComposeHost private constructor(private val handle: CPointer<cnames.st
 			if (maxSeconds > 0 && platform.posix.time(null) >= deadline) break
 			Snapshot.sendApplyNotifications()
 			ComposeUiMainDispatcher.drainTasks()
+			// Whatever the screen installed as its main-thread queue.  The
+			// camera path posts real work to it -- UpdateCameraCharacteristics
+			// does its setAspectRatio and onCharacteristicsUpdated inside a
+			// runOnUiThread -- and nothing else would run those tasks.
+			photoncam.host.HostMainLoop.pump()
 			if (surfaceDirty) rebuildSurface()
 
 			val surface = skiaSurface
 			if (surface != null && (needsRender || scene.hasInvalidations())) {
 				needsRender = false
 				val canvas = surface.canvas
+				val t0 = monotonicNanos()
 				canvas.clear(Color.BLACK)
 				scene.render(canvas.asComposeCanvas(), monotonicNanos())
+				val t1 = monotonicNanos()
 				surface.flushAndSubmit()
+				val t2 = monotonicNanos()
 				// Before the swap: after eglSwapBuffers the back buffer's
 				// contents are undefined, so a grab there reads garbage.
 				if (shotPath != null && frames + 1 >= shotFrame) grab(surface)
 				mgwl_swap_buffers(handle)
 				frames++
+				// PC_TIME: where a frame goes.  Compose's own render, Skia's
+				// flush to the GPU, and the swap are three different costs and
+				// only the split says which one a slow phone is paying.
+				if (timing) {
+					sceneNanos += t1 - t0
+					flushNanos += t2 - t1
+					swapNanos += monotonicNanos() - t2
+					if (frames % 10L == 0L) {
+						println("[pc] $frames frames: scene=${sceneNanos / 10 / 1_000_000}ms" +
+							" flush=${flushNanos / 10 / 1_000_000}ms" +
+							" swap=${swapNanos / 10 / 1_000_000}ms")
+						sceneNanos = 0; flushNanos = 0; swapNanos = 0
+					}
+				}
 			}
 			val timeout = if (scene.hasInvalidations() || needsRender) 0 else 16
 			mgwl_pump(handle, timeout)
@@ -258,6 +289,7 @@ class MgwlComposeHost private constructor(private val handle: CPointer<cnames.st
 		if (w == width && h == height) return
 		width = w; height = h
 		scale = maxOf(1, mgwl_scale(handle))
+		photoncam.host.HostWindow.set(bufWidth(), bufHeight(), density)
 		surfaceDirty = true
 	}
 

@@ -512,7 +512,14 @@ int mgwl_create_window(mgwl *m, const char *app_id, const char *title,
         LOGE("eglMakeCurrent failed: 0x%x", eglGetError());
         return -1;
     }
-    eglSwapInterval(m->egl_display, 1);
+    /* MGWL_SWAP_INTERVAL: 0 asks the driver not to throttle the swap.  On
+     * Lomiri over libhybris eglSwapBuffers is where a frame's whole cost shows
+     * up, and the interval is the one knob that says whether that is the
+     * compositor pacing us or the GPU doing work. */
+    {
+        const char *si = getenv("MGWL_SWAP_INTERVAL");
+        eglSwapInterval(m->egl_display, si ? atoi(si) : 1);
+    }
     LOGE("window %dx%d (scale %d) GL_RENDERER=%s", m->width, m->height, m->scale,
          mgwl_gl_renderer(m));
     return 0;
