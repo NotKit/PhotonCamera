@@ -83,6 +83,26 @@ for f in pathlib.Path(sys.argv[1]).rglob("*.kt"):
 print(f"literal null!! restored to null: {n}")
 PYEOF
 
+# `= expr!!` WHERE THE NULL TEST IS A LINE OR TWO DOWN is the same throw again,
+# in the shape j2k's own r996 stops just short of.  scripts/bang_below.py says
+# what the shape is and why; it is shared with atlas-fixups.sh, which had the
+# only copy until round 5.  Found by TouchFocus.resetAutoFocus throwing in its
+# constructor, before the camera was ever open.
+"$PY" - "$HERE" "$GEN_NEW" <<'BANGEOF'
+import pathlib, sys
+sys.path.insert(0, str(pathlib.Path(sys.argv[1]) / "scripts"))
+from bang_below import strip_assignment_bang
+
+n = 0
+for f in pathlib.Path(sys.argv[2]).rglob("*.kt"):
+    s = f.read_text()
+    r = strip_assignment_bang(s)
+    if r != s:
+        f.write_text(r)
+        n += sum(1 for a, b in zip(s.split("\n"), r.split("\n")) if a != b)
+print(f"`= expr!!` with a null test below it, unasserted: {n}")
+BANGEOF
+
 # j2k emits GeckoView's generated surface (aidl stand-ins, android.R, the JDK
 # TODO() stubs) for any --src.  The shims under src/commonMain are real
 # implementations, so the stub surface is not wanted; only the converted
