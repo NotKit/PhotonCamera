@@ -590,7 +590,7 @@ public class Gyro {
             return new PrintWriter(new BufferedWriter(
                     new OutputStreamWriter(Files.newOutputStream(outPath), StandardCharsets.UTF_8)));
         } catch (IOException e) {
-            Log.e(TAG, "openGcsvWriter fallback failed: " + e.getMessage());
+            Log.e(TAG, "openGcsvWriter fallback failed: " + e);
             return null;
         }
     }

@@ -5424,7 +5424,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
             mCaptureSession.capture(builder.build(), null, mBackgroundHandler);
         } catch (Exception e) {
             mPendingRawMeteringCallback = null;
-            Log.e(TAG, "captureSingleRawForMetering failed: " + e.getMessage());
+            Log.e(TAG, "captureSingleRawForMetering failed: " + e);
         }
     }
 

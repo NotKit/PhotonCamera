@@ -62,7 +62,7 @@ public final class SimpleStorageHelper {
             }
             return false;
         } catch (Throwable t) {
-            Log.e(TAG, "hasStorageAccess: " + t.getMessage());
+            Log.e(TAG, "hasStorageAccess: " + t);
             return false;
         }
     }
@@ -142,7 +142,7 @@ public final class SimpleStorageHelper {
                 return;
             }
         } catch (Throwable t) {
-            Log.e(TAG, "updateFileManagerPaths: " + t.getMessage());
+            Log.e(TAG, "updateFileManagerPaths: " + t);
         }
     }
 
@@ -152,7 +152,7 @@ public final class SimpleStorageHelper {
             DocumentFile file = DocumentFileCompat.INSTANCE.fromSimplePath(context, StorageId.PRIMARY, relativePath);
             return file != null && file.exists();
         } catch (Throwable t) {
-            Log.e(TAG, "fileExistsByPath: " + t.getMessage());
+            Log.e(TAG, "fileExistsByPath: " + t);
             return false;
         }
     }
@@ -194,7 +194,7 @@ public final class SimpleStorageHelper {
             return pfd.detachFd();
 
         } catch (Exception e) {
-            Log.e(TAG, "openFdForWrite: " + e.getMessage());
+            Log.e(TAG, "openFdForWrite: " + e);
             return -1;
         }
     }
@@ -216,7 +216,7 @@ public final class SimpleStorageHelper {
             if (newFile == null) return null;
             return sContext.getContentResolver().openOutputStream(newFile.getUri(), "w");
         } catch (Exception e) {
-            Log.e(TAG, "openOutputStreamByAbsPath: " + e.getMessage());
+            Log.e(TAG, "openOutputStreamByAbsPath: " + e);
             return null;
         }
     }
