@@ -21,12 +21,15 @@ import androidx.compose.ui.unit.LayoutDirection
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.StableRef
+import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.asStableRef
+import kotlinx.cinterop.convert
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.staticCFunction
 import kotlinx.cinterop.toKString
+import kotlinx.cinterop.usePinned
 import net.thekit.mgwl.MGWL_PTR_AXIS
 import net.thekit.mgwl.MGWL_PTR_BUTTON
 import net.thekit.mgwl.MGWL_PTR_MOTION
@@ -48,15 +51,21 @@ import net.thekit.mgwl.mgwl_should_close
 import net.thekit.mgwl.mgwl_swap_buffers
 import net.thekit.mgwl.mgwl_width
 import org.jetbrains.skia.BackendRenderTarget
+import org.jetbrains.skia.Bitmap
 import org.jetbrains.skia.Color
 import org.jetbrains.skia.ColorSpace
 import org.jetbrains.skia.DirectContext
 import org.jetbrains.skia.FramebufferFormat
+import org.jetbrains.skia.Image
+import org.jetbrains.skia.ImageInfo
 import org.jetbrains.skia.Surface
 import org.jetbrains.skia.SurfaceColorFormat
 import org.jetbrains.skia.SurfaceOrigin
 import platform.posix.CLOCK_MONOTONIC
 import platform.posix.clock_gettime
+import platform.posix.fclose
+import platform.posix.fopen
+import platform.posix.fwrite
 import platform.posix.getenv
 import platform.posix.timespec
 
@@ -98,6 +107,13 @@ class MgwlComposeHost private constructor(private val handle: CPointer<cnames.st
 	private var closed = false
 
 	private val trace = getenv("PC_TRACE") != null
+
+	// PC_SHOT=/path/shot.png writes the rendered frame there, overwritten from
+	// PC_SHOT_FRAME (default 3) on, so the file holds the last frame drawn.
+	// On the phone this is the ONLY way to see the window: Lomiri ships no
+	// screenshot tool and exposes no D-Bus method for one.
+	private val shotPath = getenv("PC_SHOT")?.toKString()?.takeIf { it.isNotEmpty() }
+	private val shotFrame = getenv("PC_SHOT_FRAME")?.toKString()?.toIntOrNull() ?: 3
 
 	private val pointers = HashMap<Int, ComposeScenePointer>()
 	private var mouseButtons = 0
@@ -178,12 +194,47 @@ class MgwlComposeHost private constructor(private val handle: CPointer<cnames.st
 				canvas.clear(Color.BLACK)
 				scene.render(canvas.asComposeCanvas(), monotonicNanos())
 				surface.flushAndSubmit()
+				// Before the swap: after eglSwapBuffers the back buffer's
+				// contents are undefined, so a grab there reads garbage.
+				if (shotPath != null && frames + 1 >= shotFrame) grab(surface)
 				mgwl_swap_buffers(handle)
 				frames++
 			}
 			val timeout = if (scene.hasInvalidations() || needsRender) 0 else 16
 			mgwl_pump(handle, timeout)
 			ComposeUiMainDispatcher.drainTasks()
+		}
+	}
+
+	/** The frame as a PNG.  Skia reads it back off the GPU surface itself, so
+	 *  this needs no glReadPixels and no change to the C host.  It goes through
+	 *  a raster Bitmap on purpose: encodeToData on the makeImageSnapshot() image
+	 *  is texture-backed and returns null here, silently. */
+	private fun grab(surface: Surface) {
+		val path = shotPath ?: return
+		val first = frames + 1 == shotFrame.toLong()
+		val bitmap = Bitmap()
+		try {
+			bitmap.allocPixels(ImageInfo.makeN32Premul(surface.width, surface.height))
+			if (!surface.readPixels(bitmap, 0, 0)) {
+				if (first) println("[pc] PC_SHOT: readPixels off the surface failed")
+				return
+			}
+			val bytes = Image.makeFromBitmap(bitmap).encodeToData()?.bytes
+			if (bytes == null) {
+				if (first) println("[pc] PC_SHOT: PNG encode failed")
+				return
+			}
+			val f = fopen(path, "wb")
+			if (f == null) {
+				if (first) println("[pc] PC_SHOT: cannot write $path")
+				return
+			}
+			bytes.usePinned { fwrite(it.addressOf(0), 1u, bytes.size.convert(), f) }
+			fclose(f)
+			if (first) println("[pc] PC_SHOT: $path ${surface.width}x${surface.height}, ${bytes.size} bytes")
+		} finally {
+			bitmap.close()
 		}
 	}
 
