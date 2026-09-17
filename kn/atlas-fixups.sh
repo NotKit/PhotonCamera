@@ -58,6 +58,66 @@ def fix_sensor_manager(text):
     return re.sub(r"import android\.location\.\w+\n", "", text)
 
 
+
+def strip_assignment_bang(text):
+    """r996's init arm, widened: an ASSIGNMENT, and a null test further down.
+
+    j2k asserts `!!` on the right of `x = <expr>` and on `var x: T? = <expr>`.
+    r996 undoes the second only when the null test is the VERY NEXT statement,
+    and never the first at all.  atlas writes both shapes with the test a line
+    or two later --
+
+        var current: CameraCaptureSession? = session!!
+        if (ImageReader.DEBUG) Log.i(...)
+        if (current != null) ...
+
+        sequence = sequences!!.get(sequenceId!!)!!
+        if (sequence == null || ...) return
+
+    -- and there the assertion throws on exactly the path the null test was
+    written for.  The proof is r996's: a null test on the name is what says
+    Java meant it to be nullable.  The window is three statements, and it stops
+    at any line that USES the name first -- a dereference in between would mean
+    Java had already decided the value could not be null.
+    """
+    DECL = re.compile(r"^(\s*)(?:val|var)\s+(\w+)\s*:\s*[^=]*\?\s*=\s*(.+)!!$")
+    ASSIGN = re.compile(r"^(\s*)([\w.]+)\s*=\s*(.+)!!$")
+    lines = text.split("\n")
+    for i, line in enumerate(lines):
+        m = DECL.match(line)
+        if m:
+            names = [m.group(2)]
+        else:
+            m = ASSIGN.match(line)
+            if not m:
+                continue
+            names = [m.group(2).split(".")[-1]]
+            bare = re.match(r"^(\w+)$", m.group(3))
+            if bare:
+                names.append(bare.group(1))
+        rhs = m.group(3)
+        if rhs.count("(") != rhs.count(")") or rhs.count("[") != rhs.count("]"):
+            continue
+        alt = "|".join(re.escape(n) for n in names)
+        test = re.compile(r"(?<![\w.$])(?:(?:" + alt + r")\s*[!=]=\s*null|null\s*[!=]=\s*(?:"
+                          + alt + r")(?![\w$]))")
+        mention = re.compile(r"(?<![\w.$])(?:" + alt + r")(?![\w$])")
+        seen = 0
+        for j in range(i + 1, len(lines)):
+            t = lines[j].strip()
+            if not t or t.startswith("//") or t in ("}", "},", "})"):
+                continue
+            if re.match(r"^(?:if|while)\s*\(", t) and test.search(lines[j]):
+                lines[i] = line[:-2]
+                break
+            if mention.search(lines[j]):
+                break
+            seen += 1
+            if seen >= 3:
+                break
+    return "\n".join(lines)
+
+
 def fix(path, text):
     owner = os.path.basename(path)[:-3]
 
@@ -88,6 +148,23 @@ def fix(path, text):
             "        constructor(name: String?, type: kotlin.reflect.KClass<*>?) :\n"
             "            this(name, photoncam.camera.MetaType.ofClass(type))" % owner, 1)
 
+
+    # getKeys(): `KEYS_BY_NAME.get(name)` is null for a tag no constant names,
+    # and the very next line is the ternary that handles it.  j2k's `!!` on the
+    # lookup makes that branch dead and throws on the first unnamed vendor tag
+    # instead -- which every real device has.  (r996 strips this shape only when
+    # the null test is an `if` STATEMENT; atlas wrote a ternary.)
+    text = text.replace("KEYS_BY_NAME!!.get(name!!)!!", "KEYS_BY_NAME!!.get(name!!)")
+    text = re.sub(r"(\bkeyForName\(name!!\))!!", r"\1", text)
+    # A session with no input has no InputConfiguration, and configureSession
+    # takes null for it; j2k's `!!` turns "not reprocessing" into a crash.
+    text = text.replace("config!!.getInputConfiguration()!!)", "config!!.getInputConfiguration())")
+    text = strip_assignment_bang(text)
+    # A request's tag is the app's own opaque object and is usually absent;
+    # `!!` on it makes an untagged request -- which is every preview request --
+    # throw where AOSP simply carries null.
+    text = text.replace("this.tag = tag!!", "this.tag = tag")
+    text = text.replace("targets!!, tag!!, reprocess!!", "targets!!, tag, reprocess!!")
 
     # j2k's generated stub surface is convert.sh's, not this tree's
     text = text.replace("import org.mozilla.gecko.knstub.*\n", "")
