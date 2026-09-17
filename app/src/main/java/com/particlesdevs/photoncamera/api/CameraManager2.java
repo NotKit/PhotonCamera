@@ -197,7 +197,13 @@ public final class CameraManager2 {
                         CameraLensData cameraLensData = createNewCameraLensData(formatID, cameraCharacteristics);
                         mAllCameraIDsSet.add(formatID);
                         mCameraLensDataMap.put(formatID, cameraLensData);
-                        } catch (Exception ignored) {
+                        } catch (Exception e) {
+                        // The last-resort pass, and the only place that can say
+                        // why the scan is empty: createNewCameraLensData reads
+                        // four characteristics without a null check, so one
+                        // absent key leaves the app with no camera to open and
+                        // nothing anywhere to explain it.
+                        Log.w(TAG, "camera " + i + " could not be described: " + e);
                         }
                 }
             }
