@@ -99,7 +99,7 @@ public class SpotWhiteBalanceHelper {
                 try {
                     processRawBayerImage(image, captureResult, captureController, clampedX, clampedY, viewW, viewH, finalGravityRotation, sequenceId, callback);
                 } catch (Exception e) {
-                    Log.e(TAG, "processRawBayerImage exception: " + e.getMessage());
+                    Log.e(TAG, "processRawBayerImage exception: " + e);
                     sMainHandler.post(() -> {
                         if (sequenceId != sMeasurementSequence.get()) return;
                         if (callback != null) callback.onSpotWbFailed("FAIL");

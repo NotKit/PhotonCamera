@@ -167,7 +167,7 @@ public class FlacAudioRecorder {
             outputPfd = ParcelFileDescriptor.dup(outputFos.getFD());
             return outputPfd.getFd();
         } catch (Exception e) {
-            Log.e(TAG, "openOutputFile failed: " + e.getMessage());
+            Log.e(TAG, "openOutputFile failed: " + e);
             closeOutputFile();
             return -1;
         }
@@ -192,7 +192,7 @@ public class FlacAudioRecorder {
         try {
             record.startRecording();
         } catch (Exception e) {
-            Log.e(TAG, "startRecording failed: " + e.getMessage());
+            Log.e(TAG, "startRecording failed: " + e);
             return;
         }
 
