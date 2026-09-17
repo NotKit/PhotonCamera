@@ -59,63 +59,11 @@ def fix_sensor_manager(text):
 
 
 
-def strip_assignment_bang(text):
-    """r996's init arm, widened: an ASSIGNMENT, and a null test further down.
-
-    j2k asserts `!!` on the right of `x = <expr>` and on `var x: T? = <expr>`.
-    r996 undoes the second only when the null test is the VERY NEXT statement,
-    and never the first at all.  atlas writes both shapes with the test a line
-    or two later --
-
-        var current: CameraCaptureSession? = session!!
-        if (ImageReader.DEBUG) Log.i(...)
-        if (current != null) ...
-
-        sequence = sequences!!.get(sequenceId!!)!!
-        if (sequence == null || ...) return
-
-    -- and there the assertion throws on exactly the path the null test was
-    written for.  The proof is r996's: a null test on the name is what says
-    Java meant it to be nullable.  The window is three statements, and it stops
-    at any line that USES the name first -- a dereference in between would mean
-    Java had already decided the value could not be null.
-    """
-    DECL = re.compile(r"^(\s*)(?:val|var)\s+(\w+)\s*:\s*[^=]*\?\s*=\s*(.+)!!$")
-    ASSIGN = re.compile(r"^(\s*)([\w.]+)\s*=\s*(.+)!!$")
-    lines = text.split("\n")
-    for i, line in enumerate(lines):
-        m = DECL.match(line)
-        if m:
-            names = [m.group(2)]
-        else:
-            m = ASSIGN.match(line)
-            if not m:
-                continue
-            names = [m.group(2).split(".")[-1]]
-            bare = re.match(r"^(\w+)$", m.group(3))
-            if bare:
-                names.append(bare.group(1))
-        rhs = m.group(3)
-        if rhs.count("(") != rhs.count(")") or rhs.count("[") != rhs.count("]"):
-            continue
-        alt = "|".join(re.escape(n) for n in names)
-        test = re.compile(r"(?<![\w.$])(?:(?:" + alt + r")\s*[!=]=\s*null|null\s*[!=]=\s*(?:"
-                          + alt + r")(?![\w$]))")
-        mention = re.compile(r"(?<![\w.$])(?:" + alt + r")(?![\w$])")
-        seen = 0
-        for j in range(i + 1, len(lines)):
-            t = lines[j].strip()
-            if not t or t.startswith("//") or t in ("}", "},", "})"):
-                continue
-            if re.match(r"^(?:if|while)\s*\(", t) and test.search(lines[j]):
-                lines[i] = line[:-2]
-                break
-            if mention.search(lines[j]):
-                break
-            seen += 1
-            if seen >= 3:
-                break
-    return "\n".join(lines)
+# strip_assignment_bang moved to scripts/bang_below.py in round 5, when
+# convert.sh needed the same pass over kn/gen: one copy, so the two cannot
+# drift.  See that file for the shape and the reasoning.
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(GEN)), "scripts"))
+from bang_below import strip_assignment_bang
 
 
 def fix(path, text):
