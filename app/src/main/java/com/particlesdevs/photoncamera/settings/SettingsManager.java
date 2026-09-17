@@ -262,6 +262,15 @@ public class SettingsManager {
     }
 
     /**
+     * The same, for a setting named by its key string rather than by a
+     * {@link PreferenceKeys.Key} constant -- which is how a preference screen's
+     * own {@code android:defaultValue} names it.
+     */
+    public void setDefaults(String key, String defaultValue, String[] possibleValues) {
+        mDefaultsStore.storeDefaults(key, defaultValue, possibleValues);
+    }
+
+    /**
      * Set default and valid values for a setting, for an Integer default and
      * a set of Integer possible values that are already defined.
      * This is not required.
@@ -332,7 +341,12 @@ public class SettingsManager {
      */
     public String getString(String scope, PreferenceKeys.Key key, String defaultValue) {
         SharedPreferences preferences = getPreferencesFromScope(scope);
-        return preferences.getString(key.mValue, defaultValue);
+        // The absent case is asked outright rather than handed to
+        // SharedPreferences as a default, so that a null default is a value
+        // this method can take and not one it has to pass on.
+        if (!preferences.contains(key.mValue))
+            return defaultValue;
+        return preferences.getString(key.mValue, "");
     }
 
     public String getString(String scope, String key, String defaultValue) {
@@ -342,11 +356,17 @@ public class SettingsManager {
 
     public Set<String> getStringSet(String scope, PreferenceKeys.Key key, Set<String> defaultValue) {
         SharedPreferences preferences = getPreferencesFromScope(scope);
-        return preferences.getStringSet(key.mValue, defaultValue);
+        // Absence is asked outright, so a null default is a value this method
+        // takes rather than one it passes on. See getString(scope, key, ...).
+        if (!preferences.contains(key.mValue))
+            return defaultValue;
+        return preferences.getStringSet(key.mValue, new HashSet<>());
     }
     public ArrayList<String> getArrayList(String scope, String key, Set<String> defaultValue) {
         SharedPreferences preferences = getPreferencesFromScope(scope);
-        return new ArrayList<>(preferences.getStringSet(key, defaultValue));
+        if (!preferences.contains(key))
+            return defaultValue == null ? new ArrayList<>() : new ArrayList<>(defaultValue);
+        return new ArrayList<>(preferences.getStringSet(key, new HashSet<>()));
     }
 
     /**
@@ -354,7 +374,12 @@ public class SettingsManager {
      * stored in the DefaultsStore.
      */
     public String getString(String scope, PreferenceKeys.Key key) {
-        return getString(scope, key, getStringDefault(key));
+        String defaultValue = getStringDefault(key);
+        // A key no preference screen registered has no default at all, and
+        // may have nothing stored either; null is then the whole answer.
+        if (defaultValue == null && !isSet(scope, key))
+            return null;
+        return getString(scope, key, defaultValue);
     }
 
     /**
@@ -539,7 +564,10 @@ public class SettingsManager {
      * Set a setting to the default value stored in the DefaultsStore.
      */
     public void setToDefault(String scope, PreferenceKeys.Key key) {
-        set(scope, key, getStringDefault(key));
+        String defaultValue = getStringDefault(key);
+        if (defaultValue == null)
+            return;  // no default registered: there is nothing to set it to
+        set(scope, key, defaultValue);
     }
 
     /**
@@ -587,8 +615,9 @@ public class SettingsManager {
      */
     public boolean isDefault(String scope, PreferenceKeys.Key key) {
         String defaultValue = getStringDefault(key);
-        String value = getString(scope, key);
-        return value != null && value.equals(defaultValue);
+        if (defaultValue == null)
+            return false;  // no default registered: nothing to be equal to
+        return defaultValue.equals(getString(scope, key));
     }
 
     /**
