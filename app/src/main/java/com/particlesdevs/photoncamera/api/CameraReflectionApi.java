@@ -50,9 +50,12 @@ public class CameraReflectionApi {
      * could also list synthetic keys and filter by tag; the public one lists what
      * the camera has, and every caller here passes a null filter.
      */
+    /**
+     * @param includeSynthetic kept for the call sites; every key is returned
+     *                         either way, this build having no hidden ones.
+     */
     public static ArrayList<Object> getCameraCharacteristicsKeys(
             CameraCharacteristics cameraCharacteristics,
-            int[] filterTags,
             boolean includeSynthetic) {
         if (cameraCharacteristics == null)
             return null;

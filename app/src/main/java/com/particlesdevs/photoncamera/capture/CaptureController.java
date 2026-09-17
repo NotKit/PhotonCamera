@@ -849,17 +849,35 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
             }
             try {
                 String curID = PhotonCamera.getSettings().mCameraID;
+                if (curID == null || curID.isEmpty()) {
+                    // Settings caches mCameraID when the application starts,
+                    // which is before this controller's addIds() registers a
+                    // default for CAMERA_ID -- so on a first run it is still
+                    // unset here. Ask the preference store again, and failing
+                    // that take the first camera this device actually has.
+                    String stored = PreferenceKeys.getCameraID();
+                    if (stored == null || stored.isEmpty()) {
+                        if (mCameraCharacteristicsMap.isEmpty()) {
+                            showToast("No cameras available");
+                            return;
+                        }
+                        curID = mCameraCharacteristicsMap.keySet().iterator().next();
+                    } else {
+                        curID = stored;
+                    }
+                    PhotonCamera.getSettings().mCameraID = curID;
+                }
                 parseCameraIds(curID);
 
-                Log.d(TAG, "ID:" + mCameraCharacteristicsMap.get(physicalID));
-                // list available characteristics ids
-                for (String id : mCameraCharacteristicsMap.keySet()) {
-                    Log.d(TAG, "Available camera ID: " + id);
-                }
                 CameraCharacteristics chars = mCameraCharacteristicsMap.get(physicalID);
                 if (chars == null) {
                     Log.e(TAG, "No characteristics for physicalID=" + physicalID
                             + " (mCameraID=" + PhotonCamera.getSettings().mCameraID + "). Falling back to first available.");
+                    // The ids that DO exist, which is what makes the line above
+                    // actionable; there is no reason to list them otherwise.
+                    for (String id : mCameraCharacteristicsMap.keySet()) {
+                        Log.d(TAG, "Available camera ID: " + id);
+                    }
                     if (!mCameraCharacteristicsMap.isEmpty()) {
                         String firstId = mCameraCharacteristicsMap.keySet().iterator().next();
                         physicalID = firstId;
@@ -871,6 +889,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                         return;
                     }
                 }
+                Log.d(TAG, "ID:" + chars);
                 Size optimal = getPreviewOutputSize(getDisplaySize(), chars,
                         PhotonCamera.getSettings().selectedMode);
                 openCamera(optimal.getWidth(), optimal.getHeight());
@@ -1773,7 +1792,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                 if (highResSizes != null && highResSizes.length > 0) {
                     allTargets.addAll(Arrays.asList(highResSizes));
                 }
-                var keys = CameraReflectionApi.getCameraCharacteristicsKeys(characteristics, null, true);
+                var keys = CameraReflectionApi.getCameraCharacteristicsKeys(characteristics, true);
                 for (Object keyObj : keys) {
                     try {
                         if (keyObj instanceof CameraCharacteristics.Key<?>) {
@@ -2723,9 +2742,11 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
             mMediaRecorder = new MediaRecorder();
 //            setUpMediaRecorder();
         }
+        // Preview drawing size. Arithmetic on the display size, and the capture
+        // session reads it the moment the camera opens -- which can be before a
+        // task posted to the UI thread has run, so it is not posted.
+        mPreviewSize = getTextureOutputSize(getDisplaySize(), PhotonCamera.getSettings().selectedMode);
         activity.runOnUiThread(() -> {
-            //Preview drawing size changing
-            mPreviewSize = getTextureOutputSize(getDisplaySize(), PhotonCamera.getSettings().selectedMode);
             mTextureView.setAspectRatio(
                     mPreviewSize.getHeight(), mPreviewSize.getWidth());
             updatePreviewMirror();
@@ -3560,8 +3581,16 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
         if (isZslMode()) {
             mPreviewRequestBuilder.addTarget(mImageReaderRaw.getSurface());
         }
-        mInitialMeteringAF = mPreviewRequestBuilder.get(CONTROL_AF_REGIONS);
-        mPreviewMeteringAF = mInitialMeteringAF;
+        // A capture template need not carry metering regions at all, and then
+        // these stay null -- which is what every reader of them already tests.
+        MeteringRectangle[] afRegions = mPreviewRequestBuilder.get(CONTROL_AF_REGIONS);
+        if (afRegions == null) {
+            mInitialMeteringAF = null;
+            mPreviewMeteringAF = null;
+        } else {
+            mInitialMeteringAF = afRegions;
+            mPreviewMeteringAF = afRegions;
+        }
         mPreviewAFMode = PreferenceKeys.getAfMode();
         if (recordTemplate) {
             mPreviewRequestBuilder.set(CONTROL_AF_MODE, CONTROL_AF_MODE_CONTINUOUS_VIDEO);
@@ -3573,9 +3602,19 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                             ? CONTROL_VIDEO_STABILIZATION_MODE_ON
                             : CaptureRequest.CONTROL_VIDEO_STABILIZATION_MODE_OFF);
         }
-        mInitialMeteringAE = mPreviewRequestBuilder.get(CONTROL_AE_REGIONS);
-        mPreviewMeteringAE = mInitialMeteringAE;
-        mPreviewAEMode = mPreviewRequestBuilder.get(CONTROL_AE_MODE);
+        MeteringRectangle[] aeRegions = mPreviewRequestBuilder.get(CONTROL_AE_REGIONS);
+        if (aeRegions == null) {
+            mInitialMeteringAE = null;
+            mPreviewMeteringAE = null;
+        } else {
+            mInitialMeteringAE = aeRegions;
+            mPreviewMeteringAE = aeRegions;
+        }
+        // Likewise the AE mode: an absent key is null, and unboxing it into an
+        // int is a crash rather than a default.
+        Integer aeMode = mPreviewRequestBuilder.get(CONTROL_AE_MODE);
+        if (aeMode != null)
+            mPreviewAEMode = aeMode;
         applyZoom(mPreviewRequestBuilder);
     }
 
@@ -4410,16 +4449,27 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
     private void applyAeMeteringRegions(CaptureRequest.Builder builder) {
         int mode = PreferenceKeys.getAeMeteringStd();
         Log.d(TAG, "applyAeMeteringRegions mode:" + mode);
-        MeteringRectangle[] rectangles = getAEMeteringRectangles(mode);
-        if (mode == -1) {
-            rectangles = mInitialMeteringAE;
-        }
         Integer maxAeRegions = mCameraCharacteristics.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AE);
-        if (maxAeRegions != null && maxAeRegions > 0) {
-            builder.set(CaptureRequest.CONTROL_AE_REGIONS, rectangles);
+        if (maxAeRegions == null || maxAeRegions <= 0)
+            return;
+        if (mode == -1) {
+            // "Leave metering as the template set it" -- and a template that
+            // carried no regions leaves nothing to put back.
+            MeteringRectangle[] initial = mInitialMeteringAE;
+            if (initial == null)
+                return;
+            builder.set(CaptureRequest.CONTROL_AE_REGIONS, initial);
             if (builder == mPreviewRequestBuilder) {
-                mPreviewMeteringAE = rectangles;
+                mPreviewMeteringAE = initial;
             }
+            return;
+        }
+        MeteringRectangle[] rectangles = getAEMeteringRectangles(mode);
+        if (rectangles == null)
+            return;
+        builder.set(CaptureRequest.CONTROL_AE_REGIONS, rectangles);
+        if (builder == mPreviewRequestBuilder) {
+            mPreviewMeteringAE = rectangles;
         }
     }
 
@@ -4507,8 +4557,14 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
 
     private void setAFMode(CaptureRequest.Builder builder, int afMode) {
         if (builder != null) {
-            builder.set(CaptureRequest.CONTROL_AF_REGIONS, builder.get(CONTROL_AF_REGIONS));
-            builder.set(CaptureRequest.CONTROL_AE_REGIONS, builder.get(CONTROL_AE_REGIONS));
+            // The regions are carried over the mode change; a builder that has
+            // none simply keeps none.
+            MeteringRectangle[] afRegions = builder.get(CONTROL_AF_REGIONS);
+            if (afRegions != null)
+                builder.set(CaptureRequest.CONTROL_AF_REGIONS, afRegions);
+            MeteringRectangle[] aeRegions = builder.get(CONTROL_AE_REGIONS);
+            if (aeRegions != null)
+                builder.set(CaptureRequest.CONTROL_AE_REGIONS, aeRegions);
             builder.set(CaptureRequest.CONTROL_AF_MODE, afMode);
         }
     }

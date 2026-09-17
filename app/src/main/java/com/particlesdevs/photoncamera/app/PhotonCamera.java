@@ -130,6 +130,11 @@ public class PhotonCamera extends Application {
     }
 
     public static void setCaptureController(CaptureController captureController) {
+        // Null clears it, which is what the camera screen does on its way out.
+        if (captureController == null) {
+            sPhotonCamera.mCaptureController = null;
+            return;
+        }
         sPhotonCamera.mCaptureController = captureController;
     }
 
