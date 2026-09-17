@@ -298,7 +298,10 @@ public class SettingsManager {
      */
     public Integer getIntegerDefault(PreferenceKeys.Key key) {
         String defaultValueString = mDefaultsStore.getDefaultValue(key.mValue);
-        return defaultValueString == null ? 0 : Integer.parseInt(defaultValueString);
+        if (defaultValueString == null) {
+            return 0;
+        }
+        return Integer.parseInt(defaultValueString);
     }
 
     /**
@@ -306,7 +309,10 @@ public class SettingsManager {
      */
     public Float getFloatDefault(PreferenceKeys.Key key) {
         String defaultValueString = mDefaultsStore.getDefaultValue(key.mValue);
-        return defaultValueString == null ? 0.0f : Float.parseFloat(defaultValueString);
+        if (defaultValueString == null) {
+            return 0.0f;
+        }
+        return Float.parseFloat(defaultValueString);
     }
 
     /**
@@ -314,7 +320,10 @@ public class SettingsManager {
      */
     public boolean getBooleanDefault(PreferenceKeys.Key key) {
         String defaultValueString = mDefaultsStore.getDefaultValue(key.mValue);
-        return defaultValueString != null && (Integer.parseInt(defaultValueString) != 0);
+        if (defaultValueString == null) {
+            return false;
+        }
+        return Integer.parseInt(defaultValueString) != 0;
     }
 
     /**
