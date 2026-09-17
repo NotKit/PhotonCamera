@@ -55,13 +55,21 @@ fun ModeSwitcher(
     // Only a scroll that actually happened counts - snapshotFlow emits the current
     // value on subscription, and taking that for a selection would change the mode
     // (and restart the camera) the moment the screen appears.
+    //
+    // `selected` is read through rememberUpdatedState because this coroutine is
+    // keyed on the list and not on it: a captured `selected` goes stale on the
+    // first change, and then the "did it actually move" guard below compares the
+    // new centre against the OLD selection, calls onSelect again, and the mode is
+    // applied and the camera restarted twice for one swipe. The second restart
+    // lands while the first is still closing the device.
+    val currentSelected by rememberUpdatedState(selected)
     LaunchedEffect(listState, labels.size) {
         var wasScrolling = false
         snapshotFlow { listState.isScrollInProgress }
             .collect { scrolling ->
                 if (wasScrolling && !scrolling && rowWidthPx > 0) {
                     val centred = listState.firstVisibleItemIndex
-                    if (centred != selected && centred in labels.indices) onSelect(centred)
+                    if (centred != currentSelected && centred in labels.indices) onSelect(centred)
                 }
                 wasScrolling = scrolling
             }
