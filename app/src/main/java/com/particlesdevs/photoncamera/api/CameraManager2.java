@@ -6,8 +6,6 @@ import android.os.Build;
 
 import com.particlesdevs.photoncamera.util.Log;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.particlesdevs.photoncamera.app.PhotonCamera;
 import com.particlesdevs.photoncamera.pro.SpecificSetting;
 import com.particlesdevs.photoncamera.settings.SettingsManager;
@@ -30,7 +28,6 @@ import static com.particlesdevs.photoncamera.settings.PreferenceKeys.Key.CAMERA_
 public final class CameraManager2 {
     private static final String _CAMERAS = CAMERAS_PREFERENCE_FILE_NAME.mValue;
     private static final String TAG = "CameraManager2";
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private final Map<String, CameraLensData> mCameraLensDataMap = new LinkedHashMap<>();
     private final SettingsManager mSettingsManager;
     /**
@@ -62,7 +59,13 @@ public final class CameraManager2 {
         }
         SpecificSetting sp = PhotonCamera.getSpecific().specificSetting;
         String[] ids = sp.cameraIDS;
-        Log.d("CameraManager2", "Loaded ids:"+ Arrays.toString(ids));
+        // null until a device profile has been loaded, which for a device that
+        // is not on the supported list never happens -- scanAllCameras below is
+        // that case, so say which one this is rather than logging "null".
+        if (ids == null)
+            Log.d("CameraManager2", "Loaded ids: none, no profile for this device");
+        else
+            Log.d("CameraManager2", "Loaded ids:" + Arrays.toString(ids));
             if (!isLoaded()) {
                 if(ids == null)
                     scanAllCameras(cameraManager);
@@ -113,8 +116,9 @@ public final class CameraManager2 {
         mCameraLensDataJSONSet = mSettingsManager.getStringSet(_CAMERAS, ALL_CAMERA_LENS_KEY, null);
         //Deserialize JSON and store CameraLensData objects into mCameraLensDataMap
         mCameraLensDataJSONSet.forEach(jsonString -> {
-            CameraLensData cameraLensData = (CameraLensData) GSON.fromJson(jsonString, CameraLensData.class);
-            mCameraLensDataMap.put(cameraLensData.getCameraId(), cameraLensData);
+            CameraLensData cameraLensData = CameraLensData.fromJson(jsonString);
+            if (cameraLensData != null)
+                mCameraLensDataMap.put(cameraLensData.getCameraId(), cameraLensData);
         });
         if(ids != null && mCameraLensDataJSONSet.size() < ids.length){
             initExt(cameraManager,ids);
@@ -246,7 +250,7 @@ public final class CameraManager2 {
         mSettingsManager.set(_CAMERAS, ALL_CAMERA_IDS_KEY, mAllCameraIDsSet);
 
         //Serialise CameraLensData objects to JSON and store them to mCameraLensDataJSONSet
-        mCameraLensDataMap.forEach((id, lensData) -> mCameraLensDataJSONSet.add(GSON.toJson(lensData)));
+        mCameraLensDataMap.forEach((id, lensData) -> mCameraLensDataJSONSet.add(lensData.toJson()));
         //Save mCameraLensDataJSONSet to SharedPreferences
         mSettingsManager.set(_CAMERAS, ALL_CAMERA_LENS_KEY, mCameraLensDataJSONSet);
     }
