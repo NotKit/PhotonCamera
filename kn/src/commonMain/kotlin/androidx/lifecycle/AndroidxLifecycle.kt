@@ -2,13 +2,19 @@
  *
  * There is no Activity here, so an observer is never auto-removed: a LiveData
  * observer added with observeForever's semantics stays until removed.  That is
- * the only divergence, and it is why observe(owner, ...) ignores its owner. */
+ * the only divergence.
+ *
+ * NOT declared here, on purpose: Lifecycle, LifecycleOwner, LifecycleObserver
+ * and ViewModelProvider.  Those ARE in androidx's linuxArm64/linuxX64 klibs,
+ * which Compose pulls in, and a source class with a klib class's package and
+ * name REPLACES it for every consumer -- including the klib's own compiled
+ * code.  An empty `interface LifecycleOwner` here cost a whole phone run:
+ * androidx.savedstate's SavedStateRegistryImpl reads `owner.lifecycle`, found
+ * our member-less twin instead, and the first LazyList frame died with
+ * IrLinkageError "No property accessor found for
+ * androidx.savedstate/SavedStateRegistryOwner.lifecycle".  LiveData, Observer
+ * and AndroidViewModel are Android-only in androidx and have no klib twin. */
 package androidx.lifecycle
-
-open class ViewModel {
-    protected open fun onCleared() {}
-    fun clear() = onCleared()
-}
 
 open class AndroidViewModel(private val application: android.app.Application) : ViewModel() {
     /** Not generic: the JVM's `<T extends Application> T getApplication()` needs
@@ -20,8 +26,6 @@ fun interface Observer<T> {
     fun onChanged(value: T)
 }
 
-interface LifecycleOwner
-
 open class LiveData<T> {
     private var valueField: T? = null
     private val observers = ArrayList<Observer<T>>()
@@ -32,8 +36,6 @@ open class LiveData<T> {
     open fun getValue(): T? = valueField
     fun hasObservers(): Boolean = observers.isNotEmpty()
 
-    fun observe(owner: LifecycleOwner?, observer: Observer<T>) = observeForever(observer)
-
     fun observeForever(observer: Observer<T>) {
         if (observer !in observers) {
             observers.add(observer)
@@ -42,7 +44,6 @@ open class LiveData<T> {
     }
 
     fun removeObserver(observer: Observer<T>) { observers.remove(observer) }
-    fun removeObservers(owner: LifecycleOwner?) = observers.clear()
 
     protected open fun setValueInternal(value: T) {
         valueField = value
@@ -58,12 +59,4 @@ class MutableLiveData<T> : LiveData<T> {
 
     /** No main thread to hop to here, so postValue is setValue. */
     fun postValue(value: T) = setValueInternal(value)
-}
-
-class ViewModelProvider(private val store: Any?) {
-    private val cache = LinkedHashMap<String, ViewModel>()
-    fun <T : ViewModel> get(key: String, factory: () -> T): T {
-        @Suppress("UNCHECKED_CAST")
-        return cache.getOrPut(key, factory) as T
-    }
 }
