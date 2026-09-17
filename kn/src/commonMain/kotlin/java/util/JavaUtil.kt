@@ -42,6 +42,17 @@ object Arrays {
 
     fun <T> asList(vararg items: T): kotlin.collections.MutableList<T> = items.toMutableList()
 
+    /**
+     * `Arrays.asList(T[])`, which is what `asList(someArray)` means in JAVA.
+     *
+     * Java's own signature is `asList(T... a)` and an array argument IS the
+     * varargs array, so the list holds its ELEMENTS.  Kotlin needs a spread to
+     * say that, and j2k does not write one -- without this overload
+     * `asList(sizes)` quietly builds a one-element list holding the array, and
+     * the first method called on that "element" jumps into nothing.
+     */
+    fun <T> asList(items: Array<out T>): kotlin.collections.MutableList<T> = items.toMutableList()
+
     fun sort(a: IntArray) = a.sort()
     fun sort(a: LongArray) = a.sort()
     fun sort(a: FloatArray) = a.sort()

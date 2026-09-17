@@ -10,16 +10,17 @@ import kotlin.reflect.KClass
 
 fun kotlin.Long.Companion.parseLong(s: String): kotlin.Long = s.toLong()
 fun kotlin.Long.Companion.parseLong(s: String, radix: Int): kotlin.Long = s.toLong(radix)
-fun kotlin.Float.Companion.parseFloat(s: String): kotlin.Float = s.toFloat()
-fun kotlin.Double.Companion.parseDouble(s: String): kotlin.Double = s.toDouble()
+fun kotlin.Float.Companion.parseFloat(s: String): kotlin.Float = javaFloatText(s).toFloat()
+fun kotlin.Double.Companion.parseDouble(s: String): kotlin.Double = javaFloatText(s).toDouble()
+
 fun kotlin.Boolean.Companion.parseBoolean(s: String?): kotlin.Boolean =
     s != null && s.equals("true", ignoreCase = true)
 
 fun kotlin.Long.Companion.valueOf(s: String): kotlin.Long = s.toLong()
 fun kotlin.Long.Companion.valueOf(v: kotlin.Long): kotlin.Long = v
-fun kotlin.Float.Companion.valueOf(s: String): kotlin.Float = s.toFloat()
+fun kotlin.Float.Companion.valueOf(s: String): kotlin.Float = parseFloat(s)
 fun kotlin.Float.Companion.valueOf(v: kotlin.Float): kotlin.Float = v
-fun kotlin.Double.Companion.valueOf(s: String): kotlin.Double = s.toDouble()
+fun kotlin.Double.Companion.valueOf(s: String): kotlin.Double = parseDouble(s)
 fun kotlin.Double.Companion.valueOf(v: kotlin.Double): kotlin.Double = v
 fun kotlin.Boolean.Companion.valueOf(s: String?): kotlin.Boolean = parseBoolean(s)
 fun kotlin.Boolean.Companion.valueOf(v: kotlin.Boolean): kotlin.Boolean = v
@@ -172,4 +173,21 @@ private fun sci(v: kotlin.Double, digits: Int): String {
     while (a < 1.0) { a *= 10.0; exp-- }
     val e = (if (exp < 0) "-" else "+") + kotlin.math.abs(exp).toString().padStart(2, '0')
     return (if (neg) "-" else "") + fixed(a, digits) + "e" + e
+}
+
+/**
+ * java.lang.Float.parseFloat's grammar, not Kotlin's.
+ *
+ * Java accepts surrounding whitespace and a trailing type suffix -- `"0f"`,
+ * `"1.5F"`, `"2d"` are all numbers to it and none of them are to
+ * `String.toFloat()`.  The app's own `tonemap_default` resource is a list of
+ * `f`-suffixed literals, so this is not a corner: without it the first thing
+ * Settings reads at startup throws.
+ */
+private fun javaFloatText(s: String): String {
+    val t = s.trim()
+    val last = t.lastOrNull() ?: return t
+    return if ((last == 'f' || last == 'F' || last == 'd' || last == 'D') && t.length > 1)
+        t.substring(0, t.length - 1)
+    else t
 }

@@ -146,11 +146,20 @@ class CameraDeviceNative(private val listener: Listener) : CameraSession.Sink {
 			return
 		}
 		val texture = surface.surfaceTexture
-		if (texture != null) {
-			/* the preview path copies: the GL upload is the gl lane's and it
-			 * cannot hold a HAL buffer past this call */
-			texture.postFrame(if (buffer.planeCount > 0) buffer.readPlane(0) else null,
-				buffer.timestamp)
+		/* The copy is made ONLY when the consumer has taken the last frame.
+		 * The buffer goes back to the producer at the end of this call, so the
+		 * preview path has to copy, and a preview runs far faster than a scene
+		 * draws -- asking first is what keeps the copy off the dropped ones. */
+		if (texture != null && texture.acceptsFrame()) {
+			/* every plane: a viewfinder given only the luma plane would be a
+			 * grey picture of a colour camera */
+			val n = buffer.planeCount
+			texture.postFrame(
+				buffer.width, buffer.height, buffer.format, buffer.timestamp,
+				Array(n) { buffer.readPlane(it) },
+				IntArray(n) { buffer.rowStride(it) },
+				IntArray(n) { buffer.pixelStride(it) },
+			)
 		}
 		buffer.release()
 	}
