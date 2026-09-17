@@ -53,6 +53,18 @@ public class Settings {
     public int noiseReduction = NOISE_REDUCTION_MODE_OFF;
     public CameraMode selectedMode;
 
+    /**
+     * Fills the cache straight away.
+     *
+     * <p>Until this was here, every field below stayed at its Java default
+     * until the first preference WRITE fired PreferenceKeys' change listener --
+     * so on a first run {@code selectedMode} and {@code mCameraID} were null
+     * while the camera was already being opened against them.
+     */
+    public Settings() {
+        loadCache();
+    }
+
     public void loadCache() {
         noiseReduction = PreferenceKeys.isSystemNrOn();
         frameCount = PreferenceKeys.getFrameCountValue();
@@ -95,7 +107,12 @@ public class Settings {
         selectedMode = CameraMode.valueOf(PreferenceKeys.getCameraModeOrdinal());
         toneMap = parseToneMapArray();
         gamma = parseGammaArray();
-        mCameraID = PreferenceKeys.getCameraID();
+        String cameraID = PreferenceKeys.getCameraID();
+        // Not cached when it is unset: the preference only gains a default once
+        // CameraManager2 has scanned the device, which is after this runs, and
+        // a null here would replace an id the caller had already chosen.
+        if (cameraID != null)
+            mCameraID = cameraID;
         theme = PreferenceKeys.getThemeValue();
     }
 
@@ -118,7 +135,9 @@ public class Settings {
 
     float[] parseToneMapArray() {
         String savedArrayAsString = PreferenceKeys.getToneMap();
-        if (savedArrayAsString == null)
+        // Empty means "no curve saved", the same as absent: splitting "" gives
+        // one empty field and parsing that is not a number.
+        if (savedArrayAsString == null || savedArrayAsString.trim().isEmpty())
             return new float[0];
         String[] array = savedArrayAsString.replace("[", "").replace("]", "").split(",");
         float[] finalArray = new float[array.length];
@@ -130,7 +149,8 @@ public class Settings {
 
     float[] parseGammaArray() {
         String savedArrayAsString = PreferenceKeys.getPref(PreferenceKeys.Key.GAMMA);
-        if (savedArrayAsString == null)
+        // Empty means "no curve saved"; see parseToneMapArray.
+        if (savedArrayAsString == null || savedArrayAsString.trim().isEmpty())
             return new float[0];
         String[] array = savedArrayAsString.replace("[", "").replace("]", "").split(",");
         float[] finalArray = new float[array.length];
