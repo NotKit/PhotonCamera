@@ -18,6 +18,24 @@ LOG="$OUT/typecheck-$TAG.log"
 SRCS=$(find "$HERE/src/commonMain/kotlin" -mindepth 1 -maxdepth 1 -type d ! -name photoncam | sort)
 SRCS="$SRCS $(find "$HERE/src/commonMain/kotlin/photoncam" -mindepth 1 -maxdepth 1 ! -name host | sort)"
 KLIBS=(); for k in "$OUT"/klib/*.klib; do [ -e "$k" ] && KLIBS+=(-l "$k"); done
+# androidx.lifecycle's ViewModel/LifecycleOwner are NOT shimmed: they are in
+# androidx's own linux klibs, which Compose puts on the link path, and a source
+# class with a klib class's package and name replaces it for every consumer --
+# that is what killed the first phone run (see AndroidxLifecycle.kt).  Gradle
+# resolves them; this gate does not, so it takes them out of Gradle's cache.
+# A version that moves is a missing file here, not a wrong answer: the loop
+# only adds what exists, and the ViewModel errors come straight back.
+CACHE="$HOME/.gradle/caches/modules-2/files-2.1"
+for k in \
+    "$CACHE"/androidx.lifecycle/lifecycle-viewmodel-linuxx64/*/*/lifecycle-viewmodel-linuxX64Main-*.klib \
+    "$CACHE"/androidx.lifecycle/lifecycle-common-linuxx64/*/*/lifecycle-common-linuxX64Main-*.klib \
+    "$CACHE"/androidx.annotation/annotation-linuxx64/*/*/annotation.klib \
+    "$CACHE"/org.jetbrains.kotlinx/atomicfu-linuxx64/*/*/atomicfu-linuxX64Main-*.klib \
+    "$CACHE"/org.jetbrains.kotlinx/atomicfu-linuxx64/*/*/atomicfu-linuxX64Cinterop-interopMain-*.klib \
+    "$CACHE"/org.jetbrains.kotlinx/kotlinx-coroutines-core-linuxx64/*/*/kotlinx-coroutines-core-linuxX64Main-*.klib
+do
+    [ -e "$k" ] && KLIBS+=(-l "$k")
+done
 JAVA_OPTS="${JAVA_OPTS:--Xmx4g}" "$KN" -target linux_x64 -p library -nowarn \
     -o "$OUT/typecheck-$TAG.klib" ${KLIBS[@]+"${KLIBS[@]}"} "$HERE/gen" "$HERE/gen-atlas" $SRCS "$@" >"$LOG" 2>&1
 rc=$?
