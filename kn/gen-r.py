@@ -115,6 +115,82 @@ def main():
     lines += table("array", lambda v: "arrayOf(%s)" % ", ".join('"%s"' % esc(x) for x in v))
     lines.append(")")
     lines.append("")
+    # THE PREFERENCE SCREENS' OWN DEFAULTS.  On Android
+    # PreferenceManager.setDefaultValues(context, R.xml.preferences, ...) walks
+    # this tree and every `android:defaultValue` becomes the key's default; the
+    # preference fragments are in drop.txt here, so nothing would register them
+    # and every such setting would read back 0 -- CONTROL_AF_MODE among them,
+    # which is a viewfinder that never focuses.  The references are resolved
+    # against the value tables above, and a boolean is written the way
+    # SettingsManager stores one ("1"/"0").
+    A = "{http://schemas.android.com/apk/res/android}"
+    strings = types.get("string", {})
+    bools = types.get("bool", {})
+    integers = types.get("integer", {})
+
+    def resolve(raw):
+        if raw is None:
+            return None
+        raw = raw.strip()
+        m = re.fullmatch(r"@(string|bool|integer)/(\w+)", raw)
+        if not m:
+            return raw
+        kind, name = m.group(1), m.group(2)
+        v = {"string": strings, "bool": bools, "integer": integers}[kind].get(name)
+        return None if v is None else v.strip()
+
+    arrays = types.get("array", {})
+
+    def resolve_array(raw):
+        if raw is None:
+            return None
+        m = re.fullmatch(r"@array/(\w+)", raw.strip())
+        if not m:
+            return None
+        return arrays.get(m.group(1))
+
+    prefs = {}
+    choices = {}
+    xmldir = os.path.join(RES, "xml")
+    if os.path.isdir(xmldir):
+        for f in sorted(os.listdir(xmldir)):
+            if not f.endswith(".xml"):
+                continue
+            try:
+                root = ET.parse(os.path.join(xmldir, f)).getroot()
+            except ET.ParseError:
+                continue
+            for el in root.iter():
+                key = resolve(el.get(A + "key"))
+                default = resolve(el.get(A + "defaultValue"))
+                if key is None or default is None:
+                    continue
+                if default in ("true", "false"):
+                    default = "1" if default == "true" else "0"
+                prefs.setdefault(key, default)
+                values = resolve_array(el.get(A + "entryValues"))
+                if values:
+                    choices.setdefault(key, values)
+
+    lines.append("/**")
+    lines.append(" * The preference screens' `android:defaultValue`s, key -> default, with the")
+    lines.append(" * `@string/`/`@bool/` references already resolved and booleans written the")
+    lines.append(" * way SettingsManager stores them.  This is what")
+    lines.append(" * PreferenceManager.setDefaultValues reads off res/xml on Android.")
+    lines.append(" */")
+    lines.append("val R_PREFERENCE_DEFAULTS: Map<String, String> = mapOf(")
+    for k in sorted(prefs):
+        lines.append('    "%s" to "%s",' % (esc(k), esc(prefs[k])))
+    lines.append(")")
+    lines.append("")
+    lines.append("/** The same screens' `android:entryValues`, for the keys that list them. */")
+    lines.append("val R_PREFERENCE_VALUES: Map<String, Array<String>> = mapOf(")
+    for k in sorted(choices):
+        lines.append('    "%s" to arrayOf(%s),'
+                     % (esc(k), ", ".join('"%s"' % esc(v) for v in choices[k])))
+    lines.append(")")
+    lines.append("")
+
     lines.append("/** id -> resource name, for AssetManager/Resources file lookups. */")
     lines.append("internal val R_NAMES: Map<Int, String> = mapOf(")
     for t in order:

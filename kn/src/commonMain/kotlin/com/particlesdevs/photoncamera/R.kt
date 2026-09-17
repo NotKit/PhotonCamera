@@ -1309,6 +1309,72 @@ internal val R_ARRAYS: Map<Int, Array<String>> = mapOf(
     R.array.video_resolution_entryvalues to arrayOf("3840x2160", "1920x1080", "1280x720"),
 )
 
+/**
+ * The preference screens' `android:defaultValue`s, key -> default, with the
+ * `@string/`/`@bool/` references already resolved and booleans written the
+ * way SettingsManager stores them.  This is what
+ * PreferenceManager.setDefaultValues reads off res/xml on Android.
+ */
+val R_PREFERENCE_DEFAULTS: Map<String, String> = mapOf(
+    "pref_af_mode_key" to "4",
+    "pref_align_method_key" to "1",
+    "pref_binning_key" to "0",
+    "pref_camera_sounds_key" to "1",
+    "pref_cfa_key" to "-1",
+    "pref_chroma_nr_seekbar_key" to "12",
+    "pref_color_method_key" to "1",
+    "pref_compressor_seekbar_key" to "0.0",
+    "pref_contrast_seekbar_key" to "0.0",
+    "pref_disable_aligning_key" to "0",
+    "pref_enable_system_nr_key" to "0",
+    "pref_energy_safe_key" to "0",
+    "pref_enhanced_processing_key" to "0",
+    "pref_expocompensation_seekbar_key" to "0.0",
+    "pref_frame_count_key" to "15",
+    "pref_hdrx_nr_key" to "1",
+    "pref_hide_gallery_icon_key" to "0",
+    "pref_horizon" to "0",
+    "pref_luma_nr_seekbar_key" to "12",
+    "pref_merge_seekbar_key" to "0.0",
+    "pref_noise_seekbar_key" to "0.0",
+    "pref_peak_method_key" to "2",
+    "pref_preserve_manual_wb_key" to "0",
+    "pref_preview_format_key" to "0",
+    "pref_rawvideo_crop_169_key" to "1",
+    "pref_rawvideo_downscale_4x_key" to "0",
+    "pref_rawvideo_write_zip_key" to "1",
+    "pref_saturation_seekbar_key" to "1.0",
+    "pref_save_raw_key" to "0",
+    "pref_shadows_seekbar_key" to "0.0",
+    "pref_sharpness_seekbar_key" to "0.20",
+    "pref_show_afdata_key" to "0",
+    "pref_show_gradient_key" to "1",
+    "pref_show_grid_key" to "0",
+    "pref_show_roundedge_key" to "1",
+    "pref_show_watermark_key" to "1",
+    "pref_theme_accent_key" to "default",
+    "pref_theme_key" to "-1",
+    "pref_ultrahdr_key" to "0",
+    "pref_video_resolution_key" to "1920x1080",
+    "pref_wide169_key" to "0",
+)
+
+/** The same screens' `android:entryValues`, for the keys that list them. */
+val R_PREFERENCE_VALUES: Map<String, Array<String>> = mapOf(
+    "pref_af_mode_key" to arrayOf("4", "3", "1"),
+    "pref_align_method_key" to arrayOf("1"),
+    "pref_cfa_key" to arrayOf("-1", "0", "3", "1", "2", "4", "-2"),
+    "pref_color_method_key" to arrayOf("0", "1", "2"),
+    "pref_peak_method_key" to arrayOf("0", "1", "2"),
+    "pref_preview_format_key" to arrayOf("35", "256", "1212500294", "0"),
+    "pref_save_raw_key" to arrayOf("0", "1", "2"),
+    "pref_show_afdata_key" to arrayOf("0", "1", "2", "3"),
+    "pref_show_grid_key" to arrayOf("0", "1", "2", "3", "4"),
+    "pref_theme_accent_key" to arrayOf("default", "eszdman", "blue", "red", "orange", "green", "pink", "cyan", "teal", "white"),
+    "pref_theme_key" to arrayOf("-1", "1", "2"),
+    "pref_video_resolution_key" to arrayOf("3840x2160", "1920x1080", "1280x720"),
+)
+
 /** id -> resource name, for AssetManager/Resources file lookups. */
 internal val R_NAMES: Map<Int, String> = mapOf(
     R.anim.animate_slide_right_exit to "animate_slide_right_exit",
