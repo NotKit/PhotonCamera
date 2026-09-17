@@ -122,7 +122,7 @@ public class Camera2ApiAutoFix {
             Range<Long> nrange = new Range<>(exprange.getLower(), (long) (ExposureIndex.sec * 5.2));
             CameraReflectionApi.set(characteristics, SENSOR_INFO_EXPOSURE_TIME_RANGE, nrange);
         }
-        var keys = CameraReflectionApi.getCameraCharacteristicsKeys(characteristics, null, true);
+        var keys = CameraReflectionApi.getCameraCharacteristicsKeys(characteristics, true);
 
         for (Object keyObj : keys) {
             try {
@@ -168,7 +168,7 @@ public class Camera2ApiAutoFix {
         Range<Integer> exprange = characteristics.get(SENSOR_INFO_SENSITIVITY_RANGE);
         if (exprange == null) return;
         final int upper = exprange.getUpper();
-        var keys = CameraReflectionApi.getCameraCharacteristicsKeys(characteristics, null, true);
+        var keys = CameraReflectionApi.getCameraCharacteristicsKeys(characteristics, true);
         for (Object keyObj : keys) {
             try {
                 if (keyObj instanceof CameraCharacteristics.Key<?>) {
