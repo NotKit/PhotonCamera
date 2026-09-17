@@ -542,10 +542,10 @@ public class TouchFocus {
                     if (regionLive && Integer.valueOf(CameraMetadata.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED).equals(afState))
                         failedLockObserved = true;
                     if (startAck.onFrame(afState, regionLive)) {
-                        boolean acknowledged = startAck.resolvedState() != null;
+                        boolean acknowledged = startAck.resolvedState() != StateWatcher.NO_STATE;
                         Log.d(TAG, "AF trigger " + (acknowledged ? "acknowledged" : (failedLockObserved
                                 ? "executed but FAILED to lock" : "UNACKNOWLEDGED")) + ", sequence complete");
-                        if (Integer.valueOf(CameraMetadata.CONTROL_AF_STATE_ACTIVE_SCAN).equals(startAck.resolvedState())) {
+                        if (startAck.resolvedState() == CameraMetadata.CONTROL_AF_STATE_ACTIVE_SCAN) {
                             scanWatchArmed = true;
                             scanAckAtElapsed = SystemClock.elapsedRealtime();
                             focusAtScanAck = captureController.mFocus;
@@ -743,8 +743,10 @@ public class TouchFocus {
         private long deadlineElapsed;
         private int frameCount;
         private boolean active;
-        @Nullable
-        private Integer resolvedState;
+        /** No state resolved the wait; it ran to its deadline. */
+        static final int NO_STATE = -1;
+
+        private int resolvedState = NO_STATE;
 
         StateWatcher(String name) {
             this.name = name;
@@ -755,16 +757,15 @@ public class TouchFocus {
             this.deadlineElapsed = deadlineElapsed;
             this.frameCount = 0;
             this.active = true;
-            this.resolvedState = null;
+            this.resolvedState = NO_STATE;
         }
 
         void dismiss() {
             active = false;
         }
 
-        /** The state that resolved the wait, or null when it resolved by deadline. */
-        @Nullable
-        Integer resolvedState() {
+        /** The state that resolved the wait, or {@link #NO_STATE} by deadline. */
+        int resolvedState() {
             return resolvedState;
         }
 
@@ -779,7 +780,7 @@ public class TouchFocus {
             }
             if (frameCount >= STATE_MAX_FRAMES || SystemClock.elapsedRealtime() >= deadlineElapsed) {
                 active = false;
-                resolvedState = null;
+                resolvedState = NO_STATE;
                 Log.d(TAG, name + " resolved: deadline after " + frameCount + " frames");
                 return true;
             }
