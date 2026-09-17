@@ -34,6 +34,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -42,7 +44,9 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.graphics.drawscope.Stroke
 import android.graphics.Point
+import android.hardware.camera2.CameraMetadata
 import android.graphics.SurfaceTexture
 import com.particlesdevs.photoncamera.capture.PreviewSurface
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -111,8 +115,10 @@ class ComposePreviewSurface : PreviewSurface {
 	}
 
 	/** the slot's size in pixels, which is what the listener is told */
-	private var width = 0
-	private var height = 0
+	var width = 0
+		private set
+	var height = 0
+		private set
 
 	override fun setAspectRatio(width: Int, height: Int) {
 		aspectWidth = width
@@ -149,7 +155,7 @@ class ComposePreviewSurface : PreviewSurface {
  * preview would show the user a different crop from the one the shutter takes.
  */
 @Composable
-fun BoxScope.CameraViewfinder(surface: ComposePreviewSurface) {
+fun BoxScope.CameraViewfinder(surface: ComposePreviewSurface, overlay: ViewfinderOverlay) {
 	val texture = surface.getSurfaceTexture()
 	var image by remember { mutableStateOf<ImageBitmap?>(null) }
 	var lastSize by remember { mutableStateOf(IntSize.Zero) }
@@ -211,8 +217,52 @@ fun BoxScope.CameraViewfinder(surface: ComposePreviewSurface) {
 				drawPreview(shown, lastSize, surface.orientationDegrees - 90, surface.mirror)
 			}
 		}
+		// The indicators go on top of the frame and INSIDE the box, which is
+		// where viewfinder_stack.xml had their Views; the coordinates
+		// TouchFocus was given are the box's own.
+		val focus = overlay.focusAt
+		val spot = overlay.spotWbAt
+		if (focus != null || spot != null) {
+			Canvas(Modifier.fillMaxSize()) {
+				if (focus != null) drawFocusCircle(focus, overlay.afState)
+				if (spot != null) drawSpotWb(spot, overlay.spotWbError != null)
+			}
+		}
 	}
 }
+
+/**
+ * The focus circle, coloured by AF state as FocusCircleView coloured it: white
+ * while the lens is moving, green on a lock, red when the lock failed.
+ */
+private fun DrawScope.drawFocusCircle(at: Offset, afState: Int) {
+	val colour = when (afState) {
+		CameraMetadata.CONTROL_AF_STATE_FOCUSED_LOCKED,
+		CameraMetadata.CONTROL_AF_STATE_PASSIVE_FOCUSED -> Color(0xFF4CAF50)
+		CameraMetadata.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED,
+		CameraMetadata.CONTROL_AF_STATE_PASSIVE_UNFOCUSED -> Color(0xFFE53935)
+		else -> Color.White
+	}
+	val r = minOf(size.width, size.height) * FOCUS_RADIUS_FRACTION
+	drawCircle(colour, radius = r, center = at, style = Stroke(width = 3f))
+	drawCircle(colour, radius = 3f, center = at)
+}
+
+/** The spot-WB reticle: a square, red once the measurement has failed. */
+private fun DrawScope.drawSpotWb(at: Offset, failed: Boolean) {
+	val colour = if (failed) Color(0xFFE53935) else Color(0xFFFFC107)
+	val r = minOf(size.width, size.height) * SPOT_WB_RADIUS_FRACTION
+	drawRect(
+		colour,
+		topLeft = Offset(at.x - r, at.y - r),
+		size = Size(r * 2f, r * 2f),
+		style = Stroke(width = 3f),
+	)
+}
+
+/** Both indicators are sized off the box, as the layout's dp figures were. */
+private const val FOCUS_RADIUS_FRACTION = 0.09f
+private const val SPOT_WB_RADIUS_FRACTION = 0.05f
 
 /**
  * The frame, rotated upright and scaled to cover.

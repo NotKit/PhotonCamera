@@ -11,6 +11,11 @@
  * and the delivered buffers are drawn in the scene by [CameraViewfinder].
  * The still-capture path is the app's and is reached through the shutter event
  * like any other; nothing here shortcuts it.
+ *
+ * ROUND 5 wires the events up: [CameraActions] is the port of the dropped
+ * CameraUIController, so the shutter takes a picture, the carousel switches
+ * mode, the top bar's toggles write the app's preferences and restart the
+ * camera where the Java did, and a tap on the viewfinder runs TouchFocus.
  */
 package photoncam.screen
 
@@ -24,6 +29,7 @@ import android.hardware.SensorManager
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureResult
+import android.hardware.camera2.CameraMetadata
 import android.media.AudioManager
 import android.net.Uri
 import android.os.Vibrator
@@ -33,6 +39,7 @@ import com.particlesdevs.photoncamera.R_PREFERENCE_DEFAULTS
 import com.particlesdevs.photoncamera.R_PREFERENCE_VALUES
 import com.particlesdevs.photoncamera.app.PhotonCamera
 import com.particlesdevs.photoncamera.capture.CaptureController
+import com.particlesdevs.photoncamera.control.TouchFocus
 import com.particlesdevs.photoncamera.composeui.camera.CameraScreen
 import com.particlesdevs.photoncamera.composeui.theme.PhotonTheme
 import com.particlesdevs.photoncamera.settings.PreferenceKeys
@@ -125,7 +132,9 @@ private class HostActivity(private val app: PhotonCamera) : Activity() {
  * Every call it makes is a CameraScreenHost method with the original's name, so
  * the capture path drives the Compose screen exactly where it drove the old one.
  */
-private class HostCameraEvents(private val host: CameraScreenHost) : CameraEventsListener() {
+private class HostCameraEvents(private val rig: CameraRig) : CameraEventsListener() {
+
+	private val host: CameraScreenHost get() = rig.host
 
 	/* ProcessingEventsListener */
 	override fun onProcessingStarted(processName: String?) {
@@ -180,15 +189,30 @@ private class HostCameraEvents(private val host: CameraScreenHost) : CameraEvent
 		host.setVideoRecordingInfoVisible(false)
 	}
 
-	override fun onPreviewCaptureCompleted(captureResult: CaptureResult?) {}
+	/**
+	 * CameraFragment.updateScreenLog's one line that is not a debug HUD: the
+	 * focus circle's colour is the AF state of the newest preview result.
+	 */
+	override fun onPreviewCaptureCompleted(captureResult: CaptureResult?) {
+		val focus = rig.touchFocus ?: return
+		focus.setState(captureResult?.get(CaptureResult.CONTROL_AF_STATE)
+			?: CameraMetadata.CONTROL_AF_STATE_INACTIVE)
+	}
 
 	/* CameraEventsListener */
 	override fun onOpenCamera(cameraManager: CameraManager?) {
 		logD("onOpenCamera: ${cameraManager?.getCameraIdList()?.joinToString()}")
+		// CameraFragment did this here too: the lens map is what the aux row
+		// and the flip button are built from, and it cannot be read before a
+		// camera has been opened.
+		rig.actions?.initCameraIdLists(cameraManager)
 	}
 
 	override fun onCameraRestarted() {
 		host.refresh(CaptureController.isProcessing)
+		// A restart can land before the preview surface exists, and TouchFocus
+		// is only built once it does.
+		rig.touchFocus?.resetFocusCircle()
 	}
 
 	override fun onCharacteristicsUpdated(characteristics: CameraCharacteristics?) {
@@ -208,14 +232,25 @@ private class HostCameraEvents(private val host: CameraScreenHost) : CameraEvent
  * composes and closed when it goes away, which is CameraFragment's
  * onViewCreated/onResume and onPause in the two places Compose has for them.
  */
-private class CameraRig(val host: CameraScreenHost) {
+internal class CameraRig(val host: CameraScreenHost) {
 	val preview = ComposePreviewSurface()
+	/** The focus circle and the spot-WB reticle, which [CameraViewfinder] draws. */
+	val overlay = ViewfinderOverlay()
 	private val executor = Executors.newSingleThreadExecutor()
-	private var controller: CaptureController? = null
+	var controller: CaptureController? = null
+		private set
+	var actions: CameraActions? = null
+		private set
+	/** CameraFragment.mTouchFocus, built once the preview surface exists. */
+	var touchFocus: TouchFocus? = null
+		private set
 
 	fun start() {
 		val activity = HostActivity(application)
-		val c = CaptureController(activity, preview, executor, HostCameraEvents(host))
+		val a = CameraActions(application, host, this)
+		actions = a
+		host.setEventListener { event -> a.onEvent(event) }
+		val c = CaptureController(activity, preview, executor, HostCameraEvents(this))
 		controller = c
 		// CameraFragment.onViewCreated does this; it decides whether a burst
 		// gets its own session, and nothing else sets it.
@@ -224,6 +259,12 @@ private class CameraRig(val host: CameraScreenHost) {
 		PhotonCamera.setCaptureController(c)
 		c.startBackgroundThread()
 		c.resumeCamera()
+		// CameraFragment.initTouchFocus, which runs right after resumeCamera and
+		// posts so the preview view has been laid out.  The Compose slot reports
+		// its size through markAvailable, so there is nothing to wait for.
+		val focus = TouchFocus(c, HostFocusIndicator(preview, overlay))
+		touchFocus = focus
+		c.mTouchFocus = focus
 		println("[pc] camera resumed against ${HostWindow.widthPx}x${HostWindow.heightPx}")
 	}
 
@@ -233,6 +274,10 @@ private class CameraRig(val host: CameraScreenHost) {
 		runCatching { preview.release() }
 		executor.shutdownNow()
 		PhotonCamera.setCaptureController(null)
+		controller?.mTouchFocus = null
+		touchFocus = null
+		actions = null
+		host.setEventListener(null)
 		controller = null
 	}
 }
@@ -242,7 +287,6 @@ fun CameraScreenContent() {
 	PhotonTheme {
 		val host = remember {
 			CameraScreenHost(application).also { h ->
-				h.setEventListener { event -> println("[pc] CameraUiEvent $event") }
 				// The preference sync is what fills the top bar, the mode and
 				// the gradient from the app's own stored settings.  It reads
 				// SettingsManager, so it is the first thing that can fail on a
@@ -250,27 +294,28 @@ fun CameraScreenContent() {
 				// than a black window.
 				runCatching { h.syncFromPreferences() }
 					.onFailure { e -> report("syncFromPreferences", e) }
-				runCatching {
-					// The window is what knows the panel here; applyMode wants
-					// the figures rather than a Resources that cannot answer.
-					val w = HostWindow.widthDp
-					val hgt = HostWindow.heightDp
-					h.applyMode(
-						CameraMode.valueOf(PreferenceKeys.getCameraModeOrdinal())!!,
-						h.enableQuadRes, if (w > 0f) hgt / w else 16f / 9f, w, hgt,
-					)
-				}.onFailure { e -> report("applyMode", e) }
 			}
 		}
 		val rig = remember { CameraRig(host) }
 		DisposableEffect(rig) {
 			runCatching { rig.start() }.onFailure { e -> report("camera start", e) }
+			// CameraFragment.onViewCreated's applyMode, now that the actions
+			// exist: it also pushes the settings-bar entries, which is what
+			// fills the bar a swipe down opens.
+			runCatching {
+				rig.actions?.applyCameraMode(
+					CameraMode.valueOf(PreferenceKeys.getCameraModeOrdinal())!!,
+				)
+			}.onFailure { e -> report("applyMode", e) }
 			onDispose { runCatching { rig.stop() }.onFailure { e -> report("camera stop", e) } }
 		}
+		// Nothing on Ubuntu Touch can press a button for us; PC_EVENTS is how a
+		// phone run reaches the shutter and the carousel at all.
+		EventScriptRunner(host, rig.preview)
 		CameraScreen(
 			state = host.state,
 			onEvent = { host.onEvent(it) },
-			viewfinder = { CameraViewfinder(rig.preview) },
+			viewfinder = { CameraViewfinder(rig.preview, rig.overlay) },
 		)
 	}
 }
