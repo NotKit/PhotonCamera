@@ -1314,6 +1314,13 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
             physicalID = logicalID;
         }
         
+        // BEFORE the open, not after it. The close above stopped the background
+        // thread, which also nulled mBackgroundHandler, so the open below was
+        // handing camera2 a null handler -- "callbacks on the calling thread's
+        // looper", which is the UI thread, and only by accident of this
+        // ordering. Every other openCamera in this class gives it the
+        // background handler, and now so does this one.
+        startBackgroundThread();
         try {
             if (!mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
                 throw new RuntimeException("Time out waiting to lock camera opening.");
@@ -1327,9 +1334,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
             mCameraOpening.set(false);
             throw new RuntimeException("Interrupted while trying to restart camera.", e);
         }
-        //stopBackgroundThread();
         //UpdateCameraCharacteristics(physicalID);
-        startBackgroundThread();
 
         if (mCameraCharacteristics == null) {
             if (mCameraCharacteristicsMap == null || mCameraCharacteristicsMap.isEmpty()) {
