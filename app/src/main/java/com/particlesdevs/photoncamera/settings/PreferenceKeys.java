@@ -152,7 +152,11 @@ public class PreferenceKeys {
         });
     }
     public static void addIds(String[] ids){
-        if(ids != null) {
+        // An EMPTY list is not "no list": ids[0] below is the camera the app
+        // opens, so an empty array is an ArrayIndexOutOfBounds inside
+        // CaptureController's constructor, which reads as the camera failing
+        // to open rather than as nothing having been scanned.
+        if(ids != null && ids.length != 0) {
             SettingsManager settingsManager = preferenceKeys.settingsManager;
             Log.d(TAG, "Added IDS:" + Arrays.toString(ids));
             settingsManager.setDefaults(Key.CAMERA_ID, ids[0], ids);
