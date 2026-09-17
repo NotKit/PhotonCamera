@@ -15,6 +15,11 @@ package photoncam.screen
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import android.content.Context
+import android.hardware.SensorManager
+import android.hardware.camera2.CameraManager
+import android.media.AudioManager
+import android.os.Vibrator
 import com.particlesdevs.photoncamera.app.PhotonCamera
 import com.particlesdevs.photoncamera.composeui.camera.CameraScreen
 import com.particlesdevs.photoncamera.composeui.theme.PhotonTheme
@@ -24,9 +29,16 @@ import photoncam.host.PlaceholderViewfinder
 /** The application singleton, built once and kept for the process's life. */
 private val application: PhotonCamera by lazy {
 	// Application's no-argument constructor is the platform lane's: a Context
-	// here is three directories and a preference store, so there is nothing to
-	// attach and onCreate() can be called straight away.
+	// here is three directories, a preference store and host-installed services.
 	PhotonCamera().also {
+		val cameraManager = CameraManager()
+		it.installSystemService(Context.SENSOR_SERVICE, SensorManager())
+		it.installSystemService(Context.AUDIO_SERVICE, AudioManager())
+		it.installSystemService(Context.VIBRATOR_SERVICE, Vibrator())
+		it.installSystemService(Context.CAMERA_SERVICE, cameraManager)
+		runCatching { cameraManager.getCameraIdList()?.joinToString() }
+			.onSuccess { ids -> println("[pc] camera2 ids=${ids.orEmpty()}") }
+			.onFailure { e -> println("[pc] camera2 probe failed: $e") }
 		runCatching { it.onCreate() }
 			.onFailure { e ->
 				println("[pc] PhotonCamera.onCreate failed: $e")
@@ -47,7 +59,10 @@ fun CameraScreenContent() {
 				// half-built application -- hence the catch and the log rather
 				// than a black window.
 				runCatching { h.syncFromPreferences() }
-					.onFailure { e -> println("[pc] syncFromPreferences failed: $e") }
+					.onFailure { e ->
+						println("[pc] syncFromPreferences failed: $e")
+						e.stackTraceToString().lines().drop(1).take(12).forEach { println("    $it") }
+					}
 			}
 		}
 		CameraScreen(

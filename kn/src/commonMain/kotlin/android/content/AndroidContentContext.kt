@@ -25,6 +25,7 @@ open class Context(
     private val prefsDir: File = File(files.getParent() ?: ".", "shared_prefs")
     private val assetsRoot: File = assetsDir ?: File(defaultAssets())
     private val prefs = LinkedHashMap<String, SharedPreferences>()
+    private val systemServices = LinkedHashMap<String, Any>()
     private val resources = Resources(AssetManager(assetsRoot))
 
     init {
@@ -62,10 +63,14 @@ open class Context(
     open fun deleteFile(name: String): Boolean = File(files, name).delete()
     open fun fileList(): Array<String> = files.list() ?: emptyArray()
 
+    fun installSystemService(name: String, service: Any) {
+        systemServices[name] = service
+    }
+
     /** Android returns null for a service this device has not got. */
     open fun getSystemService(name: String): Any? = when (name) {
         WINDOW_SERVICE -> android.view.WindowManager
-        else -> null
+        else -> systemServices[name]
     }
 
     open fun getPackageManager(): android.content.pm.PackageManager = android.content.pm.PackageManager
