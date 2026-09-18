@@ -160,7 +160,7 @@ public class PyramidAlignment implements AutoCloseable {
     float downScalePerLevel = 2.0f;
 
     @Tunable(title = "Correction Sharpness", category = "Alignment", min = -1.0f, max = 2.0f, defaultValue = 1.0f)
-    float sharpness;
+    float sharpness = 1.0f;
 
     // Fixed alignment parameters, tuned on real ProRAW bursts with
     // perspective (hand-shake) warps in tools/alignment-bench:

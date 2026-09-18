@@ -19,22 +19,22 @@ public class BilateralSeparable extends Node {
     }
 
     @Tunable(title = "Enable", category = "BilateralSeparable", defaultValue = 1, min = 0, max = 1, step = 1)
-    boolean enable;
+    boolean enable = true;
 
     @Tunable(title = "Kernel Size", category = "BilateralSeparable", 
              description = "Size of the filter kernel (larger = more smoothing)", 
              defaultValue = 15, min = 5, max = 31, step = 2)
-    int kernelSize;
+    int kernelSize = 15;
 
     @Tunable(title = "Spatial Sigma", category = "BilateralSeparable", 
              description = "Spatial sigma for Gaussian weighting", 
              defaultValue = 5.0f, min = 1.0f, max = 20.0f, step = 0.5f)
-    float spatialSigma;
+    float spatialSigma = 5.0f;
 
     @Tunable(title = "Intensity Multiplier", category = "BilateralSeparable", 
              description = "Multiplier for noise-based intensity sigma", 
              defaultValue = 1.0f, min = 0.1f, max = 5.0f, step = 0.1f)
-    float intensityMultiplier;
+    float intensityMultiplier = 1.0f;
 
     @Override
     public void Compile() {

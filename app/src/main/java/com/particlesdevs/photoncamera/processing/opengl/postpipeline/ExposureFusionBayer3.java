@@ -272,7 +272,7 @@ public class ExposureFusionBayer3 extends Node {
         max = 4.0f,
         step = 0.1f
     )
-    float downScalePerLevel;
+    float downScalePerLevel = 2.0f;
     
     /*@Tunable(
         title = "Curve Points Count",

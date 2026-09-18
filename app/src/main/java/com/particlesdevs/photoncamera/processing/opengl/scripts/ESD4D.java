@@ -79,9 +79,9 @@ public class ESD4D extends GLOneScript {
     /** Packed texture size (rawSize/2 + cfaShift) shared by all quad-packed stages. */
     Point packedSize;
     @Tunable(title = "Max hotPixels", category = "Merge", description = "Statistical cpu filtering count threshold", min = 16384, max = 262144, step = 1000, defaultValue = 65535)
-    int MAX_HOT_PIXELS;
+    int MAX_HOT_PIXELS = 65535;
     @Tunable(title = "Max reasonable hotPixels", category = "Merge", description = "Statistical cpu filtering count threshold", min = 1000, max = 10000, step = 100, defaultValue = 2000)
-    int MAX_REASONABLE_HOTPIXELS;
+    int MAX_REASONABLE_HOTPIXELS = 2000;
 
     @Tunable(title = "Enable hotPixel correction", category = "Merge", min = 0, max = 1, step = 1, defaultValue = 0)
     boolean enableHotPixelCorrection;
@@ -293,13 +293,13 @@ public class ESD4D extends GLOneScript {
     /** Dense optical-flow alignment (FlowNet); non-null when useNcnnFlow ran. */
     FlowNetAlignment flowNetAlignment;
     @Tunable(title = "HotPixels detect threshold", category = "Merge", description = "Higher multiplier detects less hotpixels", min = 0.5f, max = 5.0f, step = 0.1f, defaultValue = 1.5f)
-    double detectThr;
+    double detectThr = 1.5;
 
     @Tunable(title = "Enable Adaptive Noise Model", category = "Merge", description = "Creates noise multiplier based on stdev", min = 0, max = 1, step = 1, defaultValue = 1)
-    boolean enableAdaptiveNoise;
+    boolean enableAdaptiveNoise = true;
 
     @Tunable(title = "Enable Alignment", category = "Merge", description = "Disable to test merging motion filtering without alignment", min = 0, max = 1, step = 1, defaultValue = 1)
-    boolean enableAlignment;
+    boolean enableAlignment = true;
 
     @Tunable(title = "FlowNet optical flow alignment", category = "Merge", description = "Align burst frames with the FlowNet dense optical flow model (ncnn) instead of the block pyramid", min = 0, max = 1, step = 1, defaultValue = 0)
     boolean useNcnnFlow;
@@ -311,37 +311,37 @@ public class ESD4D extends GLOneScript {
     //float flowRefineMaxDisp;
 
     @Tunable(title = "Enable Adaptive Noise Storage", category = "Merge", description = "Persist fitted noise model into the dynamic multisample store", min = 0, max = 1, step = 1, defaultValue = 1)
-    boolean enableNoiseStore;
+    boolean enableNoiseStore = true;
 
     @Tunable(title = "Network merge noise multiplier", category = "Merge", description = "Scales the noise model fed to the kernel network", min = 0.1f, max = 20.0f, step = 0.05f, defaultValue = 1.0f)
-    float noiseMpy;
+    float noiseMpy = 1.0f;
 
     @Tunable(title = "Noise blend max frames", category = "Merge", description = "Frames combined into the deliberately misaligned progressive Gaussian blend used for noise estimation (blurs scene detail while noise only drops by a known factor)", min = 1, max = 9, step = 1, defaultValue = 9)
-    int noiseBlendMaxFrames;
+    int noiseBlendMaxFrames = 9;
 
     @Tunable(title = "Noise blend calibration", category = "Merge", description = "Trim multiplier on the Monte-Carlo noise blend calibration table (1.0 = table value)", min = 0.5f, max = 2.0f, step = 0.05f, defaultValue = 1.0f)
-    float noiseBlendCalMpy;
+    float noiseBlendCalMpy = 1.0f;
 
     @Tunable(title = "Noise scan subsample", category = "Merge", description = "Stride between texels evaluated by the noise histogram; the cheap difference operator supports a dense stride (was fixed 3 in the median-chain era)", min = 1, max = 8, step = 1, defaultValue = 3)
-    int noiseScanSubsample;
+    int noiseScanSubsample = 3;
 
     @Tunable(title = "Noise fit variance bins", category = "Merge", description = "Per-brightness-row cutoff on occupied variance bins kept by the noise fit pass 1 (lower rejects texture harder but undershoots on texture-free scenes; was fixed 45)", min = 8, max = 45, step = 1, defaultValue = 45)
-    int noiseFitVarBins;
+    int noiseFitVarBins = 45;
 
     @Tunable(title = "Noise fit gate", category = "Merge", description = "Adaptive per-brightness gate: pass 2 keeps only histogram bins whose implied variance is within this multiple of the pass-1 fitted noise (the per-brightness lower part; rejects texture and saturated bins). 0 disables", min = 0.0f, max = 5.0f, step = 0.25f, defaultValue = 2.0f)
-    float noiseFitGateMpy;
+    float noiseFitGateMpy = 2.0f;
 
     @Tunable(title = "Read noise floor multiplier", category = "Merge", description = "Multiplier on the analytic OPlace read-noise floor applied to fitted O; the legacy 3.0 compensated texture leakage that the noise blend now removes", min = 0.5f, max = 4.0f, step = 0.25f, defaultValue = 1.0f)
-    float noiseOFloorMpy;
+    float noiseOFloorMpy = 1.0f;
 
     @Tunable(title = "Fit O correction", category = "Merge", description = "Legacy fitO += 3/8*fitS^2 correction that compensated the under-rescaled fit; keep off with the calibrated blend", min = 0, max = 1, step = 1, defaultValue = 0)
     boolean enableFitOCorrection;
 
     @Tunable(title = "Adaptive fallback min", category = "Merge", description = "Lower clamp of the fallback adaptive multiplier (was 1.0, up-only)", min = 0.25f, max = 2.0f, step = 0.25f, defaultValue = 0.5f)
-    float adaptiveFallbackMin;
+    float adaptiveFallbackMin = 0.5f;
 
     @Tunable(title = "Adaptive fallback max", category = "Merge", description = "Upper clamp of the fallback adaptive multiplier (was 4.0)", min = 1.0f, max = 4.0f, step = 0.25f, defaultValue = 2.0f)
-    float adaptiveFallbackMax;
+    float adaptiveFallbackMax = 2.0f;
 
     /** Progressive noise-blend grid, must match BLEND_GRID in
      * tools/noise-blend-calibration/mc.py: center first, then edges, then
@@ -634,6 +634,10 @@ public class ESD4D extends GLOneScript {
             int[][] noiseRes = noiseHist.Compute(noiseInput);
             if (noiseInput != baseAlter) noiseInput.close();
             noiseHist.close();
+            // Bracketed on purpose: everything from here to the merge loop was
+            // one silent stretch, and a stage that says nothing cannot be told
+            // from one that hangs.
+            Log.d("DynamicNoise", "histogram read back, fitting " + noiseScanBins + " bins");
             int[] hist = noiseRes[0];
             // Weighted linear regression: variance = NoiseS * brightness + NoiseO,
             // run in two passes. Pass 1 fits all bins kept by the per-row
@@ -878,6 +882,9 @@ public class ESD4D extends GLOneScript {
         float maxBlack = Math.max(blackLevel[0], Math.max(blackLevel[1], Math.max(blackLevel[2], blackLevel[3])));
         float minLevel = (float) (1.0/(double)(parameters.whiteLevel-maxBlack));
 
+        Log.d("ESD4D", "merge loop: " + images.size() + " frames, minExpIdx=" + minExpIdx
+                + " whiteLevel=" + parameters.whiteLevel + " maxBlack=" + maxBlack
+                + " minLevel=" + minLevel + " tile=" + tile);
         for (int f = 0; f < images.size(); f++) {
             startT();
             if(f == minExpIdx) continue;

@@ -20,7 +20,7 @@ import com.particlesdevs.photoncamera.util.Log;
  */
 public class LinearExposure extends Node {
     @Tunable(title = "Histogram size", category = "Sky Exposure", defaultValue = 1024, min = 256, max = 16384, step = 16, description = "Histogram bin count")
-    int histSize;
+    int histSize = 1024;
 
     @Tunable(title = "Midtone Anchor", category = "Sky Exposure", min = 0.005f, max = 0.200f, defaultValue = 0.050f, step = 0.005f, description = "Linear luminance target for the 50th percentile")
     float midAnchor = 0.050f;

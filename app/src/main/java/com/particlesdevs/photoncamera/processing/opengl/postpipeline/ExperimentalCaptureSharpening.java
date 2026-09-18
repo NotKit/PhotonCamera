@@ -12,13 +12,13 @@ public class ExperimentalCaptureSharpening extends Node {
     private static final int MAX_ITERATIONS = 10;
 
     @Tunable(title = "Radius", description = "Gaussian PSF sigma (px)", category = "Capture Sharpening", min = 0.1f, max = 2.0f, defaultValue = 0.75f, step = 0.05f)
-    public float radius;
+    public float radius = 0.75f;
     @Tunable(title = "Corner Boost", description = "Additive radius increase at the corners", category = "Capture Sharpening", min = 0.0f, max = 2.0f, defaultValue = 0.0f, step = 0.05f)
     public float cornerBoost;
     @Tunable(title = "Contrast Threshold", description = "RT blend-mask threshold", category = "Capture Sharpening", min = 0.0f, max = 100.0f, defaultValue = 10.0f, step = 0.5f)
-    public float contrastThreshold;
+    public float contrastThreshold = 10.0f;
     @Tunable(title = "Iterations", description = "Number of RL iterations; zero is passthrough", category = "Capture Sharpening", min = 0.0f, max = 10.0f, defaultValue = 10.0f, step = 1.0f)
-    public int iterations;
+    public int iterations = 10;
     @Tunable(title = "Debug Mask", description = "Show the sharpening mask", category = "Capture Sharpening", min = 0.0f, max = 1.0f, defaultValue = 0.0f, step = 1.0f)
     public int debugResponse;
     public float epsilon = 1e-4f;
