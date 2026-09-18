@@ -271,6 +271,41 @@ revision — `0.97.1` today. Bump `CLICK_REV` in `build.sh` when the packaging
 changes but the app does not: OpenStore refuses an upload whose version it has
 already seen.
 
+## CI
+
+`.github/workflows/kn-click.yml` runs the self-contained build on every push to
+`kn` that touches `kn/**`, `ui-compose/**`, the assets or `clickable.yaml`, and
+on `workflow_dispatch`. An ordinary x86_64 runner: this is the amd64 cross
+container, and `kn/` is a standalone Gradle build with no Android modules, so
+the workflow deletes the runner's Android SDK rather than configuring it.
+
+Two things are cached, and both are keyed by the file that decides their
+contents rather than by a date:
+
+* `kn/deps/{aurora-maven,sysroot-arm64}`, keyed by `scripts/fetch-deps.sh` —
+  922 MB over git-lfs from hub.mos.ru and 141 MB of debs from ports.ubuntu.com,
+  the slowest and least reliable part of a run. `kn/deps/atl-touch` is
+  deliberately *not* cached: it is a moving master and `kn/gen-atlas` is
+  generated from whatever it is that day.
+* `kn/out/click/.clickable/home`, keyed by `build.gradle.kts`,
+  `gradle.properties` and the wrapper properties. clickable points `HOME` at
+  `${BUILD_DIR}/.clickable/home`, so the container's `~/.konan` and `~/.gradle`
+  land inside the workspace; konan's bundle and its LLVM are most of that.
+
+A `checks` job parses every script, the YAML and the substituted manifest, and
+checks the hook against the `.desktop` basename, before the hour-long build
+starts — the packaging mistakes that are otherwise found at the end of it.
+
+`clickable review` runs but **cannot fail the build**: `picture_files` is a
+standing NEEDS REVIEW finding (below), so a blocking review would mean a
+permanently red workflow. Its output is in the run summary, and reading it after
+a packaging change is the point.
+
+A push to `kn` publishes the click as a GitHub prerelease tagged
+`kn-v<version>-<sha>`, because an Actions artifact needs a login to download and
+a tester does not have one. Nothing is uploaded to the OpenStore: the last
+section of this file is what a human has to settle first.
+
 ## What is unresolved
 
 **`clickable build --arch arm64` has now been run both ways and both produce a
