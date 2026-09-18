@@ -286,6 +286,10 @@ struct atl_camera {
 	/* the session is being torn down: no listener may take another image, and
 	 * the ones still running have to be waited for (see session_destroy) */
 	bool closing;
+	/* and this one never goes back off: the camera itself is being closed, so
+	 * a callback arriving after ACameraDevice_close has nothing left to run
+	 * against */
+	bool gone;
 	int callbacks_running;
 	GCond idle;
 
@@ -1385,16 +1389,24 @@ static bool image_to_nv21(struct atl_camera *camera, AImage *image, int *out_wid
 }
 
 /*
- * An AImageReader listener is running. Its images belong to a reader the app
- * thread may be about to delete, and the NDK does not wait for us, so every
- * callback announces itself and session_destroy waits for the ones in flight.
+ * A callback from the camera is running. Its images belong to a reader, and its
+ * metadata to a vendor tag cache, that the app thread may be about to delete,
+ * and the NDK does not wait for us: so every callback announces itself and the
+ * teardown waits for the ones in flight.
+ *
+ * EVERY callback, not only the image listeners. A capture RESULT arriving after
+ * ACameraDevice_close ran md_from_acamera on it, which asks
+ * get_local_camera_metadata_tag_type_vendor_id for each vendor tag -- and that
+ * reads the process-wide VendorTagDescriptorCache, which the closing camera
+ * client has just torn down. The crash is a SIGSEGV inside
+ * VendorTagDescriptorCache::getTagType with no Kotlin frame anywhere in it.
  */
 static bool listener_enter(struct atl_camera *camera)
 {
 	bool run;
 
 	g_mutex_lock(&camera->lock);
-	run = !camera->closing;
+	run = !camera->closing && !camera->gone;
 	if (run)
 		camera->callbacks_running++;
 	g_mutex_unlock(&camera->lock);
@@ -2429,7 +2441,10 @@ static void on_stream_started(void *context, ACameraCaptureSession *session,
                               const ACaptureRequest *request, int64_t timestamp)
 {
 	(void)session;
+	if (!listener_enter(context))
+		return;
 	stream_started(context, request, timestamp, -1);
+	listener_leave(context);
 }
 
 static void on_stream_started_v2(void *context, ACameraCaptureSession *session,
@@ -2437,7 +2452,10 @@ static void on_stream_started_v2(void *context, ACameraCaptureSession *session,
                                  int64_t frame_number)
 {
 	(void)session;
+	if (!listener_enter(context))
+		return;
 	stream_started(context, request, timestamp, frame_number);
+	listener_leave(context);
 }
 
 static bool reprocess_available(void)
@@ -2560,15 +2578,22 @@ static void on_stream_completed(void *context, ACameraCaptureSession *session,
                                 ACaptureRequest *request, const ACameraMetadata *result)
 {
 	struct atl_camera *camera = context;
-	struct atl_camera_metadata *md = md_from_acamera(result, NULL);
+	struct atl_camera_metadata *md;
 	const struct atl_camera_metadata_entry *entry;
 	int64_t timestamp = 0, frame_number;
 	int request_id;
 	bool reprocess;
 
 	(void)session;
-	if (!md)
+	/* before md_from_acamera, which is the call that reads the vendor tag
+	 * cache the close is tearing down */
+	if (!listener_enter(camera))
 		return;
+	md = md_from_acamera(result, NULL);
+	if (!md) {
+		listener_leave(camera);
+		return;
+	}
 	entry = atl_camera_metadata_find(md, ACAMERA_SENSOR_TIMESTAMP);
 	if (entry && entry->type == ATL_CAMERA2_TYPE_INT64 && entry->count >= 1)
 		timestamp = ((const int64_t *)entry->data)[0];
@@ -2586,6 +2611,7 @@ static void on_stream_completed(void *context, ACameraCaptureSession *session,
 		result_keep_locked(camera, timestamp, result);
 	g_mutex_unlock(&camera->lock);
 	camera->s_callbacks.result(camera->s_user, request_id, frame_number, md);
+	listener_leave(camera);
 }
 
 static void on_stream_failed(void *context, ACameraCaptureSession *session,
@@ -2596,9 +2622,12 @@ static void on_stream_failed(void *context, ACameraCaptureSession *session,
 	int64_t frame_number = failure ? failure->frameNumber : -1;
 
 	(void)session;
+	if (!listener_enter(camera))
+		return;
 	fprintf(stderr, "Camera camera2ndk: capture of frame %" G_GINT64_FORMAT " (request %d) "
 	                "failed, reason %d\n", frame_number, request_id, failure ? failure->reason : -1);
 	camera->s_callbacks.failed(camera->s_user, request_id, frame_number);
+	listener_leave(camera);
 }
 
 /* the HAL will not fill one stream's buffer of this frame; the app hears
@@ -2612,6 +2641,9 @@ static void on_stream_buffer_lost(void *context, ACameraCaptureSession *session,
 	int index = -1;
 
 	(void)session;
+	/* camera->streams[] below is the session's, and the teardown frees it */
+	if (!listener_enter(camera))
+		return;
 	for (int i = 0; i < camera->n_streams; i++)
 		if (camera->streams[i]->window == window)
 			index = i;
@@ -2628,6 +2660,7 @@ static void on_stream_buffer_lost(void *context, ACameraCaptureSession *session,
 		        camera->streams[index]->unacquired);
 	if (camera->s_callbacks.buffer_lost)
 		camera->s_callbacks.buffer_lost(camera->s_user, request_id, frame_number, index);
+	listener_leave(camera);
 }
 
 /* the session's listeners off and waited for, then everything freed that no
@@ -3274,6 +3307,15 @@ static void camera2ndk_close(struct atl_camera *camera)
 {
 	if (!camera)
 		return;
+
+	/* FIRST, and it never goes back off: from here a late callback has to be
+	 * refused, not waited for, because everything it would touch is about to
+	 * be freed -- and the vendor tag cache it reads is not even ours. */
+	g_mutex_lock(&camera->lock);
+	camera->gone = true;
+	while (camera->callbacks_running)
+		g_cond_wait(&camera->idle, &camera->lock);
+	g_mutex_unlock(&camera->lock);
 
 	session_destroy(camera);
 	stream_session_destroy(camera);

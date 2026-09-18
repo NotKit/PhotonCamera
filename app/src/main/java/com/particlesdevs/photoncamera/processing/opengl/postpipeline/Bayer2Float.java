@@ -78,10 +78,19 @@ public class Bayer2Float extends Node {
             try {
                 // Input is already normalized fp16: level 0, whitelevel 1 put
                 // the clip thresholds into the same normalized domain.
-                hlChroma = OpposedGL.compute(glProg, inTex, rawSize, basePipeline.mParameters.cfaPattern,
+                // Declared and null-tested here, rather than assigned straight
+                // to hlChroma: j2k asserts !! on that assignment, and compute()
+                // returns null for the ordinary "nothing clipped in this frame"
+                // case, which then read in the log as an NPE and a dead node.
+                float[] chroma = OpposedGL.compute(glProg, inTex, rawSize, basePipeline.mParameters.cfaPattern,
                         basePipeline.mSettings.alignAlgorithm == 2,
-                        1.0f, new float[]{0.f, 0.f, 0.f, 0.f},
+                        1.0f, new float[]{0.0f, 0.0f, 0.0f, 0.0f},
                         basePipeline.mParameters.whitePoint, OpposedGL.CLIP_MAGIC * hlClip);
+                if (chroma == null) {
+                    Log.d(Name, "InpaintOpposed: nothing clipped, no reconstruction");
+                } else {
+                    hlChroma = chroma;
+                }
             } catch (Exception e) {
                 Log.d(Name, "InpaintOpposed failed, disabling:" + Log.getStackTraceString(e));
                 hlChroma = null;
