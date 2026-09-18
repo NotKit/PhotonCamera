@@ -12,10 +12,15 @@ import kotlinx.cinterop.get
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.toCPointer
+import kotlinx.cinterop.toKString
 import kotlinx.cinterop.toLong
 import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.value
 import photoncam.gles.EGLConfigVar
+
+/** The window's EGLDisplay, at file scope because `EGL14` and `EGL14.Companion`
+ *  are two instances of [EGL14Api] and both have to answer the same one. */
+private var sharedHostDisplay: COpaquePointer? = null
 
 /** android.opengl's EGL handles: a wrapper round one EGL pointer, as on Android. */
 abstract class EGLObjectHandle internal constructor(internal val handle: COpaquePointer?) {
@@ -38,6 +43,9 @@ open class EGL14Api {
     val EGL_BIND_TO_TEXTURE_RGBA: Int = 0x303A
     val EGL_BLUE_SIZE: Int = 0x3022
     val EGL_CONFIG_CAVEAT: Int = 0x3027
+    val EGL_VENDOR: Int = 0x3053
+    val EGL_VERSION: Int = 0x3054
+    val EGL_EXTENSIONS: Int = 0x3055
     val EGL_CONFIG_ID: Int = 0x3028
     val EGL_CONTEXT_CLIENT_VERSION: Int = 0x3098
     val EGL_DEPTH_SIZE: Int = 0x3025
@@ -76,8 +84,82 @@ open class EGL14Api {
     val EGL_NO_CONTEXT: EGLContext = EGLContext(null)
     val EGL_NO_SURFACE: EGLSurface = EGLSurface(null)
 
+    /** EGL_PLATFORM_SURFACELESS_MESA, spelled out: a plain int, so using it
+     * links nothing. An EGL that does not know the platform answers
+     * EGL_NO_DISPLAY, which the probe below treats as "no fallback". */
+    private val platformSurfacelessMesa: UInt = 0x31DDu
+
+    /**
+     * Whether eglGetDisplay(EGL_DEFAULT_DISPLAY) may fall back to the
+     * surfaceless platform. False unless the host opts in at startup: on the
+     * phone the answer has to come from hybris, never from a rasteriser the
+     * default display did not provide.
+     */
+    var allowSurfacelessFallback: Boolean = false
+
+    /**
+     * The window's own EGLDisplay, set by the host before the app starts.  It
+     * is the LAST resort before the surfaceless platform and the one the phone
+     * actually takes -- see [defaultDisplay].
+     */
+    var hostDisplay: COpaquePointer?
+        get() = sharedHostDisplay
+        set(value) { sharedHostDisplay = value }
+
     fun eglGetDisplay(displayId: Int): EGLDisplay =
-        EGLDisplay(photoncam.gles.eglGetDisplay(displayId.toLong().toCPointer<CPointed>()))
+        EGLDisplay(
+            if (displayId == EGL_DEFAULT_DISPLAY) defaultDisplay()
+            else photoncam.gles.eglGetDisplay(displayId.toLong().toCPointer<CPointed>())
+        )
+
+    /**
+     * Android's default display, and what to use when this process cannot have
+     * one.  In order:
+     *
+     *  1. EGL_DEFAULT_DISPLAY itself, when it initialises and does pbuffers.
+     *     That is the Android path, byte for byte, and a phone answers it --
+     *     but only in a process that has no other display open.
+     *  2. THE WINDOW'S display.  With the compositor's display live, hybris
+     *     refuses to initialise a second one: eglInitialize returns false and
+     *     every later call answers EGL_NOT_INITIALIZED (0x3001), which reads
+     *     as "config count zero" three frames further on.  Android has exactly
+     *     one EGLDisplay per process and here so do we.
+     *  3. The surfaceless platform -- desktop Mesa only, and gated, so no
+     *     software rasteriser can ever stand in for the Adreno.
+     */
+    private fun defaultDisplay(): COpaquePointer? {
+        val raw = photoncam.gles.eglGetDisplay(EGL_DEFAULT_DISPLAY.toLong().toCPointer<CPointed>())
+        if (raw != null && pbufferConfigs(raw, terminate = true) > 0) return raw
+        val host = sharedHostDisplay
+        // NOT terminated: the window is drawing on it.
+        if (host != null && pbufferConfigs(host, terminate = false) > 0) return host
+        if (allowSurfacelessFallback) return surfacelessDisplay() ?: raw
+        return raw
+    }
+
+    /** Count-only pbuffer config query. -1 unless the display inits and answers.
+     *  A display the window owns must not be terminated by the probe. */
+    private fun pbufferConfigs(dpy: COpaquePointer?, terminate: Boolean): Int = memScoped {
+        val major = alloc<IntVar>()
+        val minor = alloc<IntVar>()
+        if (photoncam.gles.eglInitialize(dpy, major.ptr, minor.ptr).toInt() == 0) return -1
+        val probe = intArrayOf(EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
+            EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT, EGL_NONE)
+        val n = IntArray(1)
+        val ok = eglChooseConfig(EGLDisplay(dpy), probe, 0, emptyArray(), 0, 0, n, 0)
+        val count = if (ok) n[0] else -1
+        if (terminate) photoncam.gles.eglTerminate(dpy)
+        count
+    }
+
+    private fun surfacelessDisplay(): COpaquePointer? {
+        // EGL 1.5 core: present in every -lEGL this port links, and an
+        // unknown platform answers EGL_NO_DISPLAY rather than failing.
+        val dpy: COpaquePointer? =
+            photoncam.gles.eglGetPlatformDisplay(platformSurfacelessMesa, null, null)
+        if (dpy == null) return null
+        return if (pbufferConfigs(dpy, terminate = true) > 0) dpy else null
+    }
 
     fun eglInitialize(dpy: EGLDisplay?, major: IntArray, majorOffset: Int,
                       minor: IntArray, minorOffset: Int): Boolean = memScoped {
@@ -89,9 +171,19 @@ open class EGL14Api {
         ok.toInt() != 0
     }
 
-    fun eglTerminate(dpy: EGLDisplay?): Boolean = photoncam.gles.eglTerminate(dpy?.handle).toInt() != 0
+    /** The window's display is never terminated here: GLContext.close() ends
+     *  every processing context with an eglTerminate, and on the phone that is
+     *  the display the compositor's surface is drawn on. */
+    fun eglTerminate(dpy: EGLDisplay?): Boolean =
+        if (dpy?.handle != null && dpy.handle == sharedHostDisplay) true
+        else photoncam.gles.eglTerminate(dpy?.handle).toInt() != 0
 
     fun eglGetError(): Int = photoncam.gles.eglGetError()
+
+    /** EGL14's own; the names a failing display answers are the whole
+     *  diagnosis when eglChooseConfig comes back with nothing. */
+    fun eglQueryString(dpy: EGLDisplay?, name: Int): String? =
+        photoncam.gles.eglQueryString(dpy?.handle, name)?.toKString()
 
     /**
      * Android's form: the caller's EGLConfig[] is filled in, and num_config[0]
