@@ -342,37 +342,73 @@ private fun SurfaceTexture.Frame.toSkiaImage(): Image? {
 
 	val out = ByteArray(w * h * 4)
 	var o = 0
+	// The last index each plane is asked for on a row is a property of the
+	// strides, so it is tested ONCE per row and the inner loop then runs
+	// unchecked.  Per pixel it was three bounds tests and a branch for every
+	// one of a million pixels, and that is most of what the conversion cost.
+	val yRowLast = (w - 1) * step * yPixel
+	val cRowLast = (((w - 1) * step) shr 1)
 	for (row in 0 until h) {
 		val srcRow = row * step
 		val yBase = srcRow * yStride
 		val cBase = (srcRow shr 1)
 		val uBase = cBase * uStride
 		val vBase = cBase * vStride
-		for (col in 0 until w) {
-			val srcCol = col * step
-			val yi = yBase + srcCol * yPixel
-			val yv = if (yi < y.size) (y[yi].toInt() and 0xFF) else 0
-			var r = yv
-			var g = yv
-			var b = yv
-			if (u != null && v != null) {
-				val ui = uBase + (srcCol shr 1) * uPixel
-				val vi = vBase + (srcCol shr 1) * vPixel
-				if (ui < u.size && vi < v.size) {
-					// BT.601 full range, in fixed point: the HAL's YUV_420_888
-					// is JFIF-ranged, not video-ranged.
-					val cb = (u[ui].toInt() and 0xFF) - 128
-					val cr = (v[vi].toInt() and 0xFF) - 128
-					r = yv + ((91881 * cr) shr 16)
-					g = yv - ((22554 * cb + 46802 * cr) shr 16)
-					b = yv + ((116130 * cb) shr 16)
-				}
+		val yOk = yBase + yRowLast < y.size
+		val cOk = u != null && v != null &&
+			uBase + cRowLast * uPixel < u.size && vBase + cRowLast * vPixel < v.size
+		if (yOk && cOk) {
+			// the whole row is there, in both planes: the hot path
+			val uu = u!!
+			val vv = v!!
+			var yi = yBase
+			var ui = uBase
+			var vi = vBase
+			val yAdd = step * yPixel
+			// step >= 1, so a chroma sample is shared by every 2/step output
+			// pixels; at step 2 (a 2304-wide preview) that is one each.
+			var col = 0
+			while (col < w) {
+				val yv = y[yi].toInt() and 0xFF
+				val cb = (uu[ui].toInt() and 0xFF) - 128
+				val cr = (vv[vi].toInt() and 0xFF) - 128
+				// BT.601 full range, in fixed point: the HAL's YUV_420_888
+				// is JFIF-ranged, not video-ranged.
+				out[o] = clamp(yv + ((91881 * cr) shr 16))
+				out[o + 1] = clamp(yv - ((22554 * cb + 46802 * cr) shr 16))
+				out[o + 2] = clamp(yv + ((116130 * cb) shr 16))
+				out[o + 3] = 0xFF.toByte()
+				o += 4
+				col++
+				yi += yAdd
+				ui = uBase + (((col * step) shr 1) * uPixel)
+				vi = vBase + (((col * step) shr 1) * vPixel)
 			}
-			out[o] = clamp(r)
-			out[o + 1] = clamp(g)
-			out[o + 2] = clamp(b)
-			out[o + 3] = 0xFF.toByte()
-			o += 4
+		} else {
+			for (col in 0 until w) {
+				val srcCol = col * step
+				val yi = yBase + srcCol * yPixel
+				val yv = if (yi < y.size) (y[yi].toInt() and 0xFF) else 0
+				var r = yv
+				var g = yv
+				var b = yv
+				if (u != null && v != null) {
+					val ui = uBase + (srcCol shr 1) * uPixel
+					val vi = vBase + (srcCol shr 1) * vPixel
+					if (ui < u.size && vi < v.size) {
+						val cb = (u[ui].toInt() and 0xFF) - 128
+						val cr = (v[vi].toInt() and 0xFF) - 128
+						r = yv + ((91881 * cr) shr 16)
+						g = yv - ((22554 * cb + 46802 * cr) shr 16)
+						b = yv + ((116130 * cb) shr 16)
+					}
+				}
+				out[o] = clamp(r)
+				out[o + 1] = clamp(g)
+				out[o + 2] = clamp(b)
+				out[o + 3] = 0xFF.toByte()
+				o += 4
+			}
 		}
 	}
 	return Image.makeRaster(ImageInfo(w, h, ColorType.RGBA_8888, ColorAlphaType.OPAQUE), out, w * 4)
