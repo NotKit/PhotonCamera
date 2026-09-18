@@ -43,6 +43,7 @@ import com.particlesdevs.photoncamera.control.TouchFocus
 import com.particlesdevs.photoncamera.composeui.camera.CameraScreen
 import com.particlesdevs.photoncamera.composeui.theme.PhotonTheme
 import com.particlesdevs.photoncamera.settings.PreferenceKeys
+import com.particlesdevs.photoncamera.util.FileManager
 import com.particlesdevs.photoncamera.ui.camera.compose.CameraScreenHost
 import java.util.concurrent.Executors
 import photoncam.host.HostMainLoop
@@ -72,11 +73,12 @@ private val application: PhotonCamera by lazy {
 }
 
 /**
- * CameraActivity.onCreate's three lines, which nothing else on this port runs.
+ * CameraActivity.onCreate's four lines, which nothing else on this port runs.
  *
  *     PreferenceManager.setDefaultValues(this, R.xml.preferences, ...)
  *     PreferenceKeys.setDefaults(this)
  *     PhotonCamera.getSettings().loadCache()
+ *     FileManager.CreateFolders()
  *
  * The first is the one that matters and the one that cannot work as written:
  * it walks `res/xml/preferences.xml` for every `android:defaultValue`, and the
@@ -96,6 +98,10 @@ private fun registerPreferenceDefaults(app: PhotonCamera) {
 	// must win where both name the same key.
 	PreferenceKeys.setDefaults(app)
 	PhotonCamera.getSettings()?.loadCache()
+	// DCIM/Camera, DCIM/PhotonCamera/{Raw,Tuning}.  Also CameraActivity's, and
+	// without it the pipeline runs to the very end and then cannot write: the
+	// whole burst is lost to a FileNotFoundException on the last line.
+	FileManager.CreateFolders()
 	println("[pc] preference defaults: ${R_PREFERENCE_DEFAULTS.size} from res/xml," +
 		" af=${PreferenceKeys.getAfMode()} ae=${PreferenceKeys.getAeMode()}")
 }
