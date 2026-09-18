@@ -1,6 +1,9 @@
 package photoncam
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.InternalComposeUiApi
@@ -12,6 +15,8 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.platform.ComposeUiMainDispatcher
+import androidx.compose.ui.platform.PlatformContext
+import androidx.compose.ui.platform.WindowInfo
 import androidx.compose.ui.scene.CanvasLayersComposeScene
 import androidx.compose.ui.scene.ComposeScene
 import androidx.compose.ui.scene.ComposeScenePointer
@@ -95,6 +100,15 @@ import platform.posix.timespec
 class MgwlComposeHost private constructor(private val handle: CPointer<cnames.structs.mgwl>, private val es: Int) {
 
 	private lateinit var scene: ComposeScene
+
+	/** The scene's platform, which on this host is one fact: how big the window
+	 *  is.  Everything else is PlatformContext.Empty's. */
+	private val windowInfo = HostWindowInfo()
+
+	@OptIn(InternalComposeUiApi::class)
+	private val hostPlatformContext = object : PlatformContext by PlatformContext.Empty {
+		override val windowInfo: WindowInfo get() = this@MgwlComposeHost.windowInfo
+	}
 	private var directContext: DirectContext? = null
 	private var renderTarget: BackendRenderTarget? = null
 	private var skiaSurface: Surface? = null
@@ -181,6 +195,15 @@ class MgwlComposeHost private constructor(private val handle: CPointer<cnames.st
 		// buffer off the display and the shim's Resources cannot answer.
 		photoncam.host.HostWindow.set(bufWidth(), bufHeight(), density)
 
+		// WITHOUT windowInfo EVERY POPUP LANDS AT THE WINDOW'S TOP-LEFT CORNER.
+		// A PopupPositionProvider is handed the window's SIZE and asked where the
+		// menu fits; the scene takes a `size` but leaves PlatformContext.Empty's
+		// WindowInfo alone, so containerSize is 0x0, nothing fits anywhere, and
+		// the fallback is the origin.  The anchor was right all along --
+		// `[dbg] anchor pos=Offset(0.0, 872.0) container=0 x 0`.  Providing
+		// LocalWindowInfo around the content is NOT enough: Popup reads the
+		// platform context's, not the composition local's.
+		windowInfo.containerSize = IntSize(bufWidth(), bufHeight())
 		// ComposeUiMainDispatcher is Compose's own; it is public and, unlike
 		// Aurora's window layer, has no ak-window in it.
 		scene = CanvasLayersComposeScene(
@@ -188,6 +211,7 @@ class MgwlComposeHost private constructor(private val handle: CPointer<cnames.st
 			layoutDirection = LayoutDirection.Ltr,
 			size = IntSize(bufWidth(), bufHeight()),
 			coroutineContext = ComposeUiMainDispatcher,
+			platformContext = hostPlatformContext,
 			invalidate = { needsRender = true },
 		)
 		ComposeUiMainDispatcher.setInvalidator { needsRender = true }
@@ -328,6 +352,7 @@ class MgwlComposeHost private constructor(private val handle: CPointer<cnames.st
 			ctx, rt, SurfaceOrigin.BOTTOM_LEFT, SurfaceColorFormat.RGBA_8888, ColorSpace.sRGB,
 		) ?: error("Surface.makeFromBackendRenderTarget returned null (${w}x$h)")
 		scene.size = IntSize(w, h)
+		windowInfo.containerSize = IntSize(w, h)
 		needsRender = true
 	}
 
@@ -432,4 +457,11 @@ class MgwlComposeHost private constructor(private val handle: CPointer<cnames.st
 			return if (gu != null && gu > 0f) gu / 8f else 2f
 		}
 	}
+}
+
+/** The window's own size, for whoever has to decide where a menu fits. */
+@OptIn(InternalComposeUiApi::class)
+private class HostWindowInfo : WindowInfo {
+	override val isWindowFocused: Boolean get() = true
+	override var containerSize: IntSize by mutableStateOf(IntSize.Zero)
 }
