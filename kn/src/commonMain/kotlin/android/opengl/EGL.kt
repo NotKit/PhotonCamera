@@ -116,23 +116,32 @@ open class EGL14Api {
      * Android's default display, and what to use when this process cannot have
      * one.  In order:
      *
-     *  1. EGL_DEFAULT_DISPLAY itself, when it initialises and does pbuffers.
-     *     That is the Android path, byte for byte, and a phone answers it --
-     *     but only in a process that has no other display open.
-     *  2. THE WINDOW'S display.  With the compositor's display live, hybris
-     *     refuses to initialise a second one: eglInitialize returns false and
-     *     every later call answers EGL_NOT_INITIALIZED (0x3001), which reads
-     *     as "config count zero" three frames further on.  Android has exactly
-     *     one EGLDisplay per process and here so do we.
+     *  1. THE WINDOW'S display, whenever the host set one.  It is the display
+     *     the frames are drawn on, so the pipeline runs on the same GPU the
+     *     viewfinder does, and hybris allows exactly one EGLDisplay per
+     *     process anyway: with the compositor's display live, initialising a
+     *     second one returns false and every later call answers
+     *     EGL_NOT_INITIALIZED (0x3001), which reads as "config count zero"
+     *     three frames further on.
+     *
+     *     IT MUST COME FIRST BECAUSE EGL_DEFAULT_DISPLAY IS NOT ALWAYS THE
+     *     PHONE'S.  glvnd picks its vendor from the environment, and Lomiri
+     *     runs every click app with DISPLAY=:0 pointing at a live Xwayland --
+     *     so on the phone that call answers with Mesa, the probe below sees a
+     *     perfectly good swrast display, and the 12 MP merge runs on llvmpipe
+     *     and dies there (SIGILL) instead of on the Adreno.
+     *  2. EGL_DEFAULT_DISPLAY itself, when it initialises and does pbuffers.
+     *     That is the Android path, byte for byte, and a phone with no window
+     *     open yet answers it.
      *  3. The surfaceless platform -- desktop Mesa only, and gated, so no
      *     software rasteriser can ever stand in for the Adreno.
      */
     private fun defaultDisplay(): COpaquePointer? {
-        val raw = photoncam.gles.eglGetDisplay(EGL_DEFAULT_DISPLAY.toLong().toCPointer<CPointed>())
-        if (raw != null && pbufferConfigs(raw, terminate = true) > 0) return raw
         val host = sharedHostDisplay
         // NOT terminated: the window is drawing on it.
         if (host != null && pbufferConfigs(host, terminate = false) > 0) return host
+        val raw = photoncam.gles.eglGetDisplay(EGL_DEFAULT_DISPLAY.toLong().toCPointer<CPointed>())
+        if (raw != null && pbufferConfigs(raw, terminate = true) > 0) return raw
         if (allowSurfacelessFallback) return surfacelessDisplay() ?: raw
         return raw
     }

@@ -84,6 +84,15 @@ done
 # divided by 8.  Started any other way it is absent and the app lays out at
 # density 2, which is not what the phone shows.
 
+# DISPLAY IS LOMIRI'S TOO, AND IT IS A TRAP.  Every click app inherits
+# DISPLAY=:0, which is a live Xwayland, and glvnd picks its EGL vendor from the
+# environment: eglGetDisplay(EGL_DEFAULT_DISPLAY) then answers with Mesa
+# swrast instead of the Adreno, and the merge dies on llvmpipe with SIGILL
+# halfway through a capture.  This app is a Wayland client and has no use for
+# X; android/opengl/EGL.kt prefers the window's own display for the same
+# reason, and this keeps every other library out of the X11 path as well.
+unset DISPLAY
+
 # THE ARGUMENT IS A RUN LENGTH IN SECONDS and 0 means "until the window closes".
 # The bring-up default is 10, so an app launched without it would vanish ten
 # seconds in and look like a crash.
