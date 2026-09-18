@@ -6,6 +6,11 @@ j2k/*.tsv
 j2k/**/__pycache__/
 scripts/__pycache__/
 
+# The two out-of-tree inputs, cloned here by scripts/fetch-deps.sh: aurora-maven
+# is 922 MB of Aurora's klibs and sysroot-arm64 is an assembled Ubuntu sysroot.
+# Inputs, not sources -- and far too big for a git history.
+deps/
+
 # host lane: link-line artefacts, rebuilt by scripts/build-mgwl.sh and
 # scripts/fetch-arm64-extra.sh.  composeResources/ is NOT here -- it is
 # generated too, but a plain Gradle run has to find the drawables.

@@ -1,13 +1,29 @@
 #!/bin/bash
 # atl-touch's android.hardware.camera2 (and the small types around it) ->
-# kn/gen-atlas/.  Source of truth is ~/UT/atlas-camera2/src/api-impl, which is
-# never edited: a file that converts badly is either post-sed'd here or
-# replaced by hand under src/commonMain/kotlin and listed in SKIP below.
+# kn/gen-atlas/.  Source of truth is atl-touch's src/api-impl, which is never
+# edited: a file that converts badly is either post-sed'd here or replaced by
+# hand under src/commonMain/kotlin and listed in SKIP below.
 #
 #   kn/convert-atlas.sh
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
-ATLAS="${ATLAS:-$HOME/UT/atlas-camera2/src/api-impl}"
+# WHERE atl-touch is, in the order settings.gradle.kts resolves its own inputs:
+# an explicit answer, then what scripts/fetch-deps.sh clones, then this box's
+# worktree.  github.com/NotKit/atl-touch master carries this tree, so a clone
+# is enough -- nothing here needs a private checkout.
+resolve_atlas() {
+	local d
+	for d in "${ATLAS:-}" "${PC_ATL_TOUCH:+$PC_ATL_TOUCH/src/api-impl}" \
+		"$HERE/deps/atl-touch/src/api-impl" "$HOME/UT/atlas-camera2/src/api-impl"; do
+		[ -n "$d" ] && [ -d "$d" ] && { echo "$d"; return 0; }
+	done
+	return 0
+}
+ATLAS="$(resolve_atlas)"
+[ -n "$ATLAS" ] || {
+	echo "convert-atlas: no atl-touch checkout; scripts/fetch-deps.sh clones one" >&2
+	exit 1
+}
 PY="${PYTHON:-$HOME/UT/kn-toolchain/venv/bin/python}"
 STAGE="$HERE/out/atlas-src"
 
