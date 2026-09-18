@@ -36,7 +36,11 @@
 
 #if PHOTONCAM_CODEC_SYSTEM
 
-#include <jpeglib.h>
+/* NOT <jpeglib.h>.  The libjpeg this ends up calling is the one skiko's
+ * libjpeg.a carries, which keeps the 6b API; the system header is libjpeg8's
+ * and lays jpeg_compress_struct out differently.  third_party/libjpeg/jconfig.h
+ * says why at length.  libpng is Skia's too, but 1.6 either way. */
+#include "third_party/libjpeg/jpeglib.h"
 #include <png.h>
 #include <setjmp.h>
 
