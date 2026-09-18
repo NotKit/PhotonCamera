@@ -15,8 +15,25 @@ plugins {
 	id("org.jetbrains.compose") version "0.0.4-aurora"
 }
 
-val auroraMaven = "/home/nekit/UT/firefox-atl/compose-ut/aurora-probe/aurora-maven"
-val armSysroot = "/home/nekit/UT/firefox-atl/compose-ut/aurora-probe/sysroot-arm64"
+// THE TWO INPUTS THAT ARE NOT IN THIS REPOSITORY: Aurora's maven checkout (the
+// Compose klibs, and the aarch64 libmaliit-glib the link wants) and the arm64
+// sysroot.  settings.gradle.kts carries the whole reasoning for this order --
+// env var, then -P/gradle.properties, then the in-project checkout that
+// scripts/fetch-deps.sh makes, then this box's aurora-probe.  The two files
+// repeat the resolver instead of sharing it because a settings script and a
+// build script cannot hand a value to each other without plumbing more fragile
+// than eight duplicated lines; keep them in step.
+fun resolveDep(envVar: String, property: String, inProject: String, fallback: String): String {
+	System.getenv(envVar)?.takeIf { it.isNotBlank() }?.let { return it }
+	providers.gradleProperty(property).orNull?.takeIf { it.isNotBlank() }?.let { return it }
+	val local = file(inProject)
+	return if (local.isDirectory) local.absolutePath else fallback
+}
+
+val auroraMaven = resolveDep("PC_AURORA_MAVEN", "auroraMaven", "deps/aurora-maven",
+	"/home/nekit/UT/firefox-atl/compose-ut/aurora-probe/aurora-maven")
+val armSysroot = resolveDep("PC_ARM_SYSROOT", "armSysroot", "deps/sysroot-arm64",
+	"/home/nekit/UT/firefox-atl/compose-ut/aurora-probe/sysroot-arm64")
 
 // -PwithApp: also compile the converted app and the other lanes' shims.  Off by
 // default so this lane's build never fails on somebody else's half-written file.
@@ -180,7 +197,7 @@ kotlin {
 			) + commonLibs + appLinkerOpts("x64")
 		}
 	}
-	// THE PHONE.  Same shape, with aurora-probe's sysroot flags (its checkout is
+	// THE PHONE.  Same shape, with the arm64 sysroot's flags (that checkout is
 	// read, never written).  Two additions of our own: libmgwl-arm64.a from
 	// scripts/build-mgwl.sh, and armlibs-extra/ -- that sysroot carries no
 	// libxkbcommon, because Aurora's link line has none and mgwl's does.
