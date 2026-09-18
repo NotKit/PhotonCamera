@@ -66,12 +66,30 @@ class Bitmap private constructor(
 
     fun eraseColor(color: Int) = buf().fill(color)
 
-    /** The pixels as ARGB_8888 ints, in the buffer's current byte order. */
+    /** Android copies the bitmap's own memory, and an ARGB_8888 bitmap holds
+     *  R,G,B,A in that byte order -- NOT an int in the buffer's endianness.  A
+     *  `putInt` here would hand a big-endian reader R as the alpha, which is
+     *  what turned every saved JPEG's blue channel into a constant 255. */
     fun copyPixelsToBuffer(dst: java.nio.Buffer) {
         val p = buf()
         when (dst) {
             is java.nio.IntBuffer -> dst.put(p, 0, p.size)
-            is java.nio.ByteBuffer -> for (v in p) dst.putInt(v)
+            is java.nio.ByteBuffer -> {
+                val chunk = ByteArray(minOf(p.size, CHUNK_PIXELS) * 4)
+                var i = 0
+                while (i < p.size) {
+                    val n = minOf(CHUNK_PIXELS, p.size - i)
+                    for (k in 0 until n) {
+                        val v = p[i + k]
+                        chunk[k * 4] = (v ushr 16).toByte()
+                        chunk[k * 4 + 1] = (v ushr 8).toByte()
+                        chunk[k * 4 + 2] = v.toByte()
+                        chunk[k * 4 + 3] = (v ushr 24).toByte()
+                    }
+                    dst.put(chunk, 0, n * 4)
+                    i += n
+                }
+            }
             else -> throw IllegalArgumentException("unsupported buffer: " + dst)
         }
     }
@@ -80,7 +98,22 @@ class Bitmap private constructor(
         val p = buf()
         when (src) {
             is java.nio.IntBuffer -> src.get(p, 0, p.size)
-            is java.nio.ByteBuffer -> for (i in p.indices) p[i] = src.getInt()
+            is java.nio.ByteBuffer -> {
+                val chunk = ByteArray(minOf(p.size, CHUNK_PIXELS) * 4)
+                var i = 0
+                while (i < p.size) {
+                    val n = minOf(CHUNK_PIXELS, p.size - i)
+                    src.get(chunk, 0, n * 4)
+                    for (k in 0 until n) {
+                        val r = chunk[k * 4].toInt() and 0xFF
+                        val g = chunk[k * 4 + 1].toInt() and 0xFF
+                        val b = chunk[k * 4 + 2].toInt() and 0xFF
+                        val a = chunk[k * 4 + 3].toInt() and 0xFF
+                        p[i + k] = (a shl 24) or (r shl 16) or (g shl 8) or b
+                    }
+                    i += n
+                }
+            }
             else -> throw IllegalArgumentException("unsupported buffer: " + src)
         }
     }
@@ -121,6 +154,10 @@ class Bitmap private constructor(
         other.configValue == configValue && (other.pixels?.contentEquals(pixels) ?: (pixels == null))
 
     companion object {
+        /** Pixels per staging block in the ByteBuffer copies; 12 MP at once is
+         *  a 48 MB temporary nobody needs. */
+        private const val CHUNK_PIXELS: Int = 8192
+
         fun createBitmap(width: Int, height: Int, config: Config): Bitmap {
             require(width > 0) { "width must be > 0" }
             require(height > 0) { "height must be > 0" }

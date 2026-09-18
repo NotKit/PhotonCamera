@@ -6,7 +6,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.setMain
 import photoncam.screen.CameraScreenContent
+import platform.posix._IOLBF
+import platform.posix.fflush
 import platform.posix.getenv
+import platform.posix.setvbuf
+import platform.posix.stdout
 import kotlin.native.CpuArchitecture
 import kotlin.native.Platform
 
@@ -36,6 +40,11 @@ private val KN_TARGET: String
  */
 @OptIn(ExperimentalForeignApi::class, ExperimentalCoroutinesApi::class, kotlin.experimental.ExperimentalNativeApi::class)
 fun main(args: Array<String>) {
+	// STDOUT IS A PIPE HERE (ssh, then tee), so libc block-buffers it and a
+	// crash takes the last 4 KB of println with it -- which is every line that
+	// would have said where the crash was.  Log goes to stderr and is unbuffered;
+	// this puts println on the same footing.
+	setvbuf(stdout, null, _IOLBF, 0u)
 	// Kotlin/Native on Linux ships no main dispatcher, and Compose's own
 	// postDelayed launches on Dispatchers.Main -- without this the first layout
 	// pass throws "Dispatchers.Main is missing on the current platform".
@@ -66,4 +75,10 @@ fun main(args: Array<String>) {
 	// shares the window's, as it would on Android, where there is only one.
 	host.onWindowReady = { android.opengl.EGL14.hostDisplay = host.eglDisplay() }
 	host.run(appId, "PhotonCamera", 720, 1440, seconds) { CameraScreenContent() }
+	// The last line the app itself writes.  Anything after it belongs to the
+	// process teardown -- which on this device still has the camera service's
+	// binder threads in it, inside libcamera_client.
+	fflush(stdout)
+	platform.posix.fprintf(platform.posix.stderr, "[pc] main returning\n")
+	platform.posix.fflush(platform.posix.stderr)
 }
