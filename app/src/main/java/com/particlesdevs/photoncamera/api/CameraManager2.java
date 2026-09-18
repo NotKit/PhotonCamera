@@ -90,7 +90,14 @@ public final class CameraManager2 {
                     findLensZoomFactor(mCameraLensDataMap);
                 }
                 //Override ID detection
-                save();
+                // An empty scan is a failure, not a result: saving it makes
+                // isLoaded() true forever, so the next run loads no cameras and
+                // never scans again -- the app stays at "No cameras available"
+                // even once whatever broke the scan is fixed.
+                if (mAllCameraIDsSet.isEmpty())
+                    Log.w(TAG, "the scan found no camera; not saving, so the next start scans again");
+                else
+                    save();
             } else {
                 loadFromSave(cameraManager,ids);
             }
