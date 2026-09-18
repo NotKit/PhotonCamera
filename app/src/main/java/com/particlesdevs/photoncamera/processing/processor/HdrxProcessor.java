@@ -95,12 +95,36 @@ public class HdrxProcessor extends ProcessorBase {
 //            if (isYuv) {
 //                ApplyStabilization();
 //            }
-        } catch (Exception e) {
+        // Throwable, not Exception: an Error -- an ncnn/GL wrapper's
+        // NotImplementedError, an OOM, a failed assertion -- otherwise leaves
+        // the pipeline with no last word at all, which reads as a hang.
+        } catch (Throwable e) {
             Log.e(TAG, ProcessingEventsListener.FAILED_MSG);
             Log.e(TAG, "Error in HdrX Processing:"+Log.getStackTraceString(e));
             callback.onFailed();
             processingEventsListener.onProcessingError("HdrX Processing Failed");
         }
+    }
+
+    /**
+     * The exposure the burst's result reported for this frame's timestamp.
+     *
+     * The image and its CaptureResult travel separately: the HAL can drop a
+     * frame's result and still hand over its buffer, and then the map has no
+     * entry and unboxing it is an NPE that loses the whole burst.  Any frame we
+     * hold is worth merging, so an unknown one takes the burst's first known
+     * exposure and weighs the same as it.
+     */
+    private double exposureOf(long timestamp) {
+        Double expo = exposures.get(timestamp);
+        if (expo != null) return expo;
+        for (Double known : exposures.values())
+            if (known != null && known > 0.0) {
+                Log.w(TAG, "no exposure for frame " + timestamp + ", using " + known);
+                return known;
+            }
+        Log.w(TAG, "no exposure for frame " + timestamp + " and none known, using 1.0");
+        return 1.0;
     }
 
     private void ApplyHdrX() {
@@ -123,9 +147,9 @@ public class HdrxProcessor extends ProcessorBase {
             long d = a.getTimestamp() - b.getTimestamp();
             return d < 0 ? -1 : (d > 0 ? 1 : 0);
         });
-        double minExpo = exposures.get(mImageFramesToProcess.get(0).getTimestamp());
+        double minExpo = exposureOf(mImageFramesToProcess.get(0).getTimestamp());
         for (int i = 1; i < mImageFramesToProcess.size(); i++) {
-            minExpo = Math.min(minExpo, exposures.get(mImageFramesToProcess.get(i).getTimestamp()));
+            minExpo = Math.min(minExpo, exposureOf(mImageFramesToProcess.get(i).getTimestamp()));
         }
         Log.d(TAG, "Wrapper.init");
         ArrayList<ImageFrame> images = new ArrayList<>();
@@ -142,7 +166,7 @@ public class HdrxProcessor extends ProcessorBase {
             //frame.pair = IsoExpoSelector.pairs.get(i % IsoExpoSelector.patternSize);
             frame.pair = IsoExpoSelector.fullpairs.get(i);
             frame.number = i;
-            double expo = exposures.get(mImageFramesToProcess.get(i).getTimestamp());
+            double expo = exposureOf(mImageFramesToProcess.get(i).getTimestamp());
             frame.pair.layerMpy = (float) (expo / minExpo);
             if (frame.pair.layerMpy > 1.0) {
                 frame.pair.curlayer = IsoExpoSelector.ExpoPair.exposureLayer.High;

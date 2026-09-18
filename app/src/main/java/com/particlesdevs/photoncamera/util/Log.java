@@ -276,7 +276,9 @@ public class Log {
         writeToFile("V", tag, s);
     }
 
-    public static String getStackTraceString(Exception e) {
+    /** Throwable, as android.util.Log's own is: an Error has a stack too, and
+     *  a catch that widened to Throwable could not print it otherwise. */
+    public static String getStackTraceString(Throwable e) {
         String stackTrace = android.util.Log.getStackTraceString(e);
         writeToFile("E", "Exception", stackTrace);
         return stackTrace;
