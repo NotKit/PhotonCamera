@@ -10,8 +10,8 @@
  *
  * Keep this file next to the Java when reading it.  Every branch below names
  * the Java method it came from, and where the port cannot do what the Java did
- * (there is no settings screen, no gallery activity and no manual-mode console
- * yet) it says so and logs, rather than silently doing nothing.
+ * (there is no gallery activity and no manual-mode console yet) it says so and
+ * logs, rather than silently doing nothing.
  */
 package photoncam.screen
 
@@ -44,6 +44,9 @@ internal class CameraActions(
 	private val context: Context,
 	private val host: CameraScreenHost,
 	private val rig: CameraRig,
+	/** CameraUIController.onEvent's `startActivity(SettingsActivity)`, which on
+	 *  this port is the screen switch in [CameraScreenContent]. */
+	private val onOpenSettings: () -> Unit,
 ) {
 	private val entries = SettingsBarEntryProvider()
 	private var countdown: CountdownTimer? = null
@@ -63,8 +66,7 @@ internal class CameraActions(
 	fun onEvent(event: CameraUiEvent) {
 		when (event) {
 			is CameraUiEvent.Shutter -> onShutter()
-			is CameraUiEvent.OpenSettings ->
-				log("OpenSettings: there is no settings screen on this port yet")
+			is CameraUiEvent.OpenSettings -> onOpenSettings()
 			is CameraUiEvent.OpenGallery ->
 				log("OpenGallery: there is no gallery screen on this port yet")
 			is CameraUiEvent.FlipCamera -> {

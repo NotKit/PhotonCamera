@@ -39,6 +39,13 @@ import platform.posix.getenv
 private val script: String? = getenv("PC_EVENTS")?.toKString()?.takeIf { it.isNotBlank() }
 
 /**
+ * ONCE PER PROCESS, not once per composition.  Coming back from the settings
+ * screen rebuilds the camera screen, and a LaunchedEffect keyed on the script
+ * text starts over: the run re-opened settings ten seconds after every visit.
+ */
+private var scriptStarted = false
+
+/**
  * Runs PC_EVENTS, if it is set.  One coroutine on the composition's scope, so
  * it dies with the screen; the delays are absolute, not cumulative, which is
  * what makes a script readable against the log's timestamps.
@@ -46,7 +53,9 @@ private val script: String? = getenv("PC_EVENTS")?.toKString()?.takeIf { it.isNo
 @Composable
 fun EventScriptRunner(host: CameraScreenHost, surface: ComposePreviewSurface) {
 	val text = script ?: return
+	if (scriptStarted) return
 	LaunchedEffect(text) {
+		scriptStarted = true
 		println("[pc] PC_EVENTS=$text")
 		var elapsedMs = 0L
 		for (step in text.split(",")) {
@@ -80,6 +89,7 @@ private fun parse(name: String, surface: ComposePreviewSurface): CameraUiEvent? 
 	val arg = name.substringAfter('=', "")
 	return when (key) {
 		"shutter" -> CameraUiEvent.Shutter
+		"settings" -> CameraUiEvent.OpenSettings
 		"flip" -> CameraUiEvent.FlipCamera
 		"flash" -> CameraUiEvent.ToggleFlash
 		"timer" -> CameraUiEvent.ToggleTimer

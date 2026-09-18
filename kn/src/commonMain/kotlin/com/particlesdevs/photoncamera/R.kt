@@ -1292,20 +1292,20 @@ internal val R_ARRAYS: Map<Int, Array<String>> = mapOf(
     R.array.colorset_entries to arrayOf("Auto", "Characteristics", "Capture"),
     R.array.colorset_entryValues to arrayOf("0", "1", "2"),
     R.array.countdowntimer_entryvalues to arrayOf("0", "3", "10"),
-    R.array.focuspeakset_entries to arrayOf("Off", "On", "@string/focus_peaking_auto"),
+    R.array.focuspeakset_entries to arrayOf("Off", "On", "Auto"),
     R.array.focuspeakset_entryValues to arrayOf("0", "1", "2"),
     R.array.location_geotag_entryValues to arrayOf("Off", "High Accuracy", "Network"),
     R.array.preview_format_entries to arrayOf("YUV_420_888", "JPEG", "HEIC", "None"),
     R.array.preview_format_entryValues to arrayOf("35", "256", "1212500294", "0"),
     R.array.raw_mode_entries to arrayOf("JPEG", "RAW + JPEG", "RAW"),
     R.array.raw_mode_entryvalues to arrayOf("0", "1", "2"),
-    R.array.theme_accent_entries to arrayOf("@string/Default", "Eszdman", "@string/theme_accent_blue", "@string/theme_accent_red", "@string/theme_accent_orange", "@string/theme_accent_green", "@string/theme_accent_pink", "@string/theme_accent_cyan", "@string/theme_accent_teal", "@string/theme_accent_white"),
+    R.array.theme_accent_entries to arrayOf("Default", "Eszdman", "Blue", "Red", "Orange", "Green", "Pink", "Cyan", "Teal", "White"),
     R.array.theme_accent_entryValues to arrayOf("default", "eszdman", "blue", "red", "orange", "green", "pink", "cyan", "teal", "white"),
-    R.array.theme_entries to arrayOf("@string/theme_follow_system", "@string/theme_light", "@string/theme_dark"),
+    R.array.theme_entries to arrayOf("Follow system", "Light", "Dark"),
     R.array.theme_entryValues to arrayOf("-1", "1", "2"),
-    R.array.vf_grid_entries to arrayOf("@string/off", "@string/three_x3", "@string/four_x4", "@string/golden_ratio", "@string/diag_triangle"),
+    R.array.vf_grid_entries to arrayOf("Off", "3x3", "4x4", "Golden Ratio", "Diag. Triangles"),
     R.array.vf_grid_entryvalues to arrayOf("0", "1", "2", "3", "4"),
-    R.array.video_resolution_entries to arrayOf("@string/video_res_4k", "@string/video_res_fhd", "@string/video_res_hd"),
+    R.array.video_resolution_entries to arrayOf("3840x2160 (4K)", "1920x1080 (Full HD)", "1280x720 (HD)"),
     R.array.video_resolution_entryvalues to arrayOf("3840x2160", "1920x1080", "1280x720"),
 )
 
@@ -1373,6 +1373,107 @@ val R_PREFERENCE_VALUES: Map<String, Array<String>> = mapOf(
     "pref_theme_accent_key" to arrayOf("default", "eszdman", "blue", "red", "orange", "green", "pink", "cyan", "teal", "white"),
     "pref_theme_key" to arrayOf("-1", "1", "2"),
     "pref_video_resolution_key" to arrayOf("3840x2160", "1920x1080", "1280x720"),
+)
+
+/** One row of res/xml/preferences.xml, as the file types and orders it. */
+class RPreferenceNode(
+    /** category | screen | list | seek | switch | action. */
+    val type: String,
+    val key: String,
+    val title: String = "",
+    val summary: String = "",
+    val default: String? = null,
+    val entries: Array<String> = emptyArray(),
+    val values: Array<String> = emptyArray(),
+    // UniversalSeekBarPreference's own TypedArray defaults.
+    val min: Float = 0f,
+    val max: Float = 100f,
+    val step: Float = 1f,
+    val isFloat: Boolean = false,
+    val enabled: Boolean = true,
+    val children: Array<RPreferenceNode> = emptyArray(),
+)
+
+/** res/xml/preferences.xml, which is the settings screen. */
+val R_PREFERENCE_TREE: Array<RPreferenceNode> = arrayOf(
+    RPreferenceNode("category", "pref_category_general_key", title = "General", children = arrayOf(
+        RPreferenceNode("switch", "pref_wide169_key", title = "16:9", default = "0"),
+        RPreferenceNode("switch", "pref_binning_key", title = "Process 4x lower resolution", default = "0"),
+        RPreferenceNode("switch", "pref_energy_safe_key", title = "Battery Saver", default = "0"),
+        RPreferenceNode("switch", "pref_camera_sounds_key", title = "Camera Sounds", default = "1"),
+        RPreferenceNode("switch", "pref_hide_gallery_icon_key", title = "Hide Gallery Icon", default = "0"),
+        RPreferenceNode("list", "pref_show_grid_key", title = "Show Grid", default = "0", entries = arrayOf("Off", "3x3", "4x4", "Golden Ratio", "Diag. Triangles"), values = arrayOf("0", "1", "2", "3", "4")),
+        RPreferenceNode("switch", "pref_show_roundedge_key", title = "Enable Round Edges", default = "1"),
+        RPreferenceNode("switch", "pref_show_watermark_key", title = "Watermark", default = "1"),
+        RPreferenceNode("list", "pref_af_mode_key", title = "Auto Focus Mode", default = "4", entries = arrayOf("Continuous Picture", "Continuous Video", "Auto"), values = arrayOf("4", "3", "1")),
+        RPreferenceNode("list", "pref_peak_method_key", title = "Focus Peaking", default = "2", entries = arrayOf("Off", "On", "Auto"), values = arrayOf("0", "1", "2")),
+        RPreferenceNode("list", "pref_show_afdata_key", title = "Viewfinder HUD / Debug", default = "0", entries = arrayOf("Off", "HUD", "HUD + Histogram", "Full Debug"), values = arrayOf("0", "1", "2", "3")),
+        RPreferenceNode("switch", "pref_save_per_lens_settings", title = "Per Lens Settings"),
+        RPreferenceNode("switch", "pref_preserve_manual_wb_key", title = "Preserve Manual WB", default = "0"),
+    )),
+    RPreferenceNode("category", "pref_category_photo_key", title = "Photo Settings", children = arrayOf(
+        RPreferenceNode("seek", "pref_frame_count_key", title = "HDR Frame Count", default = "15", min = 1f, max = 200f),
+    )),
+    RPreferenceNode("category", "pref_category_video_key", title = "Video Settings", children = arrayOf(
+        RPreferenceNode("list", "pref_video_resolution_key", title = "Video Resolution", default = "1920x1080", entries = arrayOf("3840x2160 (4K)", "1920x1080 (Full HD)", "1280x720 (HD)"), values = arrayOf("3840x2160", "1920x1080", "1280x720")),
+    )),
+    RPreferenceNode("category", "pref_category_rawvideo_key", title = "Raw Video Settings", children = arrayOf(
+        RPreferenceNode("switch", "pref_rawvideo_downscale_4x_key", title = "Downscale 4x", default = "0"),
+        RPreferenceNode("switch", "pref_rawvideo_write_zip_key", title = "Write ZIP", default = "1"),
+        RPreferenceNode("switch", "pref_rawvideo_crop_169_key", title = "Crop to 16:9", default = "1"),
+    )),
+    RPreferenceNode("category", "pref_category_jpg_key", title = "JPEG", children = arrayOf(
+        RPreferenceNode("switch", "pref_enable_system_nr_key", title = "System Noise Reduction", default = "0"),
+        RPreferenceNode("switch", "pref_disable_aligning_key", title = "Disable Aligning", default = "0"),
+        RPreferenceNode("seek", "pref_chroma_nr_seekbar_key", title = "Chroma NR Count", default = "12", min = 1f, max = 65f),
+        RPreferenceNode("seek", "pref_luma_nr_seekbar_key", title = "Luminance Noise Reduction Strength", default = "12", min = 1f, max = 65f),
+        RPreferenceNode("switch", "pref_enhanced_processing_key", title = "Enhanced Processing", default = "0"),
+    )),
+    RPreferenceNode("category", "pref_category_hdrx_key", title = "HDRX", children = arrayOf(
+        RPreferenceNode("list", "pref_save_raw_key", title = "Save", default = "0", entries = arrayOf("JPEG", "RAW + JPEG", "RAW"), values = arrayOf("0", "1", "2")),
+        RPreferenceNode("switch", "pref_hdrx_nr_key", title = "Noise Reduction", default = "1"),
+        RPreferenceNode("switch", "pref_ultrahdr_key", title = "Ultra HDR", summary = "Encode JPEGs with an Ultra HDR gain map (requires a second, lightweight tone pass)", default = "0"),
+        RPreferenceNode("seek", "pref_sharpness_seekbar_key", title = "Sharpness", default = "0.20", min = -0.2f, max = 1.0f, step = 20f, isFloat = true),
+        RPreferenceNode("seek", "pref_saturation_seekbar_key", title = "Saturation", default = "1.0", min = 0f, max = 3f, step = 10f, isFloat = true),
+        RPreferenceNode("seek", "pref_contrast_seekbar_key", title = "Contrast", default = "0.0", min = 0f, max = 3f, step = 10f, isFloat = true),
+        RPreferenceNode("seek", "pref_expocompensation_seekbar_key", title = "Exposure Compensation", default = "0.0", min = -4f, max = 4f, step = 10f, isFloat = true),
+        RPreferenceNode("seek", "pref_noise_seekbar_key", title = "Noise Reduction Strength", default = "0.0", min = -6f, max = 4f, step = 10f, isFloat = true),
+        RPreferenceNode("seek", "pref_merge_seekbar_key", title = "Noise Merge Strength", default = "0.0", min = -4f, max = 8f, step = 10f, isFloat = true),
+        RPreferenceNode("seek", "pref_shadows_seekbar_key", title = "Shadows", default = "0.0", min = -1.0f, max = 2.0f, step = 10f, isFloat = true),
+        RPreferenceNode("seek", "pref_compressor_seekbar_key", title = "Compressor", default = "0.0", min = -1.0f, max = 8.0f, step = 10f, isFloat = true),
+        RPreferenceNode("list", "pref_cfa_key", title = "Bayer Filter Pattern", default = "-1", entries = arrayOf("AUTO", "RGGB", "BGGR", "GRBG", "GBRG", "MONO", "QUAD"), values = arrayOf("-1", "0", "3", "1", "2", "4", "-2")),
+        RPreferenceNode("list", "pref_align_method_key", title = "Align Method", default = "1", entries = arrayOf("PCam New"), values = arrayOf("1")),
+        RPreferenceNode("list", "pref_color_method_key", title = "Color Method", default = "1", entries = arrayOf("Auto", "Characteristics", "Capture"), values = arrayOf("0", "1", "2")),
+        RPreferenceNode("switch", "pref_horizon", title = "Show horizon on preview", default = "0"),
+        RPreferenceNode("list", "pref_preview_format_key", title = "Preview Format", default = "0", entries = arrayOf("YUV_420_888", "JPEG", "HEIC", "None"), values = arrayOf("35", "256", "1212500294", "0")),
+    )),
+    RPreferenceNode("category", "pref_theme_category_key", title = "Theme", children = arrayOf(
+        RPreferenceNode("list", "pref_theme_key", title = "Theme", default = "-1", entries = arrayOf("Follow system", "Light", "Dark"), values = arrayOf("-1", "1", "2")),
+        RPreferenceNode("list", "pref_theme_accent_key", title = "Theme Color", default = "default", entries = arrayOf("Default", "Eszdman", "Blue", "Red", "Orange", "Green", "Pink", "Cyan", "Teal", "White"), values = arrayOf("default", "eszdman", "blue", "red", "orange", "green", "pink", "cyan", "teal", "white")),
+        RPreferenceNode("switch", "pref_show_gradient_key", title = "Show Gradient Background", default = "1"),
+    )),
+    RPreferenceNode("category", "pref_category_advanced_key", title = "Advanced", children = arrayOf(
+        RPreferenceNode("screen", "pref_tunable_submenu", title = "Tunable Settings", summary = "Advanced tunable parameters"),
+        RPreferenceNode("screen", "pref_sensor_config_submenu", title = "Sensor Configurations", summary = "Per-sensor tuning parameters (physical camera id)"),
+    )),
+    RPreferenceNode("category", "pref_category_device_key", title = "Device", children = arrayOf(
+        RPreferenceNode("action", "pref_fetch_configurations_key", title = "Fetch Configurations", summary = "Download device-specific tuning from the network and update cached settings"),
+    )),
+    RPreferenceNode("category", "pref_category_backup_restore", title = "Backup/Restore Settings", children = arrayOf(
+        RPreferenceNode("action", "pref_backup_preferences_key", title = "Backup"),
+        RPreferenceNode("action", "pref_restore_preferences_key", title = "Restore"),
+        RPreferenceNode("action", "pref_reset_preferences_key", title = "Reset All"),
+    )),
+    RPreferenceNode("category", "pref_category_about_key", title = "About", children = arrayOf(
+        RPreferenceNode("screen", "pref_about_key", title = "About", children = arrayOf(
+            RPreferenceNode("action", "pref_photoncamera", title = "PhotonCamera", summary = "An Open-Source Android Camera with Enhanced Image Processing", enabled = false),
+            RPreferenceNode("action", "pref_version_key", title = "Version", summary = "v%1\$s\\n%2\$s", enabled = false),
+            RPreferenceNode("action", "pref_this_device_key", enabled = false),
+            RPreferenceNode("action", "pref_contributors_key", title = "Contributors ↗", summary = "eszdman, assasinfil, killerink, mirai, Urnyx05, vibhorSrv, snajdovski"),
+            RPreferenceNode("action", "pref_telegram_channel_key", title = "Telegram Group ↗"),
+            RPreferenceNode("action", "all_devices_names", title = "Supported Devices", enabled = false),
+        )),
+    )),
 )
 
 /** id -> resource name, for AssetManager/Resources file lookups. */

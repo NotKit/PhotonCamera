@@ -19,9 +19,14 @@
  */
 package photoncam.screen
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import android.app.Activity
 import android.app.Application
 import android.content.Context
@@ -41,6 +46,7 @@ import com.particlesdevs.photoncamera.app.PhotonCamera
 import com.particlesdevs.photoncamera.capture.CaptureController
 import com.particlesdevs.photoncamera.control.TouchFocus
 import com.particlesdevs.photoncamera.composeui.camera.CameraScreen
+import com.particlesdevs.photoncamera.composeui.settings.SettingsScreen
 import com.particlesdevs.photoncamera.composeui.theme.PhotonTheme
 import com.particlesdevs.photoncamera.settings.PreferenceKeys
 import com.particlesdevs.photoncamera.util.FileManager
@@ -238,7 +244,10 @@ private class HostCameraEvents(private val rig: CameraRig) : CameraEventsListene
  * composes and closed when it goes away, which is CameraFragment's
  * onViewCreated/onResume and onPause in the two places Compose has for them.
  */
-internal class CameraRig(val host: CameraScreenHost) {
+internal class CameraRig(
+	val host: CameraScreenHost,
+	private val onOpenSettings: () -> Unit,
+) {
 	val preview = ComposePreviewSurface()
 	/** The focus circle and the spot-WB reticle, which [CameraViewfinder] draws. */
 	val overlay = ViewfinderOverlay()
@@ -253,7 +262,7 @@ internal class CameraRig(val host: CameraScreenHost) {
 
 	fun start() {
 		val activity = HostActivity(application)
-		val a = CameraActions(application, host, this)
+		val a = CameraActions(application, host, this, onOpenSettings)
 		actions = a
 		host.setEventListener { event -> a.onEvent(event) }
 		val c = CaptureController(activity, preview, executor, HostCameraEvents(this))
@@ -288,40 +297,65 @@ internal class CameraRig(val host: CameraScreenHost) {
 	}
 }
 
+/**
+ * The app, as one window with two screens in it.
+ *
+ * SettingsActivity is a separate Activity on Android, so opening it PAUSES the
+ * camera fragment and coming back resumes it.  That is exactly what this switch
+ * does: the camera screen's DisposableEffect closes the camera on the way in
+ * and re-opens it on the way out, which is the path a changed HDRX, quad-bayer
+ * or preview-format setting needs to be applied by.
+ */
 @Composable
 fun CameraScreenContent() {
 	PhotonTheme {
-		val host = remember {
-			CameraScreenHost(application).also { h ->
-				// The preference sync is what fills the top bar, the mode and
-				// the gradient from the app's own stored settings.  It reads
-				// SettingsManager, so it is the first thing that can fail on a
-				// half-built application -- hence the catch and the log rather
-				// than a black window.
-				runCatching { h.syncFromPreferences() }
-					.onFailure { e -> report("syncFromPreferences", e) }
-			}
+		var settingsOpen by remember { mutableStateOf(false) }
+		if (settingsOpen) {
+			SettingsContent(onLeave = { settingsOpen = false })
+		} else {
+			CameraContent(onOpenSettings = { settingsOpen = true })
 		}
-		val rig = remember { CameraRig(host) }
-		DisposableEffect(rig) {
-			runCatching { rig.start() }.onFailure { e -> report("camera start", e) }
-			// CameraFragment.onViewCreated's applyMode, now that the actions
-			// exist: it also pushes the settings-bar entries, which is what
-			// fills the bar a swipe down opens.
-			runCatching {
-				rig.actions?.applyCameraMode(
-					CameraMode.valueOf(PreferenceKeys.getCameraModeOrdinal())!!,
-				)
-			}.onFailure { e -> report("applyMode", e) }
-			onDispose { runCatching { rig.stop() }.onFailure { e -> report("camera stop", e) } }
-		}
-		// Nothing on Ubuntu Touch can press a button for us; PC_EVENTS is how a
-		// phone run reaches the shutter and the carousel at all.
-		EventScriptRunner(host, rig.preview)
-		CameraScreen(
-			state = host.state,
-			onEvent = { host.onEvent(it) },
-			viewfinder = { CameraViewfinder(rig.preview, rig.overlay) },
-		)
 	}
+}
+
+@Composable
+private fun SettingsContent(onLeave: () -> Unit) {
+	val host = remember { SettingsHost(application, onLeave) }
+	SettingsScreen(host.state, { host.onEvent(it) }, Modifier.fillMaxSize())
+}
+
+@Composable
+private fun CameraContent(onOpenSettings: () -> Unit) {
+	val host = remember {
+		CameraScreenHost(application).also { h ->
+			// The preference sync is what fills the top bar, the mode and
+			// the gradient from the app's own stored settings.  It reads
+			// SettingsManager, so it is the first thing that can fail on a
+			// half-built application -- hence the catch and the log rather
+			// than a black window.
+			runCatching { h.syncFromPreferences() }
+				.onFailure { e -> report("syncFromPreferences", e) }
+		}
+	}
+	val rig = remember { CameraRig(host, onOpenSettings) }
+	DisposableEffect(rig) {
+		runCatching { rig.start() }.onFailure { e -> report("camera start", e) }
+		// CameraFragment.onViewCreated's applyMode, now that the actions
+		// exist: it also pushes the settings-bar entries, which is what
+		// fills the bar a swipe down opens.
+		runCatching {
+			rig.actions?.applyCameraMode(
+				CameraMode.valueOf(PreferenceKeys.getCameraModeOrdinal())!!,
+			)
+		}.onFailure { e -> report("applyMode", e) }
+		onDispose { runCatching { rig.stop() }.onFailure { e -> report("camera stop", e) } }
+	}
+	// Nothing on Ubuntu Touch can press a button for us; PC_EVENTS is how a
+	// phone run reaches the shutter and the carousel at all.
+	EventScriptRunner(host, rig.preview)
+	CameraScreen(
+		state = host.state,
+		onEvent = { host.onEvent(it) },
+		viewfinder = { CameraViewfinder(rig.preview, rig.overlay) },
+	)
 }
