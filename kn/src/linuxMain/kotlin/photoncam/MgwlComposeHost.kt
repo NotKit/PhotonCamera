@@ -18,6 +18,7 @@ import androidx.compose.ui.scene.ComposeScenePointer
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
+import kotlinx.cinterop.COpaquePointer
 import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.StableRef
@@ -40,6 +41,7 @@ import net.thekit.mgwl.mgwl_callbacks
 import net.thekit.mgwl.mgwl_create
 import net.thekit.mgwl.mgwl_create_window
 import net.thekit.mgwl.mgwl_destroy
+import net.thekit.mgwl.mgwl_egl_display
 import net.thekit.mgwl.mgwl_egl_vendor
 import net.thekit.mgwl.mgwl_gl_renderer
 import net.thekit.mgwl.mgwl_height
@@ -108,17 +110,37 @@ class MgwlComposeHost private constructor(private val handle: CPointer<cnames.st
 
 	private val trace = getenv("PC_TRACE") != null
 
-	// PC_SHOT=/path/shot.png writes the rendered frame there, overwritten from
-	// PC_SHOT_FRAME (default 3) on, so the file holds the last frame drawn.
+	/** Called once the window and its GL context exist; [eglDisplay] is valid
+	 *  from then on.  Main.kt hands the display to the app's EGL shim there. */
+	var onWindowReady: (() -> Unit)? = null
+
+	/** The window's EGLDisplay. Android has one per process and hybris means
+	 *  it: a second eglInitialize fails while the compositor's display lives. */
+	fun eglDisplay(): COpaquePointer? = mgwl_egl_display(handle)
+
+	// PC_SHOT=/path/shot.png writes the rendered frame there: once at
+	// PC_SHOT_FRAME (default 3) and once as the run ends, so the file holds the
+	// last frame drawn.  PC_SHOT_EVERY_MS asks for periodic ones as well.
 	// On the phone this is the ONLY way to see the window: Lomiri ships no
 	// screenshot tool and exposes no D-Bus method for one.
+	//
+	// THROTTLED, because a grab is a full GPU readback plus a PNG encode plus a
+	// write: ~2 s of a frame on the phone.  Grabbing every frame turned a 44 fps
+	// viewfinder into 23 frames in a minute, and because grab() sits between the
+	// flush and the swap it was PC_TIME's "swap" that carried the cost -- which
+	// reads as the compositor starving the app.  It never was.
 	private val shotPath = getenv("PC_SHOT")?.toKString()?.takeIf { it.isNotEmpty() }
 	private val shotFrame = getenv("PC_SHOT_FRAME")?.toKString()?.toIntOrNull() ?: 3
+	private val shotEveryNanos =
+		(getenv("PC_SHOT_EVERY_MS")?.toKString()?.toLongOrNull() ?: 0L) * 1_000_000L
+	private var lastShotNanos = 0L
+	private var grabbedFinal = false
 
 	private val timing = getenv("PC_TIME") != null
 	private var sceneNanos = 0L
 	private var flushNanos = 0L
 	private var swapNanos = 0L
+	private var shotNanos = 0L
 
 	private val pointers = HashMap<Int, ComposeScenePointer>()
 	private var mouseButtons = 0
@@ -146,6 +168,9 @@ class MgwlComposeHost private constructor(private val handle: CPointer<cnames.st
 		height = mgwl_height(handle)
 		scale = maxOf(1, mgwl_scale(handle))
 		mgwl_make_current(handle)
+		// The window's EGLDisplay, for whoever needs one.  Named here and not
+		// used: the shim is the app build's, and this file is in every build.
+		onWindowReady?.invoke()
 		println(
 			"[pc] EGL_VENDOR=${mgwl_egl_vendor(handle)?.toKString()}" +
 				" GL_RENDERER=${mgwl_gl_renderer(handle)?.toKString()}" +
@@ -191,7 +216,10 @@ class MgwlComposeHost private constructor(private val handle: CPointer<cnames.st
 	private fun loop(maxSeconds: Int) {
 		val deadline = platform.posix.time(null) + maxSeconds
 		while (!closed && mgwl_should_close(handle) == 0) {
-			if (maxSeconds > 0 && platform.posix.time(null) >= deadline) break
+			val now = platform.posix.time(null)
+			if (maxSeconds > 0 && now >= deadline) break
+			// the run's last seconds, which is when the screenshot is taken
+			val nearEnd = maxSeconds > 0 && now >= deadline - 2
 			Snapshot.sendApplyNotifications()
 			ComposeUiMainDispatcher.drainTasks()
 			// Whatever the screen installed as its main-thread queue.  The
@@ -213,7 +241,23 @@ class MgwlComposeHost private constructor(private val handle: CPointer<cnames.st
 				val t2 = monotonicNanos()
 				// Before the swap: after eglSwapBuffers the back buffer's
 				// contents are undefined, so a grab there reads garbage.
-				if (shotPath != null && frames + 1 >= shotFrame) grab(surface)
+				// TWICE a run by default, not every frame: one grab is a full GPU
+				// readback, a 10 MB bitmap and a PNG encode -- 3.3 s on the phone.
+				// Once at shotFrame, so an early failure still leaves a picture,
+				// and once as the run ends, so the file holds the last frame.
+				// PC_SHOT_EVERY_MS opts back into periodic ones.
+				val wantShot = shotPath != null && frames + 1 >= shotFrame && (
+					lastShotNanos == 0L ||
+						(nearEnd && !grabbedFinal) ||
+						(shotEveryNanos > 0 && t2 - lastShotNanos >= shotEveryNanos))
+				if (wantShot) {
+					if (nearEnd) grabbedFinal = true
+					lastShotNanos = t2
+					grab(surface)
+				}
+				// the grab has its own column: charged to the swap it read as the
+				// compositor's fault, which is a whole round of the wrong question
+				val t3 = monotonicNanos()
 				mgwl_swap_buffers(handle)
 				frames++
 				// PC_TIME: where a frame goes.  Compose's own render, Skia's
@@ -222,12 +266,14 @@ class MgwlComposeHost private constructor(private val handle: CPointer<cnames.st
 				if (timing) {
 					sceneNanos += t1 - t0
 					flushNanos += t2 - t1
-					swapNanos += monotonicNanos() - t2
+					shotNanos += t3 - t2
+					swapNanos += monotonicNanos() - t3
 					if (frames % 10L == 0L) {
 						println("[pc] $frames frames: scene=${sceneNanos / 10 / 1_000_000}ms" +
 							" flush=${flushNanos / 10 / 1_000_000}ms" +
-							" swap=${swapNanos / 10 / 1_000_000}ms")
-						sceneNanos = 0; flushNanos = 0; swapNanos = 0
+							" swap=${swapNanos / 10 / 1_000_000}ms" +
+							if (shotNanos > 0) " shot=${shotNanos / 10 / 1_000_000}ms" else "")
+						sceneNanos = 0; flushNanos = 0; swapNanos = 0; shotNanos = 0
 					}
 				}
 			}
