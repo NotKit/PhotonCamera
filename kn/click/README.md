@@ -190,9 +190,10 @@ would vanish ten seconds in and look like a crash.
 Not the launcher's business, but worth knowing when reading a screenshot: a
 Lomiri-managed app loses the top 63 px to the indicator panel.
 
-## AppArmor: two policy groups, and why not more
+## AppArmor: two policy groups, one extra path, and why not more
 
     "policy_groups": ["camera", "picture_files"]
+    "read_path":     ["/proc/sys/kernel/random/boot_id"]
 
 * **`camera`** — the whole point. The capture path is the device's own Android
   camera2 stack reached through libhybris.
@@ -217,6 +218,16 @@ Groups this app is often assumed to need and **does not**, on this port, today:
 * **`content_exchange`** — there is no share path to grant. `Context.startActivity`
   on this port logs the intent and drops it; there is no activity manager. When
   the gallery tile learns to hand a JPEG to content-hub, this is the group.
+
+* **`read_path` for `/proc/sys/kernel/random/boot_id`** — the `camera` group
+  does not carry it and the app is dead without it. Characteristics are 21 KB,
+  which is over binder's 16 KB in-place blob limit, so the parcel goes through
+  ashmem; libcutils names the device `/dev/ashmem<boot_id>` and reads that file
+  to build the name. Denied, `get_ashmem_device_path()` returns the empty string
+  and never reaches its `/dev/ashmem` fallback, so
+  `ACameraManager_getCameraCharacteristics` fails for **every** id while
+  `getCameraIdList` — served from the status callbacks, no blob — still reports
+  two. The app then finds no camera to open and says "No cameras available".
 
 `policy_version` is `2404.1`, matching every other 24.04 click in this checkout.
 
@@ -331,20 +342,19 @@ click** (podman, 2026-09-18, this box):
 * `clickable review --arch arm64`: **one** finding, below. The 128×128 icon and
   the `.desktop` `Categories` were *not* flagged.
 
-**Nothing here has been run on a phone.** Everything below is reasoned, not
-observed.
+Everything below except 1 is reasoned, not observed.
 
-1. **Confinement versus libhybris.** The confined `camera` group is what a
-   Qt/QML camera app uses, and that one reaches the camera through media-hub.
-   This app reaches it through `android_dlopen` directly: `/dev/binder`,
-   `/dev/ion` or `/dev/dma_heap`, and reads under `/vendor/lib64`. Whether the
-   24.04 `camera` group covers that is **unverified**. If it does not, the
-   symptom is `android_dlopen(libcamera2ndk.so) failed` in the log, and the two
-   ways out are `read_path`/`write_path` entries in the apparmor JSON for
-   exactly what is denied (check `journalctl -k | grep DENIED`), or
-   `"template": "unconfined"` — which is what `linux-port/click` settled for and
-   which **blocks OpenStore submission** (`security:template_valid` is a NEEDS
-   REVIEW finding, not a local-install one).
+1. **Confinement versus libhybris — RUN, and it cost one rule.** The 24.04
+   `camera` group does cover `android_dlopen` and the binder nodes: the
+   libraries load, the id list comes back. What it does not cover is
+   `/proc/sys/kernel/random/boot_id`, without which no camera can be described
+   at all — see the `read_path` entry above. Nothing else in the camera path
+   was denied. The way to find the next one is not `journalctl -k | grep
+   DENIED`, which needs root the phone does not give: run the installed binary
+   under `strace -f` and `aa-exec -p <profile>` over ssh and diff it against the
+   same run unconfined. `"template": "unconfined"` is the blunt way out and
+   **blocks OpenStore submission** (`security:template_valid` is a NEEDS REVIEW
+   finding, not a local-install one); it was not needed.
 2. **One variable is the root of two different things.**
    `Context.defaultHome()` and `Environment.root()` both read
    `PHOTONCAMERA_HOME`, so `shared_prefs/`, `files/` and `cache/` cannot be

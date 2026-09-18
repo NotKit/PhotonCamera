@@ -3,5 +3,8 @@
         "camera",
         "picture_files"
     ],
+    "read_path": [
+        "/proc/sys/kernel/random/boot_id"
+    ],
     "policy_version": 2404.1
 }
