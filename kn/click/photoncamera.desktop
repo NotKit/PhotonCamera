@@ -1,0 +1,14 @@
+# The basename IS the app id Lomiri matches the surface by; see run.sh.
+# No %u: the binary reads argv[1] as a run length in seconds, so a URL handed
+# to it would silently become the 10-second bring-up default.
+[Desktop Entry]
+Name=PhotonCamera
+GenericName=Camera
+Comment=Computational photography: HDR+ burst capture and RAW/DNG
+Exec=run.sh
+Icon=photoncamera.png
+Terminal=false
+Type=Application
+Categories=Graphics;Photography;
+X-Ubuntu-Touch=true
+X-Lomiri-Touch=true

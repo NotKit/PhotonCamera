@@ -1,0 +1,15 @@
+{
+    "name": "photoncamera.thekit",
+    "title": "PhotonCamera",
+    "description": "Computational photography: HDR+ burst capture, RAW/DNG and a GPU pipeline",
+    "version": "@CLICK_VERSION@",
+    "architecture": "@CLICK_ARCH@",
+    "framework": "@CLICK_FRAMEWORK@",
+    "maintainer": "TheKit <nekit1000@gmail.com>",
+    "hooks": {
+        "photoncamera": {
+            "apparmor": "photoncamera.apparmor",
+            "desktop": "photoncamera.desktop"
+        }
+    }
+}

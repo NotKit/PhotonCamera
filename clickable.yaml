@@ -1,0 +1,101 @@
+clickable_minimum_required: 8.3.0
+
+# Ubuntu Touch 24.04 (glibc 2.39, arm64). The payload is ONE Kotlin/Native ELF —
+# no JVM, no ART, no Android runtime — plus its two resource trees and the one
+# library Ubuntu Touch does not ship. It is arm64-only because that binary is.
+framework: ubuntu-touch-24.04-1.x
+restrict_arch: arm64
+
+builder: custom
+build: ${ROOT}/kn/click/build.sh
+build_dir: ${ROOT}/kn/out/click
+
+# This yaml is at the repository ROOT, not beside the build script, for the same
+# reason the JVM port's is: the build container mounts the project root and
+# nothing else, and the packaging needs kn/** and app/src/main/assets/** at once.
+# That mount is also why kn/scripts/fetch-deps.sh clones aurora-maven INTO the
+# project (kn/deps/): a dependency outside the root does not exist in here.
+
+# The process to stop on install/redeploy — see kn/click/run.sh, which execs it.
+kill: photoncam-kn
+
+# THE CONTAINER COMPILES THE BINARY. Kotlin/Native ships no linux-aarch64 host
+# compiler — the konan bundle is kotlin-native-prebuilt-linux-x86_64-*, and that
+# name is the HOST — so an arm64 container could never have konanc. But this is
+# the amd64 cross container, where konan runs and cross-compiles by design, the
+# same place the JVM port compiles its whole world. What used to make a source
+# build impossible was not konan: it was aurora-maven and the arm64 sysroot
+# being hardcoded to absolute paths outside the project root. They are resolved
+# now (kn/settings.gradle.kts), so kn/click/build.sh fetches them and links here.
+#
+# kn/out/click-prebuilt, staged by the host, is still used when it is there and
+# newer than the sources — the fast loop, and the escape hatch. The log says
+# which of the two happened.
+dependencies_host:
+  # `file` is how build.sh proves every staged object is aarch64
+  - file
+  # readelf, for the DT_NEEDED closure check against click/device-libs.txt
+  - binutils
+  # validates the substituted manifest, converts the drawables (CMP cannot read
+  # an Android <vector>) and picks the sysroot's debs out of the ports index
+  - python3
+  # j2k's own four packages are on PyPI and in no apt archive, so build.sh puts
+  # them in a venv of its own (see j2k_python there)
+  - python3-venv
+  - python3-pip
+  # convert.sh stages the Java corpus with rsync before it converts it
+  - rsync
+  # Gradle and konan need a JDK, and so does the natives lane — it compiles the
+  # app's C++ against jni.h. 17 is what the host build uses.
+  - openjdk-17-jdk-headless
+  # aurora-maven is a git repository of 922 MB, and its klibs are git-lfs
+  # objects: without git-lfs the clone succeeds and every klib is a 130-byte
+  # pointer file, which fails much later and says nothing about the cause
+  - git
+  - git-lfs
+  # the sysroot and libxkbcommon are debs fetched from ports.ubuntu.com
+  - curl
+  - ca-certificates
+  # mgwl (our Wayland/EGL window) and atlas's camera backend, cross-compiled;
+  # konan's own link line calls aarch64-linux-gnu-gcc too
+  - gcc-aarch64-linux-gnu
+  # the app's C++ is built by clang with --target, exactly as the host build
+  # does it (host/natives/build.sh): a different compiler answers that script's
+  # jpeglib.h/png.h probe differently and changes the link line. g++-cross is
+  # there for its aarch64 libstdc++ headers, which clang is pointed at.
+  - clang
+  - g++-aarch64-linux-gnu
+  # glib's and zstd's include paths, asked for by host/atlcamera/build.sh and by
+  # kn/build.gradle.kts
+  - pkg-config
+
+# The binary's own DT_NEEDED, as -dev packages. Nothing links against them here,
+# so they are in the target sysroot for two reasons: they are the link contract
+# this click is valid against (kn/build.gradle.kts's commonLibs), and
+# libmaliit-glib-dev is where build.sh takes the one bundled library from.
+dependencies_target:
+  # libQt5Core.so.5, libQt5DBus.so.5 — on the link line because compose-ui's
+  # klib manifest names ak-window and ak-uri-launcher, whose cinterops carry them
+  - qtbase5-dev
+  # libEGL.so.1, libGLESv2.so.2 — the Skia/Ganesh context and the app's shaders
+  - libegl-dev
+  - libgles-dev
+  # libwayland-{client,egl,cursor} — host/mgwl.c, our own window
+  - libwayland-dev
+  # libxkbcommon.so.0 — mgwl's keyboard events
+  - libxkbcommon-dev
+  # libfontconfig.so.1 — Skia's font lookup
+  - libfontconfig-dev
+  # libdbus-1.so.3, and libgobject/libglib for it and for the camera backend
+  - libdbus-1-dev
+  - libglib2.0-dev
+  # libzstd.so.1 — host/atlcamera links it
+  - libzstd-dev
+  # libmaliit-glib — THE ONE LIBRARY THE CLICK BUNDLES. compose-ui's klib names
+  # ak-keyboard-maliit, so it is a hard DT_NEEDED whether or not a keyboard is
+  # ever shown; Ubuntu Touch carries libmaliit-plugins but no glib bindings, so
+  # without it the process dies in the loader before main(). NOTE that this
+  # package does NOT supply it: noble's is maliit 2.3.0, soname
+  # libmaliit-glib.so.2, and the binary wants .so.0 — Aurora's 0.99.1 build,
+  # which build.sh takes from aurora-maven. It stays here as the link contract.
+  - libmaliit-glib-dev
