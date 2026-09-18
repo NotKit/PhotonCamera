@@ -65,10 +65,19 @@ public class Bayer2Float extends Node {
         if (hlInpaintOpposed && basePipeline.mParameters.cfaPattern != 4) {
             startT();
             try {
-                hlChroma = OpposedGL.compute(glProg, in, rawSize, basePipeline.mParameters.cfaPattern,
+                // Declared and null-tested here, rather than assigned straight
+                // to hlChroma: j2k asserts !! on that assignment, and compute()
+                // returns null for the ordinary "nothing clipped in this frame"
+                // case, which then read in the log as an NPE and a dead node.
+                float[] chroma = OpposedGL.compute(glProg, in, rawSize, basePipeline.mParameters.cfaPattern,
                         basePipeline.mSettings.alignAlgorithm == 2,
                         basePipeline.mParameters.whiteLevel, basePipeline.mParameters.blackLevel,
                         basePipeline.mParameters.whitePoint, OpposedGL.CLIP_MAGIC * hlClip);
+                if (chroma == null) {
+                    Log.d(Name, "InpaintOpposed: nothing clipped, no reconstruction");
+                } else {
+                    hlChroma = chroma;
+                }
             } catch (Exception e) {
                 Log.d(Name, "InpaintOpposed failed, disabling:" + Log.getStackTraceString(e));
                 hlChroma = null;
