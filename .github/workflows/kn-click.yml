@@ -1,0 +1,290 @@
+name: Build Ubuntu Touch click (Kotlin/Native port)
+
+# The arm64 click of kn/: PhotonCamera as one Kotlin/Native ELF, no JVM and no
+# Android runtime. Kotlin/Native ships no linux-aarch64 host compiler, but it
+# cross-compiles by design, so this runs in clickable's amd64 cross container on
+# an ordinary x86_64 runner -- see kn/click/README.md.
+#
+# Everything the build needs it fetches itself (kn/scripts/fetch-deps.sh):
+# Aurora's maven checkout, an Ubuntu noble arm64 sysroot and atl-touch. Nothing
+# here depends on a path that happens to exist on a developer's box.
+
+on:
+  push:
+    branches: [kn]
+    paths:
+      - 'kn/**'
+      - 'ui-compose/**'
+      - 'app/src/main/assets/**'
+      - 'app/build.gradle'
+      - 'clickable.yaml'
+      - '.github/workflows/kn-click.yml'
+  pull_request:
+    paths:
+      - 'kn/**'
+      - 'ui-compose/**'
+      - 'app/src/main/assets/**'
+      - 'app/build.gradle'
+      - 'clickable.yaml'
+      - '.github/workflows/kn-click.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: kn-click-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Thirty seconds of checks for the packaging mistakes that would otherwise
+  # surface an hour into the container build, where they cost a whole run.
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse every script and every config
+        run: |
+          set -eu
+          # every TRACKED script under kn/, so a new one is covered without
+          # anyone remembering to list it here (git's pathspec globs match /)
+          mapfile -t scripts < <(git ls-files -- 'kn/*.sh')
+          for f in "${scripts[@]}"; do bash -n "$f"; done
+          echo "parsed ${#scripts[@]} scripts"
+          python3 -c 'import yaml' 2>/dev/null ||
+            pip3 install --break-system-packages -q pyyaml
+          python3 -c 'import yaml; yaml.safe_load(open("clickable.yaml"))'
+          # the version substitution build.sh does, so a broken manifest is
+          # caught here rather than after the link
+          v=$(sed -n "s/^[[:space:]]*versionName[[:space:]]*'\([^']*\)'.*/\1/p" \
+                app/build.gradle | head -1)
+          [ -n "$v" ] || { echo "no versionName in app/build.gradle" >&2; exit 1; }
+          sed "s|@CLICK_VERSION@|$v.0|" kn/click/manifest.json |
+            python3 -c 'import json,sys; json.load(sys.stdin)'
+          echo "app version: $v"
+
+      # The same drift build.sh refuses to package: with the hook and the
+      # .desktop basename out of step, Lomiri never associates the surface with
+      # the app it launched and SIGSTOPs the process as a background one.
+      - name: Check the hook and the .desktop agree
+        run: |
+          set -eu
+          hook=$(basename kn/click/*.desktop .desktop)
+          grep -q "\"$hook\"" kn/click/manifest.json ||
+            { echo "manifest hook is not '$hook'" >&2; exit 1; }
+          grep -q "^Exec=" kn/click/"$hook".desktop
+          echo "hook: $hook"
+
+      # Tracked inputs the build reads and cannot make: without them the failure
+      # is a GL program that cannot load its shader, an hour in.
+      - name: Check the tracked inputs are there
+        run: |
+          set -eu
+          for d in app/src/main/assets/shaders app/src/main/assets/models; do
+            [ -d "$d" ] || { echo "missing $d" >&2; exit 1; }
+          done
+          test -s fastlane/metadata/android/en-US/images/icon.png
+          test -s kn/click/device-libs.txt
+          echo "assets: $(find app/src/main/assets -type f | wc -l) files"
+
+  build:
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    permissions:
+      contents: write   # for the release step
+    env:
+      CLICKABLE_NON_INTERACTIVE: "1"
+      # No staged tree exists on a runner, so this only makes the log say which
+      # of build.sh's two paths ran -- but it also means a stray kn/out never
+      # turns a CI run into a repackage of somebody else's binary.
+      CLICKABLE_ENV_PC_CLICK_BUILD: source
+    steps:
+      - uses: actions/checkout@v4
+
+      # kn/ is a standalone Gradle build with no Android modules, so unlike the
+      # app's own workflow this needs no SDK -- and deleting it is 13 GB back.
+      # aurora-maven, the sysroot, konan's bundle and the link all want room.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+                      /usr/local/.ghcup /usr/local/share/boost \
+                      /opt/hostedtoolcache/CodeQL || true
+          df -h /
+
+      # 922 MB over git-lfs from hub.mos.ru plus 141 MB of debs from
+      # ports.ubuntu.com: the slowest and least reliable part of the build, and
+      # the one that changes only when fetch-deps.sh does. atl-touch is
+      # deliberately NOT cached -- it is a moving master, and kn/gen-atlas is
+      # generated from whatever it is today.
+      - name: Restore the fetched dependencies
+        id: deps
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            kn/deps/aurora-maven
+            kn/deps/sysroot-arm64
+          key: kn-deps-${{ hashFiles('kn/scripts/fetch-deps.sh') }}
+
+      # clickable points HOME at ${BUILD_DIR}/.clickable/home, so the container's
+      # ~/.konan and ~/.gradle land inside the workspace and can be cached. The
+      # konan bundle and its LLVM are most of it. Keyed by the files that decide
+      # which toolchain is pulled; the build only ever adds to it, so it is
+      # written once per key rather than on every run.
+      - name: Restore the container's konan and Gradle caches
+        id: toolchain
+        uses: actions/cache/restore@v4
+        with:
+          path: kn/out/click/.clickable/home
+          key: kn-toolchain-${{ hashFiles('kn/build.gradle.kts', 'kn/gradle.properties', 'gradle/wrapper/gradle-wrapper.properties') }}
+
+      - name: Install clickable
+        run: |
+          pipx install clickable-ut
+          clickable --version
+
+      # One command from a clean checkout: fetch-deps, the drawables, mgwl, the
+      # extra arm64 libraries, the j2k conversion, the app's C++, atlas's camera
+      # backend and the Kotlin/Native link, all in the container.
+      #
+      # --skip-review for the reason make-click.sh has it: the review is worth
+      # running deliberately (the step below) and not in the way of the build.
+      - name: Build the click
+        id: build
+        run: |
+          set -o pipefail
+          mkdir -p kn/out
+          clickable build --arch arm64 --skip-review --verbose 2>&1 |
+            tee kn/out/click-build.log
+
+      # A half-fetched kn/deps saved under the right key would be worse than no
+      # cache at all -- every later run would restore it and skip the fetch. So
+      # the save is gated on the two markers fetch-deps.sh itself checks: the
+      # aarch64 maliit build (proof git-lfs smudged) and the package list the
+      # sysroot was assembled from.
+      - name: Is kn/deps complete?
+        id: deps_ok
+        if: always()
+        run: |
+          if [ -d kn/deps/aurora-maven/3rd_party/maliit-glib/aarch64 ] &&
+             [ -s kn/deps/sysroot-arm64/.packages ]; then
+            echo "complete=true" >>"$GITHUB_OUTPUT"
+          else
+            echo "complete=false" >>"$GITHUB_OUTPUT"
+          fi
+
+      - name: Save the fetched dependencies
+        if: always() && steps.deps.outputs.cache-hit != 'true' && steps.deps_ok.outputs.complete == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            kn/deps/aurora-maven
+            kn/deps/sysroot-arm64
+          key: kn-deps-${{ hashFiles('kn/scripts/fetch-deps.sh') }}
+
+      # Only after a build that got all the way through: a failed one may have
+      # left a partly-extracted konan bundle, and this key is never rewritten.
+      - name: Save the container's konan and Gradle caches
+        if: steps.build.outcome == 'success' && steps.toolchain.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: kn/out/click/.clickable/home
+          key: kn-toolchain-${{ hashFiles('kn/build.gradle.kts', 'kn/gradle.properties', 'gradle/wrapper/gradle-wrapper.properties') }}
+
+      # click-review's findings, which OpenStore runs too. It is NOT allowed to
+      # fail the build: the reserved policy group `picture_files` is a standing
+      # NEEDS REVIEW finding (kn/click/README.md, "What is unresolved"), so a
+      # blocking review would mean a permanently red workflow. Read the summary.
+      - name: Review the click
+        id: review
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          clickable review --arch arm64 2>&1 | tee kn/out/click-review.log
+
+      # Which of the two binaries was packaged is the fact a reader of this run
+      # most needs: a fresh clone without kn/gen builds the UI-only one, which
+      # starts and takes no pictures, and the log is the only place that says so.
+      - name: Report
+        if: always()
+        run: |
+          {
+            echo "## Ubuntu Touch click (Kotlin/Native)"
+            echo
+            click=$(ls kn/out/click/*.click 2>/dev/null | head -1) || true
+            if [ -n "${click:-}" ]; then
+              echo "* \`$(basename "$click")\` — $(( $(stat -c%s "$click") / 1024 / 1024 )) MB"
+            else
+              echo "* no click was produced"
+            fi
+            if grep -q 'building the app (-PwithApp)' kn/out/click-build.log 2>/dev/null; then
+              echo "* the **converted app** was built (\`-PwithApp\`)"
+            elif grep -q 'building the UI-only binary' kn/out/click-build.log 2>/dev/null; then
+              echo "* ⚠️ **UI-only** binary: the j2k conversion produced no \`kn/gen\`, so this click shows the UI and takes no pictures"
+            fi
+            # `a && b` as a statement is an AND-LIST: under set -e a failing
+            # grep would take the whole step with it, hence the `|| true`
+            grep -q 'no arm64 ncnn' kn/out/click-build.log 2>/dev/null &&
+              echo "* no arm64 ncnn: FlowNet and KernelNet report unavailable" || true
+            echo "* deps cache: ${{ steps.deps.outputs.cache-hit == 'true' && 'hit' || 'miss' }}, toolchain cache: ${{ steps.toolchain.outputs.cache-hit == 'true' && 'hit' || 'miss' }}"
+            bin=kn/out/click/install/photoncam-kn
+            if [ -f "$bin" ]; then
+              echo
+              echo "\`\`\`"
+              file -b "$bin"
+              echo "bundled: $(ls kn/out/click/install/lib 2>/dev/null | tr '\n' ' ')"
+              readelf -d "$bin" | sed -n 's/.*NEEDED.*\[\(.*\)\]/  \1/p' | sort | paste -sd' '
+              echo "\`\`\`"
+            fi
+            if [ -f kn/out/click-review.log ]; then
+              echo
+              echo "<details><summary>clickable review (${{ steps.review.outcome }})</summary>"
+              echo
+              echo '```'
+              tail -40 kn/out/click-review.log
+              echo '```'
+              echo '</details>'
+            fi
+          } >>"$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kn-click-logs
+          path: kn/out/*.log
+          if-no-files-found: warn
+
+      - name: Upload the click
+        uses: actions/upload-artifact@v4
+        with:
+          name: photoncamera-kn-click-arm64
+          path: kn/out/click/*.click
+          if-no-files-found: error
+
+      # Actions artifacts need a GitHub login to download; a prerelease does
+      # not, which is what testers actually use. The version is the app's
+      # versionName plus build.sh's CLICK_REV, so the tag names the build.
+      #
+      # This does NOT publish to the OpenStore: kn/click/README.md lists what a
+      # human has to settle first (the icon size, the confinement question and
+      # the reserved picture_files group).
+      - name: Publish to a GitHub release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/kn'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          click=$(ls kn/out/click/*.click)
+          version=$(basename "$click" | cut -d_ -f2)
+          tag="kn-v${version}-${GITHUB_SHA::7}"
+          notes=$(printf '%s\n' \
+            "Unofficial test build of PhotonCamera for Ubuntu Touch 24.04 (arm64) — the Kotlin/Native port: one native ELF, no JVM and no Android runtime. Not a stable release." \
+            "" \
+            "Install with \`clickable install --ssh <device>\`, or copy it over and \`pkcon install-local --allow-untrusted <file>.click\`.")
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "$click" --clobber
+          else
+            gh release create "$tag" "$click" \
+              --title "PhotonCamera ${version} (Kotlin/Native, Ubuntu Touch)" \
+              --prerelease --notes "$notes"
+          fi
