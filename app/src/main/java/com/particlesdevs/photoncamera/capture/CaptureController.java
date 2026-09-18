@@ -598,10 +598,14 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
             Integer afState = result.get(CaptureResult.CONTROL_AF_STATE);
             // If we haven't finished the pre-capture sequence but have hit our maximum
             // wait timeout, too bad! Begin capture anyway.
+            // RETURN: without it a result that both timed out AND carries no
+            // AF state starts the burst twice, and two overlapping bursts make
+            // the HAL fail half the frames of each.
             if (hitTimeoutLocked()) {
                 Log.w(TAG, "Timed out waiting for pre-capture sequence to complete.");
                 mState = STATE_PICTURE_TAKEN;
                 captureStillPicture();
+                return;
             }
             if (afState == null) {
                 mState = STATE_PICTURE_TAKEN;
@@ -2814,6 +2818,15 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                 mTextureView.setListener(mSurfaceTextureListener);
                 // Report the missing session so a lens-switch cycle cannot stay
                 // active forever with no preview.
+                onPreviewSessionFailed(sessionToken);
+                return;
+            }
+            // Named, rather than an NPE from inside configureSurfaces: these are
+            // built by setUpCameraOutputs and nulled by every close, so a null
+            // one here means the open beat the setup and the caller's ordering
+            // is what wants fixing.
+            if (mImageReaderPreview == null || mImageReaderRaw == null) {
+                Log.w(TAG, "createCameraPreviewSession(): image readers not ready yet");
                 onPreviewSessionFailed(sessionToken);
                 return;
             }
