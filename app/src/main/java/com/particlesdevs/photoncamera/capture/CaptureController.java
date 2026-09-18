@@ -513,10 +513,14 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
             Integer afState = result.get(CaptureResult.CONTROL_AF_STATE);
             // If we haven't finished the pre-capture sequence but have hit our maximum
             // wait timeout, too bad! Begin capture anyway.
+            // RETURN: without it a result that both timed out AND carries no
+            // AF state starts the burst twice, and two overlapping bursts make
+            // the HAL fail half the frames of each.
             if (hitTimeoutLocked()) {
                 Log.w(TAG, "Timed out waiting for pre-capture sequence to complete.");
                 mState = STATE_PICTURE_TAKEN;
                 captureStillPicture();
+                return;
             }
             if (afState == null) {
                 mState = STATE_PICTURE_TAKEN;
@@ -1321,6 +1325,27 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
         // ordering. Every other openCamera in this class gives it the
         // background handler, and now so does this one.
         startBackgroundThread();
+
+        // THE OUTPUTS BEFORE THE OPEN, in openCamera(int,int)'s order.  The
+        // close above nulled mImageReaderPreview and mImageReaderRaw, and it is
+        // setUpCameraOutputs that builds them again -- but onOpened runs on the
+        // background thread and goes straight to createCameraPreviewSession,
+        // so with the open first the two raced for every mode switch.  The
+        // session lost about half of them: configureSurfaces asks the readers
+        // for their surfaces, and a null one there is an NPE that leaves the
+        // preview dead with nothing but a caught exception to say so.
+        if (mCameraCharacteristics == null) {
+            if (mCameraCharacteristicsMap == null || mCameraCharacteristicsMap.isEmpty()) {
+                fillInCameraCharacteristics();
+            }
+            mCameraCharacteristics = mCameraCharacteristicsMap.get(physicalID);
+        }
+
+        Size optimal = getPreviewOutputSize(getDisplaySize(), mCameraCharacteristics, PhotonCamera.getSettings().selectedMode);
+
+        setUpCameraOutputs(optimal.getWidth(), optimal.getHeight());
+        configureTransform(optimal.getWidth(), optimal.getHeight());
+
         try {
             if (!mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
                 throw new RuntimeException("Time out waiting to lock camera opening.");
@@ -1334,19 +1359,6 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
             mCameraOpening.set(false);
             throw new RuntimeException("Interrupted while trying to restart camera.", e);
         }
-        //UpdateCameraCharacteristics(physicalID);
-
-        if (mCameraCharacteristics == null) {
-            if (mCameraCharacteristicsMap == null || mCameraCharacteristicsMap.isEmpty()) {
-                fillInCameraCharacteristics();
-            }
-            mCameraCharacteristics = mCameraCharacteristicsMap.get(physicalID);
-        }
-
-        Size optimal = getPreviewOutputSize(getDisplaySize(), mCameraCharacteristics, PhotonCamera.getSettings().selectedMode);
-
-        setUpCameraOutputs(optimal.getWidth(), optimal.getHeight());
-        configureTransform(optimal.getWidth(), optimal.getHeight());
     }
     private Size getAspect(CameraMode targetMode){
         Size aspectRatio;
@@ -1708,6 +1720,14 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
             if (texture == null) {
                 Log.w(TAG, "createCameraPreviewSession(): SurfaceTexture not ready, waiting for surface");
                 mTextureView.setListener(mSurfaceTextureListener);
+                return;
+            }
+            // Named, rather than an NPE from inside configureSurfaces: these are
+            // built by setUpCameraOutputs and nulled by every close, so a null
+            // one here means the open beat the setup and the caller's ordering
+            // is what wants fixing.
+            if (mImageReaderPreview == null || mImageReaderRaw == null) {
+                Log.w(TAG, "createCameraPreviewSession(): image readers not ready yet");
                 return;
             }
             // We configure the size of default buffer to be the size of camera preview we want.
