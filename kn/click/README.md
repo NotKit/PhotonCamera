@@ -287,10 +287,14 @@ contents rather than by a date:
   the slowest and least reliable part of a run. `kn/deps/atl-touch` is
   deliberately *not* cached: it is a moving master and `kn/gen-atlas` is
   generated from whatever it is that day.
-* `kn/out/click/.clickable/home`, keyed by `build.gradle.kts`,
-  `gradle.properties` and the wrapper properties. clickable points `HOME` at
-  `${BUILD_DIR}/.clickable/home`, so the container's `~/.konan` and `~/.gradle`
-  land inside the workspace; konan's bundle and its LLVM are most of that.
+* `kn/out/click/{.konan,.gradle}`, keyed by `build.gradle.kts`,
+  `gradle.properties` and the wrapper properties — konan's bundle, its LLVM and
+  the Gradle distribution, about 90 seconds of downloading a run. Note that
+  these are **not** `$HOME`: clickable passes
+  `HOME=${BUILD_DIR}/.clickable/home` into the container, but Gradle and konan
+  follow the JVM's `user.home`, which for a uid with no passwd entry is not
+  `$HOME`, and they write to the build directory itself. Caching the documented
+  `HOME` instead saves 0 MB, which is what the first CI run did.
 
 A `checks` job parses every script, the YAML and the substituted manifest, and
 checks the hook against the `.desktop` basename, before the hour-long build

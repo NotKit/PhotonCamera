@@ -125,16 +125,25 @@ jobs:
             kn/deps/sysroot-arm64
           key: kn-deps-${{ hashFiles('kn/scripts/fetch-deps.sh') }}
 
-      # clickable points HOME at ${BUILD_DIR}/.clickable/home, so the container's
-      # ~/.konan and ~/.gradle land inside the workspace and can be cached. The
-      # konan bundle and its LLVM are most of it. Keyed by the files that decide
-      # which toolchain is pulled; the build only ever adds to it, so it is
-      # written once per key rather than on every run.
+      # The konan bundle, its LLVM and the Gradle distribution: about 90 s of
+      # downloading per run (measured in run 35370668507).
+      #
+      # THESE PATHS ARE NOT $HOME. clickable passes
+      # HOME=${BUILD_DIR}/.clickable/home into the container, but Gradle and
+      # konan follow the JVM's `user.home`, which is not $HOME for a uid with no
+      # passwd entry -- so they write to the build dir itself. That run proved
+      # it: HOME was set to .clickable/home and the trees landed in
+      # kn/out/click/{.konan,.gradle}, leaving a cache of 0 MB behind.
+      #
+      # Keyed by the files that decide which toolchain is pulled; the build only
+      # ever adds to these, so they are written once per key, not every run.
       - name: Restore the container's konan and Gradle caches
         id: toolchain
         uses: actions/cache/restore@v4
         with:
-          path: kn/out/click/.clickable/home
+          path: |
+            kn/out/click/.konan
+            kn/out/click/.gradle
           key: kn-toolchain-${{ hashFiles('kn/build.gradle.kts', 'kn/gradle.properties', 'gradle/wrapper/gradle-wrapper.properties') }}
 
       - name: Install clickable
@@ -187,7 +196,9 @@ jobs:
         if: steps.build.outcome == 'success' && steps.toolchain.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
-          path: kn/out/click/.clickable/home
+          path: |
+            kn/out/click/.konan
+            kn/out/click/.gradle
           key: kn-toolchain-${{ hashFiles('kn/build.gradle.kts', 'kn/gradle.properties', 'gradle/wrapper/gradle-wrapper.properties') }}
 
       # click-review's findings, which OpenStore runs too. It is NOT allowed to
