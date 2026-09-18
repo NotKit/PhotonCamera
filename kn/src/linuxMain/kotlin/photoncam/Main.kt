@@ -34,7 +34,7 @@ private val KN_TARGET: String
  * -PwithApp).  A flag would mean the no-app binary naming the app to skip it,
  * and then it would need gen/ to link.
  */
-@OptIn(ExperimentalForeignApi::class, ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalForeignApi::class, ExperimentalCoroutinesApi::class, kotlin.experimental.ExperimentalNativeApi::class)
 fun main(args: Array<String>) {
 	// Kotlin/Native on Linux ships no main dispatcher, and Compose's own
 	// postDelayed launches on Dispatchers.Main -- without this the first layout
@@ -54,5 +54,16 @@ fun main(args: Array<String>) {
 	val host = MgwlComposeHost.create(socket, es)
 		?: error("cannot reach the compositor (socket=${socket ?: "\$WAYLAND_DISPLAY"})")
 	println("[pc] photoncam-kn on $KN_TARGET, app id $appId, ${seconds}s")
+	// Offscreen GL (the converted GLContext) needs a display that does
+	// pbuffers. The phone's hybris EGL answers the default display as Android
+	// would; desktop Mesa's does not, so only the x64 host may fall back to
+	// the surfaceless platform -- on the device that fallback must never
+	// fire, or a software rasteriser would silently stand in for the Adreno.
+	android.opengl.EGL14.allowSurfacelessFallback =
+		Platform.cpuArchitecture == CpuArchitecture.X64
+	// And when the default display will not initialise at all -- which is what
+	// the phone does once the compositor's display is live -- the offscreen GL
+	// shares the window's, as it would on Android, where there is only one.
+	host.onWindowReady = { android.opengl.EGL14.hostDisplay = host.eglDisplay() }
 	host.run(appId, "PhotonCamera", 720, 1440, seconds) { CameraScreenContent() }
 }

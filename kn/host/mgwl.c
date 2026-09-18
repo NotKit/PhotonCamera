@@ -542,6 +542,8 @@ int mgwl_height(mgwl *m) { return m->height; }
 int mgwl_scale(mgwl *m)  { return m->scale; }
 int mgwl_should_close(mgwl *m) { return m->should_close; }
 
+void *mgwl_egl_display(mgwl *m) { return m ? (void *)m->egl_display : NULL; }
+
 const char *mgwl_egl_vendor(mgwl *m) {
     return m->egl_display ? eglQueryString(m->egl_display, EGL_VENDOR) : "";
 }

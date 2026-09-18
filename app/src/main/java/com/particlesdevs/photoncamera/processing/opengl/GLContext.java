@@ -6,6 +6,14 @@ import android.opengl.EGLDisplay;
 import android.opengl.EGLSurface;
 
 import static android.opengl.EGL14.EGL_HEIGHT;
+import static android.opengl.EGL14.EGL_OPENGL_ES2_BIT;
+import static android.opengl.EGL14.EGL_PBUFFER_BIT;
+import static android.opengl.EGL14.EGL_RENDERABLE_TYPE;
+import static android.opengl.EGL14.EGL_SURFACE_TYPE;
+import static android.opengl.EGL14.EGL_VENDOR;
+import static android.opengl.EGL14.EGL_VERSION;
+import static android.opengl.EGL14.eglGetError;
+import static android.opengl.EGL14.eglQueryString;
 import static android.opengl.EGL14.EGL_NONE;
 import static android.opengl.EGL14.EGL_NO_CONTEXT;
 import static android.opengl.EGL14.EGL_NO_SURFACE;
@@ -46,12 +54,22 @@ public class GLContext implements AutoCloseable {
         int[] major = new int[2];
         int[] minor = new int[2];
         mDisplay = eglGetDisplay(GLDrawParams.EGLDisplay);
-        eglInitialize(mDisplay, major, 0, minor, 0);
+        boolean inited = eglInitialize(mDisplay, major, 0, minor, 0);
         int[] numConfig = new int[1];
-        if (!eglChooseConfig(mDisplay, GLDrawParams.attribList, 0,
-                new EGLConfig[0], 0, 0, numConfig, 0)
-                || numConfig[0] == 0) {
-            throw new RuntimeException("OpenGL config count zero");
+        boolean chosen = eglChooseConfig(mDisplay, GLDrawParams.attribList, 0,
+                new EGLConfig[0], 0, 0, numConfig, 0);
+        if (!inited || !chosen || numConfig[0] == 0) {
+            // "config count zero" alone names neither the display nor the
+            // attribute that emptied the list, and the two failures it covers
+            // -- a display that will not initialise and one that has no
+            // matching config -- want opposite fixes.
+            throw new RuntimeException("OpenGL config count zero"
+                    + " (init=" + inited + " egl=" + major[0] + "." + minor[0]
+                    + " vendor=" + eglQueryString(mDisplay, EGL_VENDOR)
+                    + " version=" + eglQueryString(mDisplay, EGL_VERSION)
+                    + " chosen=" + chosen + " n=" + numConfig[0]
+                    + " err=0x" + Integer.toHexString(eglGetError())
+                    + ")" + whichAttributeEmptiedIt());
         }
         int configSize = numConfig[0];
         EGLConfig[] configs = new EGLConfig[configSize];
@@ -71,6 +89,28 @@ public class GLContext implements AutoCloseable {
         }, 0);
         eglMakeCurrent(mDisplay, mSurface, mSurface, mContext);
         mProgram = new GLProg();
+    }
+
+    /**
+     * Which attribute the display cannot satisfy, asked one drop at a time.
+     * Only ever called on the failure path; the answer is the difference
+     * between "this EGL has no offscreen at all" and "it has no
+     * BIND_TO_TEXTURE_RGBA", which are not the same bring-up problem.
+     */
+    private String whichAttributeEmptiedIt() {
+        int[][] relaxed = {
+                {EGL_SURFACE_TYPE, EGL_PBUFFER_BIT, EGL_RENDERABLE_TYPE, EGL_OPENGL_ES2_BIT, EGL_NONE},
+                {EGL_SURFACE_TYPE, EGL_PBUFFER_BIT, EGL_NONE},
+                {EGL_NONE},
+        };
+        String[] names = {"pbuffer+es2", "pbuffer", "anything"};
+        StringBuilder sb = new StringBuilder(" probes:");
+        for (int i = 0; i < relaxed.length; i++) {
+            int[] n = new int[1];
+            boolean ok = eglChooseConfig(mDisplay, relaxed[i], 0, new EGLConfig[0], 0, 0, n, 0);
+            sb.append(' ').append(names[i]).append('=').append(ok ? n[0] : -1);
+        }
+        return sb.toString();
     }
 
     @Override

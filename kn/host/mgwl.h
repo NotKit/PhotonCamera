@@ -115,6 +115,9 @@ int  mgwl_should_close(mgwl *m);
 
 /* EGL/GL info strings for logging (valid after mgwl_make_current). */
 const char *mgwl_egl_vendor(mgwl *m);
+/* The window's EGLDisplay.  There is one EGL display per process on Android
+ * and hybris means it here too: the app's offscreen GL has to share this one. */
+void *mgwl_egl_display(mgwl *m);
 const char *mgwl_gl_renderer(mgwl *m);
 
 void mgwl_destroy(mgwl *m);

@@ -73,7 +73,10 @@ public class GLInterface {
         BufferedReader reader = new BufferedReader(new StringReader(program));
         Map<String, GLComputeLayout> layoutsMap = new HashMap<>();
         for (Object line : reader.lines().toArray()) {
-            String val = String.valueOf(line);
+            // line.toString, not String.valueOf: j2k reads the valueOf(Object)
+            // overload as valueOf(int) and the port dies parsing GLSL as a
+            // number the moment a compute shader compiles.
+            String val = line.toString();
             int comment = val.indexOf("//");
             if (comment >= 0) val = val.substring(0, comment);
             if(val.contains("layout")){
@@ -106,7 +109,8 @@ public class GLInterface {
         boolean versioned = false;
         for (Object line : reader.lines().toArray()) {
             linecnt++;
-            String val = String.valueOf(line);
+            // line.toString, not String.valueOf: see getLayouts above.
+            String val = line.toString();
             String out = val;
             if(val.contains("#version"))
                 versioned = true;
