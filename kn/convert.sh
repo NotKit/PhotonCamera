@@ -63,24 +63,38 @@ PYEOF
 import re, sys, pathlib
 # strings and line comments blanked, so a `null!!` inside either is left alone
 TOKEN = re.compile(r'(?<![\w.$])null!!')
+# AND Java's `(Buffer) null`, which j2k writes as `(null as Buffer)!!`: the same
+# unconditional throw wearing a cast.  The cast is in the Java to pick an
+# overload, so it stays -- made nullable, which is the overload Java chose.
+# ESD4D's createKernelsMap died on `new GLTexture(size, format, (Buffer) null)`
+# the moment the pipeline first reached the merge's combine pass.
+CAST = re.compile(r'\(null as ([\w.<>, ?]+?)\)!!')
 STR = re.compile(r'"(?:\\.|[^"\\])*"')
 def blank(line):
     line = STR.sub(lambda m: '"' + " " * (len(m.group(0)) - 2) + '"', line)
     c = line.find("//")
     return line if c < 0 else line[:c] + " " * (len(line) - c)
-n = 0
+def nullable(m):
+    t = m.group(1).strip()
+    return "(null as %s)" % (t if t.endswith("?") else t + "?")
+n = c = 0
 for f in pathlib.Path(sys.argv[1]).rglob("*.kt"):
-    out, hit = [], 0
+    out, hit, chit = [], 0, 0
     for line in f.read_text().split("\n"):
+        spans = [m.span() for m in CAST.finditer(blank(line))]
+        for a, b in reversed(spans):
+            line = line[:a] + nullable(CAST.match(line, a)) + line[b:]
+        chit += len(spans)
         spans = [m.span() for m in TOKEN.finditer(blank(line))]
         for a, b in reversed(spans):
             line = line[:a] + "null" + line[b:]
         hit += len(spans)
         out.append(line)
-    if hit:
+    if hit or chit:
         f.write_text("\n".join(out))
-        n += hit
+        n += hit; c += chit
 print(f"literal null!! restored to null: {n}")
+print(f"`(null as T)!!` casts made nullable: {c}")
 PYEOF
 
 # `= expr!!` WHERE THE NULL TEST IS A LINE OR TWO DOWN is the same throw again,
@@ -92,6 +106,7 @@ PYEOF
 import pathlib, sys
 sys.path.insert(0, str(pathlib.Path(sys.argv[1]) / "scripts"))
 from bang_below import strip_assignment_bang
+from bang_delegate import strip_delegate_bang
 
 n = 0
 for f in pathlib.Path(sys.argv[2]).rglob("*.kt"):
@@ -101,7 +116,23 @@ for f in pathlib.Path(sys.argv[2]).rglob("*.kt"):
         f.write_text(r)
         n += sum(1 for a, b in zip(s.split("\n"), r.split("\n")) if a != b)
 print(f"`= expr!!` with a null test below it, unasserted: {n}")
+n = 0
+for f in pathlib.Path(sys.argv[2]).rglob("*.kt"):
+    s = f.read_text()
+    r = strip_delegate_bang(s)
+    if r != s:
+        f.write_text(r)
+        n += sum(1 for a, b in zip(s.split("\n"), r.split("\n")) if a != b)
+print(f"`this(...)` delegation args on nullable targets, unasserted: {n}")
 BANGEOF
+
+# A `for` LOOP'S UPDATE IS THE LAST STATEMENT OF THE `while` j2k writes, so a
+# `continue` in the body skips it and the loop spins on the same index for
+# ever -- silently, at 100% of a core, with no exception and no output.
+# scripts/for_continue.py says what the shape is; it is SHARED with
+# atlas-fixups.sh so the two lanes cannot drift.  ESD4D's noise fit and its
+# merge loop both hung on it and both read as a GPU stall for a whole round.
+"$PY" "$HERE/scripts/for_continue.py" "$GEN_NEW"
 
 # j2k emits GeckoView's generated surface (aidl stand-ins, android.R, the JDK
 # TODO() stubs) for any --src.  The shims under src/commonMain are real

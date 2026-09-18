@@ -64,6 +64,8 @@ def fix_sensor_manager(text):
 # drift.  See that file for the shape and the reasoning.
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(GEN)), "scripts"))
 from bang_below import strip_assignment_bang
+from bang_delegate import strip_delegate_bang
+from for_continue import fix_file as fix_for_continue
 
 
 def fix(path, text):
@@ -108,6 +110,10 @@ def fix(path, text):
     # takes null for it; j2k's `!!` turns "not reprocessing" into a crash.
     text = text.replace("config!!.getInputConfiguration()!!)", "config!!.getInputConfiguration())")
     text = strip_assignment_bang(text)
+    # A `this(...)` delegation arg j2k asserts even though the sibling
+    # constructor takes null there (GLTexture's pixels); scripts/bang_delegate.py
+    # says why. Same shared copy as convert.sh uses.
+    text = strip_delegate_bang(text)
     # A request's tag is the app's own opaque object and is usually absent;
     # `!!` on it makes an untagged request -- which is every preview request --
     # throw where AOSP simply carries null.
@@ -189,6 +195,17 @@ def fix(path, text):
     if owner in ("CameraCaptureSession", "CameraDevice"):
         for name in ("CaptureCallback", "StateCallback"):
             text = as_interface(text, name)
+
+    if owner == "CameraCaptureSession":
+        # Java's entrySet() hands back detached nodes, so snapshot-then-clear
+        # (abortCaptures, dispatchDeviceError) reads fine. Kotlin/Native's
+        # HashMap entries are fail-fast refs into the map: the clear() poisons
+        # the snapshot and the first getKey() throws
+        # ConcurrentModificationException. Copy the map instead; the copy is
+        # never mutated, so its entries stay valid.
+        text = text.replace(
+            "ArrayList<Map.Entry<Int, Sequence>>(sequences!!.entrySet()!!)",
+            "ArrayList<Map.Entry<Int, Sequence>>(sequences!!.toMap()!!.entries!!)")
 
     if owner == "Range":
         # AOSP's endpoints are final and never null; nullable ones make every
@@ -316,4 +333,11 @@ for root, _, files in os.walk(GEN):
         t = fix(p, s)
         if t != s:
             open(p, "w").write(t)
+
+# A `continue` that skips its for-loop's update, which j2k puts last in the
+# body: an infinite loop that costs a core and says nothing. Same shared copy
+# convert.sh runs; no site in this tree today, and the rule still has to hold.
+import pathlib as _pathlib
+_n = sum(fix_for_continue(_f) for _f in _pathlib.Path(GEN).rglob("*.kt"))
+print("`continue` that skipped its for-loop update, repaired: %d" % _n)
 PY
