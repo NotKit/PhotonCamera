@@ -369,15 +369,24 @@ Everything below except 1 is reasoned, not observed.
    `$ATL_APPDIR/{data,cache}` — inside the read-only package. Nothing asks
    today (CMP uses `PACKAGE_FILES` only), but a klib that starts to will get an
    unwritable path with no useful error.
-4. **The image codec differs between the two build paths, and that is a
-   property of the machine.** `host/natives/build.sh` probes for `jpeglib.h`
-   and `png.h`: the clickable container has both, so the container build links
-   the system libjpeg and libpng and the binary gains `libjpeg.so.8` and
-   `libpng16.so.16` — both on the device, so nothing extra ships. A box without
-   those headers (this one) gets the vendored stb instead, at lower JPEG
-   quality. `kn/scripts/fetch-deps.sh` puts libjpeg and a `libpng.so` alias in
-   the sysroot so that *either* answer links; without them the link dies with
-   `ld.lld: unable to find library -ljpeg` after twenty minutes of compiling.
+4. **The JPEG the app writes is Skia's libjpeg, whatever the link line says —
+   RUN, and it was saving 0-byte files.** `skiko.klib` carries
+   `default/targets/<target>/included/libjpeg.a` (libjpeg-turbo 3.1.0) and
+   Kotlin/Native links every one of those archives in; Skia uses libjpeg, so
+   its members are always pulled and their `jpeg_*` symbols are the ones
+   `image_codec.c` calls. That build keeps the **libjpeg 6b API**
+   (`JPEG_LIB_VERSION` 62) while Ubuntu's `jpeglib.h` is libjpeg8's (80), and
+   `build.sh`'s header probe had no `--sysroot`, so a *cross* build was reading
+   the build host's header at that. The two disagree about the middle of
+   `jpeg_compress_struct` and `jpeg_CreateCompress`'s guard catches it: `jpeg:
+   Wrong JPEG library version: library is 62, caller expects 80`, then
+   `compress(JPEG): the encoder failed`, and `ImageSaved:` logged over an empty
+   file. `host/natives/third_party/libjpeg/` now holds libjpeg-turbo 3.1.0's
+   public headers and a matching `jconfig.h`, `image_codec.c` includes them by
+   path, and `-ljpeg` is gone from the link — `libjpeg.so.8` is no longer a
+   device dependency. libpng is Skia's too and works only because both sides
+   are 1.6.x; `png.h` is still the system one and still decides
+   `PHOTONCAM_CODEC_SYSTEM`.
 5. **`clickable review` fails on one reserved policy group.**
    `security:policy_groups_safe:photoncamera:picture_files` — "(NEEDS REVIEW)
    reserved policy group 'picture_files': vetted applications only". It is a

@@ -127,17 +127,24 @@ fi
 
 # --- image codec -------------------------------------------------------------
 # PNG and JPEG are Skia's job on Android and nothing in app/src/main/cpp does
-# them, so this is the one piece of the lane with no app C++ under it.  System
-# libpng + libjpeg-turbo when their headers are here (Ubuntu Touch ships both);
-# a vendored stb otherwise, so a target without them still builds.
+# them, so this is the one piece of the lane with no app C++ under it.  libpng
+# when its header is here (Ubuntu Touch ships it); a vendored stb otherwise, so
+# a target without it still builds.
+#
+# THERE IS NO -ljpeg AND NO jpeglib.h PROBE.  skiko.klib carries libjpeg.a and
+# Kotlin/Native links it in, Skia pulls its members, and those jpeg_* symbols
+# are the ones this port gets whatever else is on the link line -- so the
+# contract to compile against is that archive's, not the build machine's.
+# third_party/libjpeg holds libjpeg-turbo 3.1.0's public headers and a jconfig.h
+# matching it; image_codec.c includes them by path.  The old probe had no
+# --sysroot either, so a cross build was reading the HOST's jpeglib.h.
 CODEC_SYSTEM=0
-jpeg_h=$("$CC" $CROSS -E -include jpeglib.h -x c /dev/null -o /dev/null 2>/dev/null && echo 1 || echo 0)
 png_h=$("$CC" $CROSS -E -include png.h -x c /dev/null -o /dev/null 2>/dev/null && echo 1 || echo 0)
-if [ "$jpeg_h" = 1 ] && [ "$png_h" = 1 ]; then
+if [ "$png_h" = 1 ]; then
 	CODEC_SYSTEM=1
-	CODEC_LINK="-ljpeg -lpng"
+	CODEC_LINK="-lpng"
 else
-	echo "  note: no jpeglib.h/png.h for $ARCH; vendoring stb (JPEG quality is lower)"
+	echo "  note: no png.h for $ARCH; vendoring stb (JPEG quality is lower)"
 	mkdir -p "$HERE/third_party"
 	for dep in \
 		"stb_image.h|https://raw.githubusercontent.com/nothings/stb/master/stb_image.h" \
@@ -180,5 +187,5 @@ fi
 	echo "-lstdc++ -lm -ldl -lpthread"
 } >"$OUT/link-flags.txt"
 
-echo "ok: $OUT/libphotoncam_native.a ($(du -h "$OUT/libphotoncam_native.a" | cut -f1), ncnn=$WITH_NCNN, codec=$([ "$CODEC_SYSTEM" = 1 ] && echo libpng+libjpeg || echo stb))"
+echo "ok: $OUT/libphotoncam_native.a ($(du -h "$OUT/libphotoncam_native.a" | cut -f1), ncnn=$WITH_NCNN, codec=$([ "$CODEC_SYSTEM" = 1 ] && echo "libpng+skia-libjpeg" || echo stb))"
 echo "    link flags in $OUT/link-flags.txt"
