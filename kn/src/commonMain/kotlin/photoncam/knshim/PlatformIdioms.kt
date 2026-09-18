@@ -14,10 +14,28 @@ import kotlin.reflect.KClass
 
 // --- String.split: Java's returns an array and takes a regex; Kotlin's takes
 // literal delimiters and returns a List.  j2k types the result Array<String>.
-fun String.split(regex: String): Array<String> = Regex(regex).split(this).toTypedArray()
+//
+// AND JAVA DROPS THE TRAILING EMPTY STRINGS when the limit is zero, which
+// Kotlin's Regex.split does not.  That one difference is silent everywhere and
+// wrong everywhere: `"buffer histogramRed ".split(" ")` ends in "" here and in
+// "histogramRed" on Android, so GLInterface.getLayouts keyed every compute
+// buffer under "" and every setBufferCompute missed -- the noise histogram ran
+// against unbound buffers with nothing said but "Wrong computeLayout".
+// Java's own rule, and now ours: if the pattern never matched, the whole string
+// comes back; otherwise the trailing empties go, all of them.
+fun String.split(regex: String): Array<String> = javaSplit(regex, 0)
 
-fun String.split(regex: String, limit: Int): Array<String> =
-    Regex(regex).split(this, if (limit < 0) 0 else limit).toTypedArray()
+fun String.split(regex: String, limit: Int): Array<String> = javaSplit(regex, limit)
+
+private fun String.javaSplit(regex: String, limit: Int): Array<String> {
+    val parts = Regex(regex).split(this, if (limit > 0) limit else 0)
+    // limit != 0 keeps them, as Java's does; one part means no match at all,
+    // and Java hands that string straight back ("".split(",") is [""]).
+    if (limit != 0 || parts.size <= 1) return parts.toTypedArray()
+    var n = parts.size
+    while (n > 0 && parts[n - 1].isEmpty()) n--
+    return parts.subList(0, n).toTypedArray()
+}
 
 // --- Foo.class: java.lang.Class is a typealias for KClass, so `.java` is the
 // identity.  knArrayClass<T>() is j2k's spelling of `T[].class`.
