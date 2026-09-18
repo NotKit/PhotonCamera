@@ -98,6 +98,32 @@ def main():
             rows.append("    R.%s.%s to %s," % (kind, n if n.isidentifier() else "`%s`" % n, conv(v)))
         return rows
 
+    APP = "{http://schemas.android.com/apk/res-auto}"
+    strings = types.get("string", {})
+    bools = types.get("bool", {})
+    integers = types.get("integer", {})
+    arrays = types.get("array", {})
+
+    def resolve(raw):
+        if raw is None:
+            return None
+        raw = raw.strip()
+        m = re.fullmatch(r"@(string|bool|integer)/(\w+)", raw)
+        if not m:
+            return raw
+        kind, name = m.group(1), m.group(2)
+        v = {"string": strings, "bool": bools, "integer": integers}[kind].get(name)
+        return None if v is None else v.strip()
+
+    def resolve_array(raw):
+        if raw is None:
+            return None
+        m = re.fullmatch(r"@array/(\w+)", raw.strip())
+        if not m:
+            return None
+        items = arrays.get(m.group(1))
+        return None if items is None else [resolve(i) or "" for i in items]
+
     lines.append("/** id -> value, for android.content.res.Resources. */")
     lines.append("internal val R_STRINGS: Map<Int, String> = mapOf(")
     lines += table("string", lambda v: '"%s"' % esc(v))
@@ -112,7 +138,8 @@ def main():
     lines.append(")")
     lines.append("")
     lines.append("internal val R_ARRAYS: Map<Int, Array<String>> = mapOf(")
-    lines += table("array", lambda v: "arrayOf(%s)" % ", ".join('"%s"' % esc(x) for x in v))
+    lines += table("array",
+                   lambda v: "arrayOf(%s)" % ", ".join('"%s"' % esc(resolve(x) or "") for x in v))
     lines.append(")")
     lines.append("")
     # THE PREFERENCE SCREENS' OWN DEFAULTS.  On Android
@@ -124,31 +151,6 @@ def main():
     # against the value tables above, and a boolean is written the way
     # SettingsManager stores one ("1"/"0").
     A = "{http://schemas.android.com/apk/res/android}"
-    strings = types.get("string", {})
-    bools = types.get("bool", {})
-    integers = types.get("integer", {})
-
-    def resolve(raw):
-        if raw is None:
-            return None
-        raw = raw.strip()
-        m = re.fullmatch(r"@(string|bool|integer)/(\w+)", raw)
-        if not m:
-            return raw
-        kind, name = m.group(1), m.group(2)
-        v = {"string": strings, "bool": bools, "integer": integers}[kind].get(name)
-        return None if v is None else v.strip()
-
-    arrays = types.get("array", {})
-
-    def resolve_array(raw):
-        if raw is None:
-            return None
-        m = re.fullmatch(r"@array/(\w+)", raw.strip())
-        if not m:
-            return None
-        return arrays.get(m.group(1))
-
     prefs = {}
     choices = {}
     xmldir = os.path.join(RES, "xml")
@@ -188,6 +190,92 @@ def main():
     for k in sorted(choices):
         lines.append('    "%s" to arrayOf(%s),'
                      % (esc(k), ", ".join('"%s"' % esc(v) for v in choices[k])))
+    lines.append(")")
+    lines.append("")
+
+    # THE SAME SCREEN, TYPED AND IN ORDER.  The defaults above are what the app
+    # READS; this is what a settings screen has to DRAW, and there is no
+    # androidx.preference here to walk.  Element name -> row type, the titles and
+    # summaries resolved, the ListPreference entries beside their values, and the
+    # seek bars' own app: attributes, nested exactly as the file nests them.
+    def node_type(tag):
+        t = tag.split(".")[-1]
+        if t == "PreferenceCategory":
+            return "category"
+        if t == "PreferenceScreen":
+            return "screen"
+        if t.endswith("ListPreference"):
+            return "list"
+        if t.endswith("SeekBarPreference"):
+            return "seek"
+        if "Switch" in t or "CheckBox" in t:
+            return "switch"
+        return "action"
+
+    def attr(el, name):
+        # app: and android: both appear in these files, for the same attribute.
+        return el.get(APP + name, el.get(A + name))
+
+    def node(el, indent):
+        kind = node_type(el.tag)
+        args = ['"%s"' % kind, '"%s"' % esc(resolve(attr(el, "key")) or "")]
+        title = resolve(attr(el, "title"))
+        summary = resolve(attr(el, "summary"))
+        if title:
+            args.append('title = "%s"' % esc(title))
+        if summary:
+            args.append('summary = "%s"' % esc(summary))
+        default = resolve(el.get(A + "defaultValue"))
+        if default is not None:
+            if default in ("true", "false"):
+                default = "1" if default == "true" else "0"
+            args.append('default = "%s"' % esc(default))
+        entries = resolve_array(attr(el, "entries"))
+        values = resolve_array(attr(el, "entryValues"))
+        if entries:
+            args.append("entries = arrayOf(%s)" % ", ".join('"%s"' % esc(e) for e in entries))
+        if values:
+            args.append("values = arrayOf(%s)" % ", ".join('"%s"' % esc(v) for v in values))
+        for name, fmt in (("minValue", "min = %sf"), ("maxValue", "max = %sf"),
+                          ("stepPerUnit", "step = %sf")):
+            raw = attr(el, name)
+            if raw is not None:
+                args.append(fmt % raw.strip())
+        if (attr(el, "isFloat") or "").strip() == "true":
+            args.append("isFloat = true")
+        if (el.get(A + "enabled") or "").strip() == "false":
+            args.append("enabled = false")
+        kids = [node(c, indent + 1) for c in el]
+        pad = "    " * indent
+        if kids:
+            args.append("children = arrayOf(\n%s,\n%s)" % (",\n".join(kids), pad + "    "))
+        return "%s    RPreferenceNode(%s)" % (pad, ", ".join(args))
+
+    lines.append("/** One row of res/xml/preferences.xml, as the file types and orders it. */")
+    lines.append("class RPreferenceNode(")
+    lines.append("    /** category | screen | list | seek | switch | action. */")
+    lines.append("    val type: String,")
+    lines.append("    val key: String,")
+    lines.append("    val title: String = \"\",")
+    lines.append("    val summary: String = \"\",")
+    lines.append("    val default: String? = null,")
+    lines.append("    val entries: Array<String> = emptyArray(),")
+    lines.append("    val values: Array<String> = emptyArray(),")
+    lines.append("    // UniversalSeekBarPreference's own TypedArray defaults.")
+    lines.append("    val min: Float = 0f,")
+    lines.append("    val max: Float = 100f,")
+    lines.append("    val step: Float = 1f,")
+    lines.append("    val isFloat: Boolean = false,")
+    lines.append("    val enabled: Boolean = true,")
+    lines.append("    val children: Array<RPreferenceNode> = emptyArray(),")
+    lines.append(")")
+    lines.append("")
+    lines.append("/** res/xml/preferences.xml, which is the settings screen. */")
+    lines.append("val R_PREFERENCE_TREE: Array<RPreferenceNode> = arrayOf(")
+    prefs_xml = os.path.join(xmldir, "preferences.xml")
+    if os.path.isfile(prefs_xml):
+        root = ET.parse(prefs_xml).getroot()
+        lines += [node(el, 0) + "," for el in root]
     lines.append(")")
     lines.append("")
 
