@@ -117,12 +117,12 @@ public class Parameters {
     @Tunable(title = "Use Dynamic White Level", category = "Parameters", defaultValue = 1, min = 0, max = 1, step = 1,
             description = "Use dynamic white level from the camera2api capture result if available (may cause instability on some devices)"
     )
-    boolean useDynamicWhiteLevel;
+    boolean useDynamicWhiteLevel = true;
 
     @SensorConfig(title = "White Level Override",
             defaultValue = -1, min = -1, max = 65535, step = 1,
             description = "Override white level for all channels -1 is disabled")
-    int whiteLevelOverride;
+    int whiteLevelOverride = -1;
 
     @Tunable(title = "Disable front mirror", category = "Parameters", defaultValue = 0, min = 0, max = 1, step = 1,
             description = "Disable front camera mirroring")
@@ -132,7 +132,7 @@ public class Parameters {
             description = "Override black level for this sensor (-1 = auto)",
             min = -1.0f, max = 8192.0f, step = 1.0f, defaultValue = -1.0f
     )
-    float blackLevelOverride;
+    float blackLevelOverride = -1.0f;
 
     public void FillConstParameters(CameraCharacteristics characteristics, Point size) {
         com.particlesdevs.photoncamera.settings.TunableInjector.inject(this);

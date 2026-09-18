@@ -32,11 +32,11 @@ public class Bayer2Float extends Node {
     int testPatternIndex = 2;
     @Tunable(title = "Inpaint Opposed Highlights", description = "Enable inpainting of opposed highlights to reconstruct chrominance",
             category = "Bayer2Float", min = 0, max = 1, defaultValue = 1, step = 1)
-    boolean hlInpaintOpposed;
+    boolean hlInpaintOpposed = true;
 
     @Tunable(title = "Highlight Clip", description = "Scale of the highlight clip level for inpainting",
             category = "Bayer2Float", min = 0.1f, max = 4.0f, defaultValue = 1.0f, step = 0.1f)
-    float hlClip;
+    float hlClip = 1.0f;
     @Override
     public void AfterRun(){
         if(testPattern && testPatternIndex == 0) {

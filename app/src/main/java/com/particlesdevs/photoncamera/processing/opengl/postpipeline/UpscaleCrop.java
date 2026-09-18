@@ -33,31 +33,31 @@ import static android.opengl.GLES20.GL_LINEAR;
 public final class UpscaleCrop extends Node {
 
     @Tunable(title = "KernelNet upscale sigma scale", category = "Upscale", description = "Fine trim on the KernelNet map sigmas after the automatic map-to-crop rescaling (1.0 = calibrated)", min = 0.1f, max = 4.0f, step = 0.05f, defaultValue = 0.9f)
-    float sigmaScale;
+    float sigmaScale = 0.9f;
 
     @Tunable(title = "KernelNet upscale abs min sigma", category = "Upscale", description = "Absolute floor on the reconstruction kernel sigma in crop pixels (numerical guard against tap-weight collapse)", min = 0.05f, max = 1.0f, step = 0.01f, defaultValue = 0.25f)
-    float absMinPx;
+    float absMinPx = 0.25f;
 
     @Tunable(title = "KernelNet upscale min sigma (output px)", category = "Upscale", description = "Additional sigma floor measured in output pixels - keeps the reconstruction equally crisp at every zoom factor (lower = sharper at extreme zoom)", min = 0.1f, max = 8.0f, step = 0.05f, defaultValue = 1.25f)
-    float outFloorPx;
+    float outFloorPx = 1.25f;
 
     @Tunable(title = "KernelNet upscale max sigma", category = "Upscale", description = "Cap on the reconstruction kernel sigma in crop pixels (kept below radius/2 so the window rim never clips the kernel)", min = 0.5f, max = 6.0f, step = 0.1f, defaultValue = 1.2f)
-    float sigmaMaxPx;
+    float sigmaMaxPx = 1.2f;
 
     @Tunable(title = "KernelNet upscale blend", category = "Upscale", description = "Mix between bicubic (0) and the anisotropic KernelNet reconstruction (1)", min = 0.0f, max = 1.0f, step = 0.05f, defaultValue = 1.0f)
-    float anisoStrength;
+    float anisoStrength = 1.0f;
 
     @Tunable(title = "KernelNet upscale radius", category = "Upscale", description = "Half-width of the anisotropic reconstruction window in crop pixels (5 = 11x11 taps). Must stay above sharpWide*sigmaMax*2 so the wide unsharp pass fits the window", min = 1, max = 5, step = 1, defaultValue = 5)
-    int kernelRadius;
+    int kernelRadius = 5;
 
     @Tunable(title = "KernelNet upscale max elongation", category = "Upscale", description = "Caps the sigma ratio max(s1,s2)/min(s1,s2) - prevents knife-thin edge kernels", min = 1.0f, max = 8.0f, step = 0.5f, defaultValue = 7.0f)
-    float maxElong;
+    float maxElong = 7.0f;
 
     @Tunable(title = "KernelNet upscale acutance", category = "Upscale", description = "Edge-aligned unsharp-mask amount: sharpened = aniso + amt*gate*(aniso - wider aniso), where gate is the used fraction of maxElong (0 in flats, 1 on strong edges); 0 keeps the output strictly convex", min = 0.0f, max = 1.5f, step = 0.05f, defaultValue = 0.75f)
-    float sharpAmt;
+    float sharpAmt = 0.75f;
 
     @Tunable(title = "KernelNet upscale acutance width", category = "Upscale", description = "Sigma multiplier of the wide pass used by the unsharp term (higher = softer wide pass, stronger bandpass). Effective value is capped at radius/(2*sigmaMax) so the wide kernel fits the window", min = 1.1f, max = 4.0f, step = 0.05f, defaultValue = 2.2f)
-    float sharpWide;
+    float sharpWide = 2.2f;
 
     @Tunable(title = "Debug: dump kernelnet params", category = "Upscale", description = "Renders the KernelNet params map (s1, s2, rho as RGB) into the debug overlay", min = 0, max = 1, step = 1, defaultValue = 0)
     int debugParams;

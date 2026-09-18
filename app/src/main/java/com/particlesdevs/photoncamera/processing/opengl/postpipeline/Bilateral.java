@@ -14,7 +14,7 @@ public class Bilateral extends Node {
         super("", "Denoise");
     }
     @Tunable(title = "Enable", category = "Bilateral", defaultValue = 1, min = 0, max = 1, step = 1)
-    boolean enable;
+    boolean enable = true;
 
     @Override
     public void Compile() {

@@ -86,23 +86,23 @@ public class LocalLaplacian2 extends Node {
 
     @Tunable(title = "Enable", description = "Enable Local Laplacian Filter",
             category = "LLF", min = 0, max = 1, defaultValue = 1, step = 1)
-    boolean enabled;
+    boolean enabled = true;
 
     @Tunable(title = "Detail", description = "Local contrast amplification near the local average; 0 is neutral",
             category = "LLF", min = -1.0f, max = 4.0f, defaultValue = 0.15f, step = 0.05f)
-    float detail;
+    float detail = 0.15f;
 
     @Tunable(title = "Highlights", description = "Slope for details darker than the local average; below 1 compresses",
             category = "LLF", min = 0.0f, max = 2.0f, defaultValue = 0.0f, step = 0.05f)
-    float highlights;
+    float highlights = 0.0f;
 
     @Tunable(title = "Shadows", description = "Slope for details brighter than the local average; below 1 compresses",
             category = "LLF", min = 0.0f, max = 2.0f, defaultValue = 0.0f, step = 0.05f)
-    float shadows;
+    float shadows = 0.0f;
 
     @Tunable(title = "Mid-tone Range", description = "Width of the tone band around the local average treated as mid-tones; highlights/shadows act only outside 2x this width. 0.5 spans the whole tonal range",
             category = "LLF", min = 0.001f, max = 1.0f, defaultValue = 0.5f, step = 0.01f)
-    float midtone;
+    float midtone = 0.5f;
 
     @Override
     public void Compile() {

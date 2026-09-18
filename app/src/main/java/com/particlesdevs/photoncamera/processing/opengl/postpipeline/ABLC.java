@@ -28,7 +28,7 @@ public class ABLC extends Node {
             defaultValue = 1.0f,
             step = 1.0f
     )
-    boolean enable;
+    boolean enable = true;
 
     @Tunable(
             title = "Histogram size",
@@ -39,7 +39,7 @@ public class ABLC extends Node {
             defaultValue = 256,
             step = 32
     )
-    int histSize;
+    int histSize = 256;
 
     @Tunable(
             title = "Noise exposure compensation EV",
@@ -50,7 +50,7 @@ public class ABLC extends Node {
             defaultValue = -1.0f,
             step = 0.5f
     )
-    double noiseEV;
+    double noiseEV = -1.0;
 
     @Tunable(
             title = "Min exposure multiplier",
@@ -61,7 +61,7 @@ public class ABLC extends Node {
             defaultValue = 8.0f,
             step = 1.0f
     )
-    double minExposureMpy;
+    double minExposureMpy = 8.0;
 
     @Tunable(
             title = "Max exposure compensation",
@@ -72,7 +72,7 @@ public class ABLC extends Node {
             defaultValue = 10.0f,
             step = 1.0f
     )
-    double maxEV;
+    double maxEV = 10.0;
 
     /** Frozen levels for this run; reused by strip re-renders. */
     private float[] blackLevels;

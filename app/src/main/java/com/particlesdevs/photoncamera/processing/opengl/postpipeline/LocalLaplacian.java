@@ -25,11 +25,11 @@ public class LocalLaplacian extends Node {
 
     @Tunable(title = "Enable", description = "Enable Local Laplacian Filter",
             category = "LLF", min = 0, max = 1, defaultValue = 1, step = 1)
-    boolean enabled;
+    boolean enabled = true;
 
     @Tunable(title = "Detail", description = "Increase or remove local contrast",
             category = "LLF", min = -1.0f, max = 2.0f, defaultValue = 0.25f, step = 0.05f)
-    float detail;
+    float detail = 0.25f;
 
     @Tunable(title = "Highlights", description = "Local contrast slope in highlights; lower values compress highlights",
             category = "LLF", min = 0.0f, max = 2.0f, defaultValue = 0.0f, step = 0.05f)
@@ -41,7 +41,7 @@ public class LocalLaplacian extends Node {
 
     @Tunable(title = "Mid-tone Range", description = "Width of the local-contrast region",
             category = "LLF", min = 0.01f, max = 1.0f, defaultValue = 0.5f, step = 0.01f)
-    float midtone;
+    float midtone = 0.5f;
 
     @Override
     public void Compile() {

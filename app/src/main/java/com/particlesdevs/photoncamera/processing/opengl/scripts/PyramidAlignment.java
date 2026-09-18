@@ -160,7 +160,7 @@ public class PyramidAlignment implements AutoCloseable {
     float downScalePerLevel = 2.0f;
 
     @Tunable(title = "Correction Sharpness", category = "Alignment", min = -1.0f, max = 2.0f, defaultValue = 1.0f)
-    float sharpness;
+    float sharpness = 1.0f;
 
     // u8 image pyramids: store the base/alter alignment pyramids as rgba8
     // (4 B/texel) instead of rgba16f (8 B/texel) - the block matcher is

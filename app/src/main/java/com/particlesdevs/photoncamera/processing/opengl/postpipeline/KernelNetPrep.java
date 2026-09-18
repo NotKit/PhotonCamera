@@ -31,7 +31,7 @@ import static android.opengl.GLES20.GL_NEAREST;
 public final class KernelNetPrep extends Node {
 
     @Tunable(title = "Single-frame KernelNet sigma multiplier", category = "Upscale", description = "Scales the noise sigma fed to KernelNet when params are inferred for a single-frame crop (multi-frame crops reuse the merge params)", min = 0.1f, max = 20.0f, step = 0.05f, defaultValue = 1.0f)
-    float singleSigmaMpy;
+    float singleSigmaMpy = 1.0f;
 
     private GLTexture rawTex;
     private GLTexture lumaTex;

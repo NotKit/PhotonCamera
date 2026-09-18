@@ -19,7 +19,7 @@ public class ESD3D extends Node {
     public void Compile() {
     }
     @Tunable(title = "Enable", category = "Denoise", defaultValue = 1, min = 0, max = 1, step = 1, description = "Enable ESD3D Denoising")
-    boolean enable;
+    boolean enable = true;
     
     @Tunable(title = "Noise To Kernel Size", category = "Denoise", max = 50.0f, defaultValue = 24.0f)
     float noiseToKernelSize = 24.0f;
