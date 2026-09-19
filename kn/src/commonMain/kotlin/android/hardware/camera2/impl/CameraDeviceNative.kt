@@ -146,10 +146,9 @@ class CameraDeviceNative(private val listener: Listener) : CameraSession.Sink {
 			return
 		}
 		val texture = surface.surfaceTexture
-		/* The copy is made ONLY when the consumer has taken the last frame.
-		 * The buffer goes back to the producer at the end of this call, so the
-		 * preview path has to copy, and a preview runs far faster than a scene
-		 * draws -- asking first is what keeps the copy off the dropped ones. */
+		if (texture != null && texture.postNativeBuffer(buffer))
+			return
+		/* The CPU fallback copies only when the consumer took the last frame. */
 		if (texture != null && texture.acceptsFrame()) {
 			/* every plane: a viewfinder given only the luma plane would be a
 			 * grey picture of a colour camera */

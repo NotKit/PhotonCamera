@@ -49,19 +49,30 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import android.graphics.Point
 import android.hardware.camera2.CameraMetadata
 import android.graphics.SurfaceTexture
+import android.opengl.GLES20
 import com.particlesdevs.photoncamera.capture.PreviewSurface
 import kotlin.native.concurrent.Future
 import kotlin.native.concurrent.FutureState
 import kotlin.native.concurrent.TransferMode
 import kotlin.native.concurrent.Worker
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.IntVar
 import kotlinx.cinterop.alloc
+import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.toKString
+import kotlinx.cinterop.value
+import org.jetbrains.skia.BackendTexture
 import org.jetbrains.skia.ColorAlphaType
 import org.jetbrains.skia.ColorType
+import org.jetbrains.skia.DirectContext
 import org.jetbrains.skia.Image
 import org.jetbrains.skia.ImageInfo
+import org.jetbrains.skia.SurfaceOrigin
+import photoncam.HostGpuFrame
+import photoncam.atlcamera.atl_preview_texture_free
+import photoncam.atlcamera.atl_preview_texture_new
+import photoncam.atlcamera.atl_preview_texture_update
 import photoncam.camera.CameraSession
 import photoncam.host.HostWindow
 import platform.posix.CLOCK_MONOTONIC
@@ -172,6 +183,17 @@ fun BoxScope.CameraViewfinder(surface: ComposePreviewSurface, overlay: Viewfinde
 	val converter = remember { PreviewConverter() }
 	DisposableEffect(converter) { onDispose { converter.close() } }
 
+	val gpu = remember(texture) { GpuPreviewRenderer(texture) }
+	DisposableEffect(gpu) {
+		val update: (DirectContext) -> Unit = { gpu.update(it) }
+		HostGpuFrame.update = update
+		onDispose {
+			if (HostGpuFrame.update === update)
+				HostGpuFrame.update = null
+			gpu.close()
+		}
+	}
+
 	LaunchedEffect(texture) {
 		var drawn = 0L
 		var reported = 0L
@@ -217,11 +239,11 @@ fun BoxScope.CameraViewfinder(surface: ComposePreviewSurface, overlay: Viewfinde
 			.background(Color.Black)
 			.onSizeChanged { surface.markAvailable(it.width, it.height) },
 	) {
-		val shown = image
-		if (shown != null) {
-			Canvas(Modifier.fillMaxSize()) {
-				drawPreview(shown, lastSize, surface.orientationDegrees - 90, surface.mirror)
-			}
+		Canvas(Modifier.fillMaxSize()) {
+			val shown = gpu.image ?: image
+			val shownSize = if (gpu.image != null) gpu.size else lastSize
+			if (shown != null)
+				drawPreview(shown, shownSize, surface.orientationDegrees - 90, surface.mirror)
 		}
 		// The indicators go on top of the frame and INSIDE the box, which is
 		// where viewfinder_stack.xml had their Views; the coordinates
@@ -236,6 +258,101 @@ fun BoxScope.CameraViewfinder(surface: ComposePreviewSurface, overlay: Viewfinde
 		}
 	}
 }
+
+/** Imports the HAL buffer, converts it on the GPU and gives Skia a 2D texture. */
+@OptIn(ExperimentalForeignApi::class)
+private class GpuPreviewRenderer(private val texture: SurfaceTexture) {
+	private var native = atl_preview_texture_new()
+	private var skia: Image? = null
+	private var held: photoncam.camera.CameraBuffer? = null
+	private var failed = false
+	private var frames = 0L
+
+	// SNAPSHOT STATE, not plain fields: the import runs on the render thread
+	// just before scene.render, and a plain field would leave the Canvas with
+	// no reason to draw again -- the frame would only appear when something
+	// else (a tap) happened to invalidate the scene.
+	private val imageState = mutableStateOf<ImageBitmap?>(null)
+	private val sizeState = mutableStateOf(IntSize.Zero)
+
+	val image: ImageBitmap? get() = imageState.value
+	val size: IntSize get() = sizeState.value
+
+	fun update(context: DirectContext) {
+		if (failed)
+			return
+		val frame = texture.takeNativeBuffer() ?: return
+		val state = native
+		if (state == null) {
+			frame.release()
+			return
+		}
+		memScoped {
+			val width = alloc<IntVar>()
+			val height = alloc<IntVar>()
+			val name = atl_preview_texture_update(
+				state, frame.nativeBuffer, frame.width, frame.height, width.ptr, height.ptr)
+			if (name == 0u) {
+				frame.release()
+				fail()
+				return
+			}
+			val backend = BackendTexture.makeGL(
+				width.value, height.value, false, name.toInt(),
+				GLES20.GL_TEXTURE_2D, GL_RGBA8,
+			)
+			val next = try {
+				Image.adoptTextureFrom(
+					context, backend, SurfaceOrigin.BOTTOM_LEFT, ColorType.RGBA_8888)
+			} catch (e: Throwable) {
+				GLES20.glDeleteTextures(1, intArrayOf(name.toInt()), 0)
+				backend.close()
+				frame.release()
+				fail()
+				return
+			}
+			backend.close()
+			val previousImage = skia
+			val previousBuffer = held
+			skia = next
+			held = frame
+			imageState.value = next.toComposeImageBitmap()
+			sizeState.value = IntSize(width.value, height.value)
+			previousImage?.close()
+			previousBuffer?.release()
+			frames++
+			if (frames == 1L)
+				println("[pc] preview GPU import ${frame.width}x${frame.height} -> ${width.value}x${height.value}")
+		}
+	}
+
+	private fun fail() {
+		if (failed)
+			return
+		failed = true
+		texture.disableNativeBuffers()
+		native?.let { atl_preview_texture_free(it) }
+		native = null
+		skia?.close()
+		skia = null
+		imageState.value = null
+		held?.release()
+		held = null
+		println("[pc] preview GPU import unavailable; using CPU conversion")
+	}
+
+	fun close() {
+		native?.let { atl_preview_texture_free(it) }
+		native = null
+		skia?.close()
+		skia = null
+		imageState.value = null
+		held?.release()
+		held = null
+	}
+}
+
+private const val GL_RGBA8 = 0x8058
 
 /**
  * The focus circle, coloured by AF state as FocusCircleView coloured it: white

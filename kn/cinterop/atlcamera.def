@@ -2,8 +2,8 @@
 # atlas-camera2/src/api-impl-jni/camera.  This is what android.hardware.camera2's
 # native methods land on: a backend vtable, the stream session over it and the
 # metadata bag.  host/atlcamera/build.sh supplies the include and library paths.
-headers = camera_backend.h camera2_metadata.h camera_streams.h camera_frame.h
-headerFilter = camera_backend.h camera2_metadata.h camera_streams.h camera_frame.h
+headers = camera_backend.h camera2_metadata.h camera_streams.h camera_frame.h preview_texture.h
+headerFilter = camera_backend.h camera2_metadata.h camera_streams.h camera_frame.h preview_texture.h
 package = photoncam.atlcamera
 staticLibraries = libatlcamera.a
 linkerOpts = -lglib-2.0 -lzstd -lpthread -lm

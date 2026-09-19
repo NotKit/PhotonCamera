@@ -1,23 +1,11 @@
 package android.graphics
 
+import photoncam.camera.CameraBuffer
+import photoncam.camera.SpinLock
+
 /**
- * The GL texture a camera preview stream is drawn into.  atlas fills it from
- * native; here the frames arrive as camera buffers and the upload is the GL
- * lane's (android.opengl), so this carries the geometry, the listener and the
- * latest frame, and nothing that needs a GL context of its own.
- *
- * THE FRAME CROSSES A THREAD.  postFrame runs on the camera backend's thread
- * and the viewfinder takes the frame on the composition thread, so a frame is
- * an immutable object published through one volatile reference: whoever reads
- * it gets a whole frame or the previous one, never half of each.
- *
- * ONE FRAME IS HELD, NOT A QUEUE.  A preview stream runs at the sensor's rate
- * and the scene draws at the panel's, and the buffer has to be COPIED out of
- * the producer before it is given back.  Copying every one of them is 6 MB a
- * frame at 2304x1728, ninety times a second, and on the phone that starved the
- * render loop to four frames in twenty-five seconds -- the picture was live and
- * the window was not.  So a frame is copied only when the last one has been
- * taken; the rest are dropped, which is what a viewfinder wants anyway.
+ * A newest-frame mailbox between the camera and Compose GL threads. Native
+ * buffers stay borrowed for GPU import; copied planes provide the fallback.
  */
 open class SurfaceTexture(private val texName: Int) {
 
@@ -45,6 +33,10 @@ open class SurfaceTexture(private val texName: Int) {
 	private var defaultHeight = 0
 	private var listener: OnFrameAvailableListener? = null
 	private var frames = 0L
+	private val nativeLock = SpinLock()
+	private var nativeLatest: CameraBuffer? = null
+	@kotlin.concurrent.Volatile
+	private var nativeEnabled = true
 
 	/** the frame waiting to be taken, or null when the consumer is up to date */
 	@kotlin.concurrent.Volatile
@@ -72,6 +64,46 @@ open class SurfaceTexture(private val texName: Int) {
 		val f = latest
 		latest = null
 		return f
+	}
+
+	/** Retains the newest gralloc frame for the Compose GL thread. */
+	fun postNativeBuffer(buffer: CameraBuffer): Boolean {
+		if (!nativeEnabled || !buffer.hasNativeBuffer)
+			return false
+		var stale: CameraBuffer? = null
+		val accepted = nativeLock.withLock {
+			if (!nativeEnabled) {
+				false
+			} else {
+				stale = nativeLatest
+				nativeLatest = buffer
+				true
+			}
+		}
+		if (!accepted)
+			return false
+		if (stale != null) {
+			dropped++
+			stale?.release()
+		}
+		listener?.onFrameAvailable(this)
+		// The scene reads this frame from a plain field, so nothing here
+		// invalidates Compose; without asking for a render the loop idles and
+		// the viewfinder holds whatever it drew last.
+		photoncam.host.HostRender.requestRender()
+		return true
+	}
+
+	fun takeNativeBuffer(): CameraBuffer? = nativeLock.withLock {
+		val frame = nativeLatest
+		nativeLatest = null
+		frame
+	}
+
+	fun disableNativeBuffers() {
+		nativeEnabled = false
+		val frame = takeNativeBuffer()
+		frame?.release()
 	}
 
 	fun getTexName(): Int = texName
@@ -122,12 +154,12 @@ open class SurfaceTexture(private val texName: Int) {
 	}
 
 	fun updateTexImage() {
-		/* the upload happens in the GL lane's preview renderer, which reads
-		 * latest; there is no external-OES producer to latch here */
+		/* The Compose host latches native buffers on its GL thread. */
 	}
 
 	fun release() {
 		listener = null
 		latest = null
+		disableNativeBuffers()
 	}
 }

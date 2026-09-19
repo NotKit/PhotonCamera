@@ -10,19 +10,16 @@ import photoncam.camera.CameraBuffer
  * the producer, so an app that leaks Images starves the stream exactly as it
  * does on Android.
  *
- * The plane bytes are copied out on first access: the backend's buffer may be
- * HAL memory that is only valid until release(), and this port's ByteBuffer is
- * a heap buffer.
+ * Plane buffers are borrowed from the producer and remain valid until close(),
+ * matching Android's Image.Plane contract.
  */
 open class Image internal constructor(private val buffer: CameraBuffer) {
 
 	open class Plane internal constructor(
-		private val bytes: ByteArray,
+		private val wrapped: ByteBuffer,
 		private val rowStride: Int,
 		private val pixelStride: Int,
 	) {
-		private val wrapped: ByteBuffer = ByteBuffer.wrap(bytes)
-
 		open fun getBuffer(): ByteBuffer = wrapped
 		open fun getRowStride(): Int = rowStride
 		open fun getPixelStride(): Int = pixelStride
@@ -41,7 +38,7 @@ open class Image internal constructor(private val buffer: CameraBuffer) {
 		var p = planes
 		if (p == null) {
 			p = Array(buffer.planeCount) {
-				Plane(buffer.readPlane(it), buffer.rowStride(it), buffer.pixelStride(it))
+				Plane(buffer.planeBuffer(it), buffer.rowStride(it), buffer.pixelStride(it))
 			}
 			planes = p
 		}

@@ -76,6 +76,11 @@ import platform.posix.fwrite
 import platform.posix.getenv
 import platform.posix.timespec
 
+/** Work that must run with the window's GL context current, before Compose. */
+object HostGpuFrame {
+	var update: ((DirectContext) -> Unit)? = null
+}
+
 /**
  * A Compose scene rendered by skiko into the EGL context our own C host created,
  * with no AWT, no JVM and no `ak-window`.
@@ -119,6 +124,8 @@ class MgwlComposeHost private constructor(private val handle: CPointer<cnames.st
 	val density = readDensity()
 
 	private var surfaceDirty = true
+	// Written by the camera's thread through HostRender, read by the loop.
+	@kotlin.concurrent.Volatile
 	private var needsRender = true
 	private var closed = false
 
@@ -215,9 +222,13 @@ class MgwlComposeHost private constructor(private val handle: CPointer<cnames.st
 			invalidate = { needsRender = true },
 		)
 		ComposeUiMainDispatcher.setInvalidator { needsRender = true }
+		// A camera buffer arrives off-thread and invalidates nothing on its
+		// own; this is what gets the GPU preview its next render.
+		photoncam.host.HostRender.invalidate = { needsRender = true }
 		scene.setContent(content)
 		loop(maxSeconds)
 
+		photoncam.host.HostRender.invalidate = null
 		skiaSurface?.close(); renderTarget?.close(); directContext?.close()
 		scene.close()
 		mgwl_destroy(handle)
@@ -256,6 +267,11 @@ class MgwlComposeHost private constructor(private val handle: CPointer<cnames.st
 			val surface = skiaSurface
 			if (surface != null && (needsRender || scene.hasInvalidations())) {
 				needsRender = false
+				val context = directContext!!
+				if (HostGpuFrame.update != null) {
+					HostGpuFrame.update?.invoke(context)
+					context.resetGLAll()
+				}
 				val canvas = surface.canvas
 				val t0 = monotonicNanos()
 				canvas.clear(Color.BLACK)
