@@ -22,7 +22,9 @@ command -v "$CC" >/dev/null || { echo "no $CC" >&2; exit 1; }
 
 mkdir -p "$HERE/build/obj-$ARCH" "$LIBDIR"
 CFLAGS="-O2 -fPIC -Wall -Wextra -std=gnu11 -I$HERE/host -I$HERE/host/vendor"
-for f in mgwl xdg-shell-protocol mgwl_clip; do
+# sensorfw.c is here rather than in an archive of its own: it is host C like
+# the rest, and cinterop/sensorfw.def binds it the same way mgwl.def does.
+for f in mgwl xdg-shell-protocol mgwl_clip sensorfw; do
 	# shellcheck disable=SC2086
 	"$CC" $CFLAGS -c "$HERE/host/$f.c" -o "$HERE/build/obj-$ARCH/$f.o"
 done
@@ -30,6 +32,7 @@ rm -f "$OUT"
 "$AR" rcs "$OUT" "$HERE/build/obj-$ARCH"/*.o
 echo "== $OUT"
 nm --defined-only "$OUT" 2>/dev/null | grep -c ' T mgwl_' | xargs -I{} echo "   {} mgwl_* symbols"
+nm --defined-only "$OUT" 2>/dev/null | grep -c ' T pc_sensorfw_' | xargs -I{} echo "   {} pc_sensorfw_* symbols"
 
 # -lruntime-manager-qt5 is on the link line because compose-ui's klib manifest
 # names ak-window and ak-uri-launcher, and THEIR cinterop klibs carry it.  Aurora's

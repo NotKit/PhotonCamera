@@ -174,6 +174,10 @@ kotlin {
 			extraOpts("-compiler-option", "-I${projectDir}/host")
 			extraOpts("-compiler-option", "-I${projectDir}/host/vendor")
 		}
+		compilations.getByName("main").cinterops.create("sensorfw") {
+			definitionFile.set(project.file("cinterop/sensorfw.def"))
+			extraOpts("-compiler-option", "-I${projectDir}/host")
+		}
 		appCinterops("x64")
 		binaries.executable { entryPoint = "photoncam.main" }
 		binaries.all {
@@ -206,6 +210,10 @@ kotlin {
 			definitionFile.set(project.file("cinterop/mgwl.def"))
 			extraOpts("-compiler-option", "-I${projectDir}/host")
 			extraOpts("-compiler-option", "-I${projectDir}/host/vendor")
+		}
+		compilations.getByName("main").cinterops.create("sensorfw") {
+			definitionFile.set(project.file("cinterop/sensorfw.def"))
+			extraOpts("-compiler-option", "-I${projectDir}/host")
 		}
 		appCinterops("arm64")
 		binaries.executable { entryPoint = "photoncam.main" }

@@ -74,7 +74,13 @@ private val application: PhotonCamera by lazy {
 			.onFailure { e -> report("preference defaults", e) }
 		// The window drains the app's main-thread queue for us; the camera path
 		// posts to it (runOnUiThread) and nothing else would run those tasks.
-		HostMainLoop.install { android.os.Looper.getMainLooper().pump() }
+		// The sensors go out on the same pass: host/sensorfw.c fills a ring on
+		// its own thread and this is where it becomes an onSensorChanged, which
+		// is the main thread on Android too.
+		HostMainLoop.install {
+			photoncam.sensors.SensorHub.drain()
+			android.os.Looper.getMainLooper().pump()
+		}
 	}
 }
 
@@ -259,6 +265,8 @@ internal class CameraRig(
 	/** CameraFragment.mTouchFocus, built once the preview surface exists. */
 	var touchFocus: TouchFocus? = null
 		private set
+	/** The window is pinned portrait, so the CONTROLS turn instead. */
+	private var orientation: OrientationWatcher? = null
 
 	fun start() {
 		val activity = HostActivity(application)
@@ -280,10 +288,30 @@ internal class CameraRig(
 		val focus = TouchFocus(c, HostFocusIndicator(preview, overlay))
 		touchFocus = focus
 		c.mTouchFocus = focus
+		// CameraFragment.onResume's two lines.  Nothing else on this port calls
+		// them, and without them Gravity never has a vector: every JPEG would be
+		// tagged upright and the controls would never turn.
+		runCatching { PhotonCamera.getGyro()?.register() }
+			.onFailure { e -> report("gyro register", e) }
+		runCatching { PhotonCamera.getGravity()?.register() }
+			.onFailure { e -> report("gravity register", e) }
+		runCatching {
+			val sensors = application.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+			orientation = orientationWatcherFor(sensors, host).also { it.register() }
+		}.onFailure { e -> report("orientation watcher", e) }
+		// Not the sensors' state: opening a sensorfw session is several D-Bus
+		// round trips on the reader thread and has not happened yet.  That
+		// thread prints its own "[pc] sensorfw <plugin>: session N" when it has.
 		println("[pc] camera resumed against ${HostWindow.widthPx}x${HostWindow.heightPx}")
 	}
 
 	fun stop() {
+		// CameraFragment.onPause's, and it matters: the sessions keep the
+		// hardware powered for the life of the process otherwise.
+		runCatching { orientation?.unregister() }
+		orientation = null
+		runCatching { PhotonCamera.getGravity()?.unregister() }
+		runCatching { PhotonCamera.getGyro()?.unregister() }
 		runCatching { controller?.closeCamera() }
 		runCatching { controller?.stopBackgroundThread() }
 		runCatching { preview.release() }

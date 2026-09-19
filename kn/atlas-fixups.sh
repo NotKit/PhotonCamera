@@ -24,11 +24,32 @@ KEYS_BY_NAME = re.compile(
 # SensorManager: atlas registers an accelerometer through a native hook and a
 # compass through android.location, neither of which this port has.  The
 # orientation maths around them is AOSP's and is what PhotonCamera uses.
+#
+# THE DATA COMES FROM SENSORFWD.  photoncam.sensors.SensorHub is the seam --
+# host/sensorfw.c behind it -- so the five methods below become delegations and
+# nothing in the converted app is touched: Gravity, Gyro, TouchFocus,
+# SpotWhiteBalanceHelper and CaptureController's JPEG_ORIENTATION are the Java's
+# own, and they now have a sensor to read.  Same shape as keysByName ->
+# photoncam.camera.KeyRegistry below: the implementation is a hand-written file
+# on the source path, not a string in this script.
 SENSOR_REGISTER = re.compile(
     r"(open fun registerListener\(listener: SensorEventListener\?, sensor: Sensor\?, "
     r"samplingPeriodUs: Int\): Boolean \{).*?\n(    \})", re.S)
+SENSOR_REGISTER_H = re.compile(
+    r"(open fun registerListener\(listener: SensorEventListener\?, sensor: Sensor\?, "
+    r"samplingPeriodUs: Int, handler: Handler\?\): Boolean \{).*?\n(    \})", re.S)
+SENSOR_UNREGISTER = re.compile(
+    r"(open fun unregisterListener\(listener: SensorEventListener\?, sensor: Sensor\?\) \{).*?\n(    \})", re.S)
+SENSOR_DEFAULT = re.compile(
+    r"(open fun getDefaultSensor\(type: Int\): Sensor\? \{).*?\n(    \})", re.S)
+SENSOR_LIST = re.compile(
+    r"(open fun getSensorList\(type: Int\): List<Sensor>\? \{).*?\n(    \})", re.S)
 SENSOR_NATIVE = re.compile(
     r"    open fun register_accelerometer_listener_native\(.*?\n    \}\n", re.S)
+
+def delegate(body):
+    """Replace a method body, keeping the signature line and the closing brace."""
+    return lambda m: m.group(1) + "\n" + body + "\n" + m.group(2)
 
 
 SENSOR_CONSTANTS = """        /* AOSP constants atlas's SensorManager does not carry and the app uses */
@@ -46,9 +67,22 @@ SENSOR_CONSTANTS = """        /* AOSP constants atlas's SensorManager does not c
 
 
 def fix_sensor_manager(text):
-    text = SENSOR_REGISTER.sub(
-        lambda m: m.group(1) + "\n        /* no sensor source in this port */\n"
-                  "        return false\n" + m.group(2), text)
+    text = SENSOR_DEFAULT.sub(delegate(
+        "        // Never null, whatever the type: the converted Gyro asks for a\n"
+        "        // rotation-vector sensor through a `!!` and this port has none.\n"
+        "        // registerListener is where an unserved type answers false.\n"
+        "        return photoncam.sensors.SensorHub.defaultSensor(type)"), text)
+    text = SENSOR_LIST.sub(delegate(
+        "        return photoncam.sensors.SensorHub.sensorList(type)"), text)
+    text = SENSOR_REGISTER.sub(delegate(
+        "        return photoncam.sensors.SensorHub.register(listener, sensor)"), text)
+    # The handler overload delivers on that Handler's thread on Android.  Here
+    # every delivery is the main loop's (SensorHub.drain), which is the thread
+    # the app passes a Handler for anyway.
+    text = SENSOR_REGISTER_H.sub(delegate(
+        "        return photoncam.sensors.SensorHub.register(listener, sensor)"), text)
+    text = SENSOR_UNREGISTER.sub(delegate(
+        "        photoncam.sensors.SensorHub.unregister(listener, sensor)"), text)
     text = SENSOR_NATIVE.sub("", text)
     wanted = [c for c in SENSOR_CONSTANTS.splitlines()
               if c.strip().startswith("/*")

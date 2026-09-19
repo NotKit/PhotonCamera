@@ -1,0 +1,14 @@
+# host/sensorfw.c -- the phone's accelerometer and gyroscope, out of sensorfwd.
+#
+# The header names no D-Bus type on purpose: the D-Bus is an implementation
+# detail of the .c file, so cinterop needs no dbus headers and the build needs
+# no libdbus-1-dev.  -ldbus-1 is already on the link line (build.gradle.kts
+# commonLibs), and deps/sysroot-arm64 already carries the bare libdbus-1.so
+# because libdbus-1-3 is in fetch-deps.sh's package list.
+#
+# Compiled into libmgwl-<arch>.a by scripts/build-mgwl.sh, with the rest of the
+# host C; there is no second archive to keep in step.
+headers = sensorfw.h
+headerFilter = sensorfw.h
+package = photoncam.sensorfw
+linkerOpts = -ldbus-1 -lpthread
