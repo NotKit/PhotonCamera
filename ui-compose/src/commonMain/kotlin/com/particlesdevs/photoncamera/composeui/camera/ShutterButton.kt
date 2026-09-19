@@ -1,5 +1,11 @@
 package com.particlesdevs.photoncamera.composeui.camera
 
+import androidx.compose.animation.core.Easing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -17,6 +23,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -24,6 +31,8 @@ import androidx.compose.ui.unit.sp
 import com.particlesdevs.photoncamera.composeui.state.CameraMode
 import com.particlesdevs.photoncamera.composeui.theme.PhotonColors
 import com.particlesdevs.photoncamera.composeui.theme.PhotonDimens
+import kotlin.math.PI
+import kotlin.math.cos
 
 /**
  * roundbutton.xml and unlimitedbutton.xml as one composable: a state list of shapes
@@ -55,20 +64,10 @@ fun ShutterButton(
             .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        // The processing ring, which circular_progress_bar2.xml drew at scale 1.35.
-        if (progress > 0f || indeterminateProgress) {
-            Canvas(Modifier.size(PhotonDimens.shutterButton)) {
-                val stroke = 4.dp.toPx()
-                drawArc(
-                    color = accent,
-                    startAngle = -90f,
-                    sweepAngle = if (indeterminateProgress) 90f else 360f * progress.coerceIn(0f, 1f),
-                    useCenter = false,
-                    topLeft = Offset(stroke / 2, stroke / 2),
-                    size = Size(size.width - stroke, size.height - stroke),
-                    style = Stroke(width = stroke, cap = StrokeCap.Round),
-                )
-            }
+        // circular_progress_bar2.xml, which the ProgressBar drew at scale 1.35.
+        val level = if (indeterminateProgress) indeterminateLevel() else progress.coerceIn(0f, 1f)
+        Canvas(Modifier.size(PhotonDimens.shutterButton)) {
+            drawProcessingRing(accent, level, progress > 0f || indeterminateProgress)
         }
 
         Canvas(Modifier.size(PhotonDimens.shutterButton * 0.75f)) {
@@ -124,3 +123,58 @@ fun ShutterButton(
         }
     }
 }
+
+/** The LEVEL an indeterminate ProgressBar feeds a drawable that is not
+ *  Animatable: indeterminateDuration, indeterminateBehavior="cycle"
+ *  (Animation.REVERSE) and the layout's interpolator, easing 0 -> 1 -> 0. */
+@Composable
+private fun indeterminateLevel(): Float {
+    val transition = rememberInfiniteTransition(label = "processing")
+    val level by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(PROGRESS_DURATION_MS, easing = AccelerateDecelerate),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "level",
+    )
+    return level
+}
+
+/** android.R.anim.accelerate_decelerate_interpolator, which is that one line. */
+private val AccelerateDecelerate = Easing { x -> (cos((x + 1f) * PI).toFloat() / 2f) + 0.5f }
+
+/**
+ * The layer list's two `<shape android:shape="ring">`, at GradientDrawable's
+ * geometry: inner radius and thickness are the box width over their ratios.
+ * The background one is useLevel="false" and so is the static track; the front
+ * one sweeps 360 degrees of level while its `<rotate>` turns 720.
+ */
+private fun DrawScope.drawProcessingRing(accent: Color, level: Float, showProgress: Boolean) {
+    val box = size.minDimension * PROGRESS_SCALE
+    val track = box / 40f
+    val trackRadius = box / 3f + track / 2f
+    drawCircle(
+        PhotonColors.WhiteThemeBackground,
+        radius = trackRadius,
+        center = center,
+        style = Stroke(width = track),
+    )
+    if (!showProgress) return
+    val bar = box / 30f
+    val radius = box / 3.02f + bar / 2f
+    drawArc(
+        color = accent,
+        startAngle = -90f + 720f * level,
+        sweepAngle = 360f * level,
+        useCenter = false,
+        topLeft = Offset(center.x - radius, center.y - radius),
+        size = Size(radius * 2f, radius * 2f),
+        style = Stroke(width = bar, cap = StrokeCap.Butt),
+    )
+}
+
+/** the ProgressBar's android:scaleX/scaleY, and its android:indeterminateDuration */
+private const val PROGRESS_SCALE = 1.35f
+private const val PROGRESS_DURATION_MS = 2000
