@@ -502,3 +502,96 @@ supports:
 ```
 PORT_SKIA_PREBUILT=$PWD/linux-port/out/skia-prebuilt linux-port/build-atlas.sh
 ```
+
+## Portrait desktop window (2026-09-15)
+
+`run.sh` launched the app at the launcher's default 960x540 landscape, where
+the camera UI's bottom bar overflows off-screen and the shutter is unreachable
+(`ATL_DUMP_HIERARCHY` put it at x -47..48). `PORT_WINDOW_WIDTH`/`HEIGHT` in
+`env.sh` (default 540x960) are now passed as `--window-width/--height`, and
+`launcher/display.sh` sizes the Xvfb screen to fit. In portrait the shutter
+lands centered and on-screen, at (223,773)-(318,868) on the default window.
+
+## The camera2 metadata members camera apps reflect on (2026-09-15)
+
+PhotonCamera overrides what the HAL reported — black level, colour transform,
+white point — and camera2 offers no public way to do that, so it reflects:
+`CameraCharacteristics.mProperties`, `CaptureResult.mResults` and
+`CaptureRequest.mLogicalCameraSettings`, then calls `setBase()`/`set()` on the
+`CameraMetadataNative` it finds. atlas held the same bags under its own names
+(`metadata`, `results`, `settings`) and had no typed setters, so every override
+was dropped on a `NoSuchFieldException` the app swallows — `D/CameraAPI: Failed
+to set CaptureResult key` in the log and a picture rendered from unfixed
+metadata. `BlackLevelPattern.mCfaOffsets` and the image plane's `mBuffer` are
+reached the same way. Fixed in atlas (`camera2: name the metadata members what
+AOSP names them`).
+
+Nothing in either build references these by name, so the next rename would be
+just as silent: `tools/CameraReflectionCheck.java` looks all eight up and
+`build-atlas.sh` runs it over the jar it just built.
+
+## The black JPEG was an uninitialized GLSL local (2026-09-15)
+
+A desktop replay capture saved a healthy stacked DNG and a near-black JPEG with
+one white shape at the bottom left. That shape is the watermark, rendered
+correctly — which clears the whole tail of the pipeline at once: the
+`RotateWatermark/addwatermark_rotate` shader ran, the watermark asset loaded,
+`drawBlocksToOutput` read the tiles back, `Bitmap.copyPixelsFromBuffer` copied
+them and the encoder wrote them. Crop the JPEG before concluding anything about
+a readback.
+
+Histogramming every node's output found the crossing exactly: `CorrectingFlow`
+out at mean 103.3, `Sharpening` out at mean 0.0. `sharpening/lsharpening3.glsl`
+declared `float sharp;` and then accumulated into it. Reading an uninitialized
+local is undefined in GLSL; Adreno gives zero, the desktop gives NaN, and
+`clamp(NaN + center, 0.0, 1.0)` is black. `float sharp = 0.0;` and the JPEG is
+the recorded scene, mean 103.9. This is an app bug, not a port one — the fix is
+correct on Android too.
+
+The probe is a `probeNode()` call at the end of `GLBasePipeline.runAll()`'s
+loop, `GLHistogram.Compute` over `node.GetProgTex()`, behind
+`-Dphoton.probeNodes=1` (`run.sh ... -- -X -Dphoton.probeNodes=1`). It is not
+committed — the port builds the app from the pinned `PORT_APP_REV` archive
+under `out/app-source-*`, not the working tree, so it and any app-source fix
+have to be applied there and re-applied whenever that tree is regenerated.
+A shader can also be overridden without any rebuild by dropping it at
+`out/data/app.apk_/assets/<path>`: the asset manager tries the data dir before
+the apk.
+
+## The replay backend answered a still capture with the preview's failures (2026-09-15)
+
+A replayed still burst reached the app as `onCaptureSequenceCompleted` alone —
+no `onCaptureStarted`, no `onCaptureCompleted` — so `mCaptureResult` stayed null
+and processing died on `Cannot invoke CaptureResult.get(...) because "result" is
+null`. The request ids were right all along.
+
+`camera_replay.c` played the whole recorded burst segment under one live
+request id. That segment opens with the events the recorded device produced
+when *its* shutter was pressed: three `ATL_REC_FAILED` and five `ATL_REC_LOST`
+for the preview request it abandoned. The first of those reached
+`CameraCaptureSession.dispatchCaptureFailed`, which removes a one-shot sequence
+from `sequences` — so every later started and result for that id found nothing
+and was dropped, and the eighth one took `Burst.outstanding` to zero and
+reported the sequence complete.
+
+The backend now indexes the recording into frames (a started, the buffers
+carrying its timestamp, the result with its frame number) and answers one
+request with one frame, matched by the recorded request id: the requests the
+trigger opened are the burst's, everything before it is the pre-roll, and the
+events of a request nothing replays are dropped rather than handed to whatever
+is in flight. Two things fell out of that:
+
+- A result chunk carries no timestamp of its own, so `result_at()` was stamping
+  every result with `shift` alone. The app pairs images to results by
+  `SENSOR_TIMESTAMP`, so `mExposures` was keyed on a constant. The frame the
+  result belongs to now supplies it.
+- A frame the recording stopped inside (a started with no result) is dropped:
+  the request it answered would never complete, and the burst would hang one
+  frame short of `onCaptureSequenceCompleted`.
+
+A one-shot with `CONTROL_CAPTURE_INTENT_STILL_CAPTURE` takes the burst; any
+other one-shot — a pre-capture sequence is one — takes a pre-roll frame, where
+it used to replay the entire burst.
+
+With that, a desktop replay run takes eight frames, merges them and saves the
+scene: the port's own end-to-end HDRX check, no phone in the loop.
