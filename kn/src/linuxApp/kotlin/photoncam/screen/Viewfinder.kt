@@ -15,7 +15,8 @@
  * frame in one volatile reference and this file picks it up under
  * `withFrameNanos`, on the composition thread.  Awaiting that clock is also what
  * keeps `scene.hasInvalidations()` true, so MgwlComposeHost keeps rendering
- * while the preview is running.
+ * while the preview is running.  The conversion itself is [PreviewConverter]'s
+ * worker, not the composition thread's.
  */
 package photoncam.screen
 
@@ -49,6 +50,10 @@ import android.graphics.Point
 import android.hardware.camera2.CameraMetadata
 import android.graphics.SurfaceTexture
 import com.particlesdevs.photoncamera.capture.PreviewSurface
+import kotlin.native.concurrent.Future
+import kotlin.native.concurrent.FutureState
+import kotlin.native.concurrent.TransferMode
+import kotlin.native.concurrent.Worker
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.alloc
 import kotlinx.cinterop.ptr
@@ -164,6 +169,9 @@ fun BoxScope.CameraViewfinder(surface: ComposePreviewSurface, overlay: Viewfinde
 	val open = remember { arrayOfNulls<Image>(1) }
 	DisposableEffect(open) { onDispose { open[0]?.close(); open[0] = null } }
 
+	val converter = remember { PreviewConverter() }
+	DisposableEffect(converter) { onDispose { converter.close() } }
+
 	LaunchedEffect(texture) {
 		var drawn = 0L
 		var reported = 0L
@@ -171,26 +179,21 @@ fun BoxScope.CameraViewfinder(surface: ComposePreviewSurface, overlay: Viewfinde
 		var convertNanos = 0L
 		while (true) {
 			withFrameNanos { nanos ->
-				// Taking it is what lets the producer copy the next one.
-				val frame = texture.takeFrame()
-				if (frame != null) {
+				val raster = converter.take()
+				if (raster != null) {
 					drawn++
-					val t0 = nanoTime()
-					val img = frame.toSkiaImage()
-					convertNanos += nanoTime() - t0
-					if (img != null) {
-						open[0]?.close()
-						open[0] = img
-						image = img.toComposeImageBitmap()
-						lastSize = IntSize(img.width, img.height)
-					}
+					convertNanos += raster.nanos
+					val img = raster.toSkiaImage()
+					open[0]?.close()
+					open[0] = img
+					image = img.toComposeImageBitmap()
+					lastSize = IntSize(img.width, img.height)
 					// One line per 60 drawn frames: proof the stream is live
 					// without a log that is only the preview.
 					if (drawn - reported >= 60L || reported == 0L) {
 						val n = (drawn - reported).coerceAtLeast(1)
 						val wall = if (reportedAt == 0L) 0L else (nanos - reportedAt) / n / 1_000_000
-						println("[pc] preview frame $drawn ${frame.width}x${frame.height}" +
-							" format=0x${frame.format.toString(16)} planes=${frame.planes.size}" +
+						println("[pc] preview frame $drawn ${converter.source}" +
 							" dropped=${texture.dropped}" +
 							" convert=${convertNanos / n / 1_000_000}ms frame=${wall}ms")
 						reported = drawn
@@ -198,6 +201,9 @@ fun BoxScope.CameraViewfinder(surface: ComposePreviewSurface, overlay: Viewfinde
 						convertNanos = 0L
 					}
 				}
+				// Taking it is what lets the producer copy the next one, so it
+				// is taken only when the converter can start on it at once.
+				if (!converter.busy()) texture.takeFrame()?.let { converter.submit(it) }
 			}
 		}
 	}
@@ -310,6 +316,49 @@ private val rotateOverride: Int? =
 	getenv("PC_PREVIEW_ROTATE")?.toKString()?.toIntOrNull()
 
 /**
+ * The conversion, on a worker of its own.  Under withFrameNanos it was the
+ * whole of the composition thread's frame budget -- and so the shutter ring's,
+ * the carousel's and every touch's, which is what a capture made visible: the
+ * pipeline takes the cores, the conversion takes longer, and the screen slows
+ * with it.  ONE frame in flight, so a slow one drops rather than queues.
+ */
+private class PreviewConverter {
+	class Raster(val bytes: ByteArray, val width: Int, val height: Int, val nanos: Long) {
+		fun toSkiaImage(): Image = Image.makeRaster(
+			ImageInfo(width, height, ColorType.RGBA_8888, ColorAlphaType.OPAQUE), bytes, width * 4)
+	}
+
+	private val worker = Worker.start(name = "preview-convert")
+	private var pending: Future<Raster?>? = null
+
+	/** the newest frame's own shape, for the preview log line */
+	var source: String = ""
+		private set
+
+	fun busy(): Boolean = pending != null
+
+	fun submit(frame: SurfaceTexture.Frame) {
+		source = "${frame.width}x${frame.height} format=0x${frame.format.toString(16)}" +
+			" planes=${frame.planes.size}"
+		pending = worker.execute(TransferMode.SAFE, { frame }) { it.toRaster() }
+	}
+
+	/** The finished raster, once; null while one is still in flight.  A frame
+	 *  that threw clears the slot too, or the preview never starts again. */
+	fun take(): Raster? {
+		val f = pending ?: return null
+		if (f.state == FutureState.SCHEDULED) return null
+		pending = null
+		return if (f.state == FutureState.COMPUTED) f.result else null
+	}
+
+	fun close() {
+		pending = null
+		worker.requestTermination(processScheduledJobs = false)
+	}
+}
+
+/**
  * YUV_420_888 -> RGBA, at whatever stride the producer chose.
  *
  * The chroma planes are half resolution and may be INTERLEAVED (pixel stride 2
@@ -318,7 +367,8 @@ private val rotateOverride: Int? =
  * from its luma alone -- grey, and visibly so, rather than a wrong colour that
  * reads as a camera fault.
  */
-private fun SurfaceTexture.Frame.toSkiaImage(): Image? {
+private fun SurfaceTexture.Frame.toRaster(): PreviewConverter.Raster? {
+	val t0 = nanoTime()
 	if (width <= 0 || height <= 0 || planes.isEmpty()) return null
 	// EVERY PIXEL IS CONVERTED BY THE CPU, so the raster is built at the size
 	// the screen can actually show rather than the sensor's.  A 2304x1728
@@ -411,10 +461,10 @@ private fun SurfaceTexture.Frame.toSkiaImage(): Image? {
 			}
 		}
 	}
-	return Image.makeRaster(ImageInfo(w, h, ColorType.RGBA_8888, ColorAlphaType.OPAQUE), out, w * 4)
+	return PreviewConverter.Raster(out, w, h, nanoTime() - t0)
 }
 
-/** The long side the preview raster is built at; see [toSkiaImage]. */
+/** The long side the preview raster is built at; see [toRaster]. */
 private const val PREVIEW_MAX = 1280
 
 private fun clamp(v: Int): Byte = when {
