@@ -1,0 +1,251 @@
+[
+{
+  "name":"[Ljava.lang.String;"
+},
+{
+  "name":"android.app.Activity",
+  "fields":[{"name":"finishing"}, {"name":"windowFocused"}],
+  "methods":[{"name":"createMainActivity","parameterTypes":["java.lang.String","long","java.lang.String","java.lang.String"] }, {"name":"onBackPressed","parameterTypes":[] }, {"name":"onNewIntent","parameterTypes":["android.content.Intent"] }, {"name":"onPostCreate","parameterTypes":["android.os.Bundle"] }, {"name":"onPostResume","parameterTypes":[] }, {"name":"onWindowFocusChanged","parameterTypes":["boolean"] }, {"name":"performCreate","parameterTypes":["android.os.Bundle"] }, {"name":"performDestroy","parameterTypes":[] }, {"name":"performPause","parameterTypes":[] }, {"name":"performResume","parameterTypes":[] }, {"name":"performStart","parameterTypes":[] }, {"name":"performStop","parameterTypes":[] }]
+},
+{
+  "name":"android.app.Application",
+  "methods":[{"name":"get_app_icon_path","parameterTypes":[] }, {"name":"onCreate","parameterTypes":[] }]
+},
+{
+  "name":"android.app.Instrumentation"
+},
+{
+  "name":"android.atl.ATLRuntime",
+  "methods":[{"name":"installProcessDefaults","parameterTypes":["java.lang.String","int"] }, {"name":"loadNativeLibrary","parameterTypes":["java.lang.String"] }]
+},
+{
+  "name":"android.atl.GVariantBuilderParcel",
+  "methods":[{"name":"<init>","parameterTypes":["long"] }]
+},
+{
+  "name":"android.atl.GVariantIterParcel",
+  "methods":[{"name":"<init>","parameterTypes":["long"] }]
+},
+{
+  "name":"android.content.ContentProvider",
+  "methods":[{"name":"createContentProviders","parameterTypes":[] }]
+},
+{
+  "name":"android.content.Context",
+  "fields":[{"name":"sys_config"}],
+  "methods":[{"name":"createApplication","parameterTypes":["long"] }, {"name":"getPackageName","parameterTypes":[] }, {"name":"onSystemConfigChanged","parameterTypes":[] }, {"name":"resolveActivityInternal","parameterTypes":["android.content.Intent"] }, {"name":"sendBroadcast","parameterTypes":["android.content.Intent"] }, {"name":"startActivity","parameterTypes":["android.content.Intent"] }, {"name":"startService","parameterTypes":["android.content.Intent"] }]
+},
+{
+  "name":"android.content.Intent",
+  "methods":[{"name":"<init>","parameterTypes":[] }, {"name":"getDataString","parameterTypes":[] }, {"name":"putExtra","parameterTypes":["java.lang.String","int"] }, {"name":"putExtra","parameterTypes":["java.lang.String","long"] }, {"name":"putExtra","parameterTypes":["java.lang.String","android.os.Parcelable"] }, {"name":"putExtra","parameterTypes":["java.lang.String","java.lang.CharSequence"] }, {"name":"putExtra","parameterTypes":["java.lang.String","byte[]"] }, {"name":"setClassName","parameterTypes":["android.content.Context","java.lang.String"] }]
+},
+{
+  "name":"android.content.res.AssetManager",
+  "fields":[{"name":"mObject"}],
+  "methods":[{"name":"extractFromAPK","parameterTypes":["java.lang.String","java.lang.String","java.lang.String"] }]
+},
+{
+  "name":"android.content.res.Configuration",
+  "fields":[{"name":"screenLayout"}]
+},
+{
+  "name":"android.graphics.Bitmap",
+  "methods":[{"name":"fromNative","parameterTypes":["long"] }]
+},
+{
+  "name":"android.graphics.Canvas",
+  "methods":[{"name":"drawText","parameterTypes":["java.lang.CharSequence","int","int","float","float","android.graphics.Paint"] }]
+},
+{
+  "name":"android.graphics.Paint",
+  "methods":[{"name":"getColor","parameterTypes":[] }]
+},
+{
+  "name":"android.graphics.Paint$FontMetrics",
+  "fields":[{"name":"ascent"}, {"name":"bottom"}, {"name":"descent"}, {"name":"leading"}, {"name":"top"}]
+},
+{
+  "name":"android.graphics.Paint$FontMetricsInt",
+  "fields":[{"name":"ascent"}, {"name":"bottom"}, {"name":"descent"}, {"name":"leading"}, {"name":"top"}]
+},
+{
+  "name":"android.graphics.Rect",
+  "fields":[{"name":"bottom"}, {"name":"left"}, {"name":"right"}, {"name":"top"}]
+},
+{
+  "name":"android.graphics.RectF",
+  "fields":[{"name":"bottom"}, {"name":"left"}, {"name":"right"}, {"name":"top"}]
+},
+{
+  "name":"android.graphics.SurfaceTexture",
+  "fields":[{"name":"nativePtr"}],
+  "methods":[{"name":"postFrameAvailableFromNative","parameterTypes":[] }]
+},
+{
+  "name":"android.hardware.SensorEvent",
+  "methods":[{"name":"<init>","parameterTypes":["float[]","android.hardware.Sensor"] }]
+},
+{
+  "name":"android.hardware.camera2.impl.CameraDeviceNative",
+  "methods":[{"name":"dispatchCaptureBufferLost","parameterTypes":["int","long","int"] }, {"name":"dispatchCaptureCompleted","parameterTypes":["int","long","long"] }, {"name":"dispatchCaptureFailed","parameterTypes":["int","long"] }, {"name":"dispatchCaptureStarted","parameterTypes":["int","long","long"] }, {"name":"dispatchError","parameterTypes":["int"] }]
+},
+{
+  "name":"android.media.AudioTrack$OnPlaybackPositionUpdateListener",
+  "methods":[{"name":"onPeriodicNotification","parameterTypes":["android.media.AudioTrack"] }]
+},
+{
+  "name":"android.media.ImageReader",
+  "methods":[{"name":"dispatchImageAvailable","parameterTypes":[] }]
+},
+{
+  "name":"android.media.MediaPlayer",
+  "methods":[{"name":"postEventFromNative","parameterTypes":["int","int","int"] }]
+},
+{
+  "name":"android.net.Uri",
+  "methods":[{"name":"parse","parameterTypes":["java.lang.String"] }]
+},
+{
+  "name":"android.os.BaseBundle",
+  "methods":[{"name":"get","parameterTypes":["java.lang.String"] }, {"name":"keySet","parameterTypes":[] }]
+},
+{
+  "name":"android.os.Bundle"
+},
+{
+  "name":"android.os.Looper",
+  "methods":[{"name":"loop","parameterTypes":[] }, {"name":"prepareMainLooper","parameterTypes":[] }]
+},
+{
+  "name":"android.os.Parcel",
+  "methods":[{"name":"readParcelable","parameterTypes":["java.lang.ClassLoader"] }, {"name":"writeParcelable","parameterTypes":["android.os.Parcelable","int"] }]
+},
+{
+  "name":"android.text.BoringLayout$Metrics"
+},
+{
+  "name":"android.util.AttributeSet",
+  "methods":[{"name":"getAttributeIntValue","parameterTypes":["java.lang.String","java.lang.String","int"] }, {"name":"getAttributeValue","parameterTypes":["java.lang.String","java.lang.String"] }]
+},
+{
+  "name":"android.util.TypedValue",
+  "fields":[{"name":"assetCookie"}, {"name":"data"}, {"name":"density"}, {"name":"resourceId"}, {"name":"string"}, {"name":"type"}]
+},
+{
+  "name":"android.view.Display",
+  "fields":[{"name":"window_height"}, {"name":"window_width"}],
+  "methods":[{"name":"setWindowSize","parameterTypes":["int","int"] }]
+},
+{
+  "name":"android.view.InputQueue$Callback",
+  "methods":[{"name":"onInputQueueCreated","parameterTypes":["android.view.InputQueue"] }]
+},
+{
+  "name":"android.view.KeyEvent",
+  "methods":[{"name":"<init>","parameterTypes":["long","long","int","int","int","int"] }]
+},
+{
+  "name":"android.view.MotionEvent",
+  "methods":[{"name":"<init>","parameterTypes":["int","int","long","float","float","float","float"] }, {"name":"<init>","parameterTypes":["int","int","long","float","float","float","float","float","float"] }, {"name":"<init>","parameterTypes":["int","int","long","int[]","float[]"] }]
+},
+{
+  "name":"android.view.Surface",
+  "fields":[{"name":"imageReaderPtr"}, {"name":"nativeWindow"}, {"name":"surfaceTexture"}, {"name":"videoEncoderPtr"}, {"name":"view"}],
+  "methods":[{"name":"postFrame","parameterTypes":["android.graphics.Bitmap"] }]
+},
+{
+  "name":"android.view.SurfaceView",
+  "methods":[{"name":"surfaceChanged","parameterTypes":["int","int","int"] }, {"name":"surfaceCreated","parameterTypes":[] }]
+},
+{
+  "name":"android.view.View",
+  "methods":[{"name":"computeScroll","parameterTypes":[] }, {"name":"dispatchDraw","parameterTypes":["android.graphics.Canvas"] }, {"name":"dispatchGenericMotionEvent","parameterTypes":["android.view.MotionEvent"] }, {"name":"dispatchHoverEvent","parameterTypes":["android.view.MotionEvent"] }, {"name":"dispatchKeyEvent","parameterTypes":["android.view.KeyEvent"] }, {"name":"dispatchTouchEvent","parameterTypes":["android.view.MotionEvent"] }, {"name":"draw","parameterTypes":["android.graphics.Canvas"] }, {"name":"getAllSuperClasses","parameterTypes":[] }, {"name":"getId","parameterTypes":[] }, {"name":"getIdName","parameterTypes":[] }, {"name":"getMeasuredHeight","parameterTypes":[] }, {"name":"getMeasuredWidth","parameterTypes":[] }, {"name":"getScrollX","parameterTypes":[] }, {"name":"getScrollY","parameterTypes":[] }, {"name":"getSuggestedMinimumHeight","parameterTypes":[] }, {"name":"getSuggestedMinimumWidth","parameterTypes":[] }, {"name":"measure","parameterTypes":["int","int"] }, {"name":"onAttachedToWindow","parameterTypes":[] }, {"name":"onDetachedFromWindow","parameterTypes":[] }, {"name":"onDraw","parameterTypes":["android.graphics.Canvas"] }, {"name":"onGenericMotionEvent","parameterTypes":["android.view.MotionEvent"] }, {"name":"onInterceptTouchEvent","parameterTypes":["android.view.MotionEvent"] }, {"name":"onKeyDown","parameterTypes":["int","android.view.KeyEvent"] }, {"name":"onLayout","parameterTypes":["boolean","int","int","int","int"] }, {"name":"onMeasure","parameterTypes":["int","int"] }, {"name":"onTouchEvent","parameterTypes":["android.view.MotionEvent"] }, {"name":"onTouchEventInternal","parameterTypes":["android.view.MotionEvent","boolean"] }, {"name":"performClick","parameterTypes":[] }, {"name":"performLongClick","parameterTypes":["float","float"] }, {"name":"setLayoutParams","parameterTypes":["android.view.ViewGroup$LayoutParams"] }, {"name":"setMeasuredDimension","parameterTypes":["int","int"] }]
+},
+{
+  "name":"android.view.ViewGroup",
+  "methods":[{"name":"dispatchTouchEvent","parameterTypes":["android.view.MotionEvent"] }]
+},
+{
+  "name":"android.view.ViewRootImpl",
+  "fields":[{"name":"mDirty"}, {"name":"scene"}],
+  "methods":[{"name":"dispatchCharacter","parameterTypes":["int"] }, {"name":"dispatchCommitText","parameterTypes":["java.lang.String","int","int","int"] }, {"name":"dispatchComposingText","parameterTypes":["java.lang.String","int","int","int"] }, {"name":"dispatchConfigurationChanged","parameterTypes":[] }, {"name":"dispatchFinishComposing","parameterTypes":[] }, {"name":"dispatchGenericMotionEvent","parameterTypes":["android.view.MotionEvent"] }, {"name":"dispatchImInitiatedHide","parameterTypes":[] }, {"name":"dispatchImeGetSelection","parameterTypes":[] }, {"name":"dispatchImeSetSelection","parameterTypes":["int","int"] }, {"name":"dispatchKeyEvent","parameterTypes":["android.view.KeyEvent"] }, {"name":"dispatchTouchEvent","parameterTypes":["android.view.MotionEvent"] }, {"name":"dispatchWindowFocusChanged","parameterTypes":["boolean"] }, {"name":"performDraw","parameterTypes":["long","int","int"] }, {"name":"performLayout","parameterTypes":["int","int"] }, {"name":"setImeInset","parameterTypes":["int"] }]
+},
+{
+  "name":"android.view.ViewTreeObserver",
+  "methods":[{"name":"dispatchOnGlobalLayout","parameterTypes":[] }]
+},
+{
+  "name":"android.webkit.WebView",
+  "methods":[{"name":"internalGetAssetManager","parameterTypes":[] }, {"name":"internalLoadChanged","parameterTypes":["int","java.lang.String"] }]
+},
+{
+  "name":"android.widget.DatePicker",
+  "methods":[{"name":"onDateChange","parameterTypes":[] }]
+},
+{
+  "name":"android.widget.TimePicker",
+  "methods":[{"name":"onTimeChange","parameterTypes":[] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.camera.CameraActivity",
+  "methods":[{"name":"onBackPressed","parameterTypes":[] }]
+},
+{
+  "name":"dalvik.system.VMRuntime",
+  "methods":[{"name":"getRuntime","parameterTypes":[] }]
+},
+{
+  "name":"java.io.FileNotFoundException",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.String"] }]
+},
+{
+  "name":"java.lang.Class",
+  "methods":[{"name":"getDeclaredField","parameterTypes":["java.lang.String"] }, {"name":"getDeclaredMethod","parameterTypes":["java.lang.String","java.lang.Class[]"] }]
+},
+{
+  "name":"java.lang.String"
+},
+{
+  "name":"java.lang.System",
+  "methods":[{"name":"getProperty","parameterTypes":["java.lang.String"] }]
+},
+{
+  "name":"java.nio.Buffer",
+  "fields":[{"name":"address"}, {"name":"position"}]
+},
+{
+  "name":"java.nio.ByteBuffer"
+},
+{
+  "name":"java.nio.CharBuffer"
+},
+{
+  "name":"java.nio.DirectByteBuffer",
+  "methods":[{"name":"isDirect","parameterTypes":[] }]
+},
+{
+  "name":"java.nio.DirectFloatBufferU",
+  "methods":[{"name":"isDirect","parameterTypes":[] }]
+},
+{
+  "name":"java.nio.DirectIntBufferU",
+  "methods":[{"name":"isDirect","parameterTypes":[] }]
+},
+{
+  "name":"java.nio.FloatBuffer"
+},
+{
+  "name":"java.nio.IntBuffer"
+},
+{
+  "name":"java.nio.ShortBuffer"
+},
+{
+  "name":"java.util.ArrayList",
+  "methods":[{"name":"add","parameterTypes":["java.lang.Object"] }, {"name":"clear","parameterTypes":[] }, {"name":"get","parameterTypes":["int"] }, {"name":"remove","parameterTypes":["java.lang.Object"] }, {"name":"size","parameterTypes":[] }]
+},
+{
+  "name":"java.util.Set",
+  "methods":[{"name":"toArray","parameterTypes":[] }]
+}
+]

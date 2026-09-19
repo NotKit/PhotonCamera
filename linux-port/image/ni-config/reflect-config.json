@@ -1,0 +1,377 @@
+[
+{
+  "name":"[B"
+},
+{
+  "name":"[C"
+},
+{
+  "name":"[F"
+},
+{
+  "name":"[I"
+},
+{
+  "name":"[Landroid.graphics.FontFamily;"
+},
+{
+  "name":"[Landroid.text.style.ParagraphStyle;"
+},
+{
+  "name":"[[I"
+},
+{
+  "name":"android.content.res.Resources$Theme",
+  "methods":[{"name":"rebase","parameterTypes":[] }]
+},
+{
+  "name":"android.graphics.FontFamily",
+  "methods":[{"name":"<init>","parameterTypes":[] }, {"name":"abortCreation","parameterTypes":[] }, {"name":"addFontFromAssetManager","parameterTypes":["android.content.res.AssetManager","java.lang.String","int","boolean","int","int","int","android.graphics.fonts.FontVariationAxis[]"] }, {"name":"addFontFromBuffer","parameterTypes":["java.nio.ByteBuffer","int","android.graphics.fonts.FontVariationAxis[]","int","int"] }, {"name":"freeze","parameterTypes":[] }]
+},
+{
+  "name":"android.graphics.Typeface",
+  "methods":[{"name":"createFromFamiliesWithDefault","parameterTypes":["android.graphics.FontFamily[]","java.lang.String","int","int"] }]
+},
+{
+  "name":"android.hardware.camera2.CameraCharacteristics",
+  "allDeclaredFields":true
+},
+{
+  "name":"android.hardware.camera2.CameraCharacteristics$Key"
+},
+{
+  "name":"android.hardware.camera2.CameraMetadata",
+  "allDeclaredFields":true,
+  "methods":[{"name":"getKeys","parameterTypes":["java.lang.Class","java.lang.Class","android.hardware.camera2.CameraMetadata","int[]","boolean"] }]
+},
+{
+  "name":"android.hardware.camera2.CaptureRequest",
+  "allDeclaredFields":true
+},
+{
+  "name":"android.hardware.camera2.CaptureResult",
+  "allDeclaredFields":true
+},
+{
+  "name":"android.hardware.camera2.impl.CameraMetadataNative",
+  "methods":[{"name":"set","parameterTypes":["android.hardware.camera2.CaptureResult$Key","java.lang.Object"] }, {"name":"setBase","parameterTypes":["android.hardware.camera2.CameraCharacteristics$Key","java.lang.Object"] }]
+},
+{
+  "name":"android.os.Build$VERSION",
+  "fields":[{"name":"SDK_INT"}]
+},
+{
+  "name":"android.os.Trace",
+  "fields":[{"name":"TRACE_TAG_APP"}],
+  "methods":[{"name":"asyncTraceBegin","parameterTypes":["long","java.lang.String","int"] }, {"name":"asyncTraceEnd","parameterTypes":["long","java.lang.String","int"] }, {"name":"isTagEnabled","parameterTypes":["long"] }, {"name":"traceCounter","parameterTypes":["long","java.lang.String","int"] }]
+},
+{
+  "name":"android.view.FrameLayout"
+},
+{
+  "name":"android.view.LinearLayout"
+},
+{
+  "name":"android.view.ProgressBar"
+},
+{
+  "name":"android.view.RelativeLayout"
+},
+{
+  "name":"android.view.View",
+  "methods":[{"name":"getElevation","parameterTypes":[] }, {"name":"getRotation","parameterTypes":[] }, {"name":"getTranslationZ","parameterTypes":[] }, {"name":"setElevation","parameterTypes":["float"] }, {"name":"setRotation","parameterTypes":["float"] }, {"name":"setTranslationZ","parameterTypes":["float"] }]
+},
+{
+  "name":"android.widget.FrameLayout",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"android.widget.LinearLayout",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"android.widget.ProgressBar",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"android.widget.RelativeLayout",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"androidx.appcompat.widget.AppCompatImageButton"
+},
+{
+  "name":"androidx.appcompat.widget.AppCompatImageView"
+},
+{
+  "name":"androidx.appcompat.widget.AppCompatToggleButton"
+},
+{
+  "name":"androidx.appcompat.widget.ContentFrameLayout",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"androidx.appcompat.widget.FitWindowsLinearLayout",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }, {"name":"makeOptionalFitsSystemWindows","parameterTypes":[] }]
+},
+{
+  "name":"androidx.appcompat.widget.ViewStubCompat",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"androidx.concurrent.futures.AbstractResolvableFuture",
+  "fields":[{"name":"listeners"}, {"name":"value"}, {"name":"waiters"}]
+},
+{
+  "name":"androidx.concurrent.futures.AbstractResolvableFuture$Waiter",
+  "fields":[{"name":"next"}, {"name":"thread"}]
+},
+{
+  "name":"androidx.constraintlayout.widget.ConstraintLayout",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"androidx.core.content.FileProvider",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"androidx.emoji2.text.EmojiCompatInitializer",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"androidx.lifecycle.ProcessLifecycleInitializer",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"androidx.preference.ListPreference",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"androidx.preference.Preference",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"androidx.preference.PreferenceCategory",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"androidx.preference.PreferenceScreen",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"androidx.profileinstaller.ProfileInstallerInitializer",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"androidx.startup.InitializationProvider",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.google.android.material.button.MaterialButton",
+  "methods":[{"name":"setElevation","parameterTypes":["float"] }]
+},
+{
+  "name":"com.google.android.material.theme.MaterialComponentsViewInflater",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.app.PhotonCamera",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.capture.CaptureController",
+  "allDeclaredFields":true
+},
+{
+  "name":"com.particlesdevs.photoncamera.circularbarlib.ui.views.knobview.KnobView",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.processing.ImageSaverSettings",
+  "allDeclaredFields":true
+},
+{
+  "name":"com.particlesdevs.photoncamera.processing.opengl.scripts.ESD4D",
+  "allDeclaredFields":true
+},
+{
+  "name":"com.particlesdevs.photoncamera.processing.opengl.scripts.PyramidAlignment",
+  "allDeclaredFields":true
+},
+{
+  "name":"com.particlesdevs.photoncamera.processing.render.Parameters",
+  "allDeclaredFields":true
+},
+{
+  "name":"com.particlesdevs.photoncamera.settings.DynamicNoiseStore$RawSample",
+  "allDeclaredFields":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.settings.DynamicNoiseStore$StoreDto",
+  "allDeclaredFields":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.SplashActivity",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.camera.CameraActivity",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.camera.CameraLayout",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.camera.CameraUIViewImpl",
+  "allDeclaredFields":true
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.camera.data.CameraLensData",
+  "allDeclaredFields":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.camera.viewmodel.AuxButtonsViewModel",
+  "queryAllPublicConstructors":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.camera.viewmodel.CameraFragmentViewModel",
+  "queryAllPublicConstructors":true,
+  "methods":[{"name":"<init>","parameterTypes":["android.app.Application"] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.camera.viewmodel.SettingsBarEntryProvider",
+  "queryAllPublicConstructors":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.camera.viewmodel.TimerFrameCountViewModel",
+  "queryAllPublicConstructors":true,
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.camera.views.AuxButtonsLayout",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.camera.views.FlashButton",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.camera.views.FocusCircleView",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.camera.views.SpotWbIndicatorView",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.camera.views.TimerButton",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.camera.views.modeswitcher.wefika.horizontalpicker.HorizontalPicker",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.camera.views.settingsbar.SettingsBarLayout",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.camera.views.viewfinder.GLPreview",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.camera.views.viewfinder.HorizonIndicatorView",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.camera.views.viewfinder.SurfaceViewOverViewfinder",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.camera.views.viewfinder.ViewfinderHudView",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.settings.custompreferences.BackupPreferences",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.settings.custompreferences.ManagedSwitchPreference",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.settings.custompreferences.ResetPreferences",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.settings.custompreferences.RestorePreference",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"com.particlesdevs.photoncamera.ui.settings.custompreferences.UniversalSeekBarPreference",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"com.sun.xml.internal.stream.XMLInputFactoryImpl",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"com.whatsapp.util.Log"
+},
+{
+  "name":"de.hdodenhof.circleimageview.CircleImageView",
+  "methods":[{"name":"<init>","parameterTypes":["android.content.Context","android.util.AttributeSet"] }]
+},
+{
+  "name":"java.lang.Class",
+  "methods":[{"name":"getRecordComponents","parameterTypes":[] }, {"name":"isRecord","parameterTypes":[] }]
+},
+{
+  "name":"java.lang.reflect.RecordComponent",
+  "methods":[{"name":"getName","parameterTypes":[] }, {"name":"getType","parameterTypes":[] }]
+},
+{
+  "name":"java.security.SecureRandomParameters"
+},
+{
+  "name":"java.sql.Date"
+},
+{
+  "name":"java.util.HashMap",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "name":"java.util.concurrent.atomic.AtomicBoolean",
+  "fields":[{"name":"value"}]
+},
+{
+  "name":"java.util.concurrent.atomic.AtomicReference",
+  "fields":[{"name":"value"}]
+},
+{
+  "name":"kotlin.reflect.jvm.internal.ReflectionFactoryImpl"
+},
+{
+  "name":"kotlinx.coroutines.flow.StateFlowImpl",
+  "fields":[{"name":"_state$volatile"}]
+},
+{
+  "name":"sun.misc.Unsafe",
+  "fields":[{"name":"theUnsafe"}],
+  "methods":[{"name":"allocateInstance","parameterTypes":["java.lang.Class"] }]
+},
+{
+  "name":"sun.security.provider.NativePRNG",
+  "methods":[{"name":"<init>","parameterTypes":[] }, {"name":"<init>","parameterTypes":["java.security.SecureRandomParameters"] }]
+},
+{
+  "name":"sun.security.provider.SHA",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+}
+]

@@ -312,7 +312,12 @@ build_full() {
 	# initialised during it anyway. Each name in the file answers one such error.
 	# A file rather than a list here, so the set is reviewable as a diff.
 	local bt_file="$PORT_DIR/image/initialize-at-build-time.txt" init_bt=""
-	[ ! -f "$bt_file" ] || init_bt=$(grep -vE '^[[:space:]]*(#|$)' "$bt_file" | paste -sd, -)
+	# `|| true` on the grep, not on the pipeline: the file starts out holding
+	# nothing but comments, grep then exits 1, and under `set -o pipefail` that
+	# is the whole substitution's status -- which `set -e` turns into a silent
+	# exit right here, with no image and no message.
+	[ ! -f "$bt_file" ] ||
+		init_bt=$({ grep -vE '^[[:space:]]*(#|$)' "$bt_file" || true; } | paste -sd, -)
 	local bt_opts=()
 	[ -z "$init_bt" ] || bt_opts=("--initialize-at-build-time=$init_bt")
 
@@ -383,6 +388,8 @@ build_full() {
 		exit 1
 	fi
 
+	# The class list holds android.os.Build$VERSION, so it is single-quoted:
+	# double quotes would let a reader sourcing this file expand $VERSION.
 	cat >"$dir/build-stats.env" <<-EOF
 		PORT_IMAGE_LIB="$dir/$name.so"
 		PORT_IMAGE_BYTES=$(stat -c%s "$dir/$name.so")
@@ -390,7 +397,7 @@ build_full() {
 		PORT_IMAGE_PEAK_RSS_KB=$peak_rss_kb
 		PORT_IMAGE_ARCH="$(uname -m)"
 		PORT_IMAGE_GRAALVM="$("$native_image" --version | head -1)"
-		PORT_IMAGE_INIT_AT_RUNTIME="$init_rt"
+		PORT_IMAGE_INIT_AT_RUNTIME='$init_rt'
 		ATLAS_REV="${ATLAS_REV:-}"
 		ATLAS_API_IMPL_SHA="${ATLAS_API_IMPL_SHA:-}"
 	EOF
