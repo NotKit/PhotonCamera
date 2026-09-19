@@ -33,10 +33,20 @@ set -euo pipefail
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/env.sh"
 
+# A clean checkout has no atlas next door, and the container compiles the
+# framework from sources that travel inside this repository -- so there has to
+# be a checkout to rsync. The pin, not the branch tip: the framework the AOT
+# image is built over and the one this click compiles have to be one commit
+# (env.sh, $ATLAS_PIN_REV). An existing checkout is left exactly as it is.
+if [ ! -f "$ATLAS_DIR/meson.build" ]; then
+	echo "no atlas checkout at $ATLAS_DIR: cloning $ATLAS_URL at $ATLAS_PIN_REV"
+	git clone "$ATLAS_URL" "$ATLAS_DIR"
+	git -C "$ATLAS_DIR" checkout --detach "$ATLAS_PIN_REV"
+fi
+
 ATL_SDK_REPO="${ATL_SDK_REPO:-NotKit/atl-touch}"
-# Not derived from $ATLAS_DIR's HEAD the way the Mercurygram port does it: the
-# camera2 branch has no SDK release of its own, and the SDK here is only the
-# dependency chain. Bump the pin file, not this.
+# The pin file, not $ATLAS_DIR's HEAD: it names both the SDK release and the
+# atlas commit the framework is compiled from (env.sh). Bump the file.
 ATL_SDK_TAG="${ATL_SDK_TAG:-$(tr -d '[:space:]' <"$PORT_DIR/click/atl-sdk.tag")}"
 
 OUT="$PORT_OUT/click-prebuilt"
@@ -167,9 +177,11 @@ Staged by \`linux-port/click/stage-prebuilt.sh\`; do not edit, do not commit.
 | skia/ | libskia.so for the target plus the headers atlas compiles against |
 | atlas-src/ | the camera2 checkout, so the container can compile the framework |
 
-atlas itself does **not** come from the SDK. The SDK is built from atl-touch
-master and this port stands on the camera2 branch, so \`build.sh\` compiles the
-framework from \`atlas-src/\` against the inputs above.
+atlas's natives do **not** come from the SDK: \`build.sh\` compiles the framework
+from \`atlas-src/\` against the inputs above, pinned to the commit this SDK
+release was built from. The ahead-of-time image takes that same commit's
+\`api-impl_classes.jar\` out of the SDK, and \`build.sh\` fails the build when the
+two revisions disagree.
 
 This \`libskia.so\` is the SDK's, built with \`skia_use_system_libjpeg_turbo\`
 off, so it vendors its own libjpeg and links none from the device.

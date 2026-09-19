@@ -61,8 +61,11 @@ step_sources() {
 	# points at a checkout when there is one next door (env.sh); otherwise clone
 	# the branch that has the camera2 bring-up.
 	if [ ! -f "$ATLAS_DIR/meson.build" ]; then
-		echo "no atlas checkout at $ATLAS_DIR: cloning $ATLAS_URL ($ATLAS_BRANCH)"
-		git clone -b "$ATLAS_BRANCH" "$ATLAS_URL" "$ATLAS_DIR"
+		echo "no atlas checkout at $ATLAS_DIR: cloning $ATLAS_URL at $ATLAS_PIN_REV"
+		git clone "$ATLAS_URL" "$ATLAS_DIR"
+		# The pin, not the branch tip: the framework the image is built over and
+		# the one the click compiles have to be one commit (env.sh).
+		git -C "$ATLAS_DIR" checkout --detach "$ATLAS_PIN_REV"
 	fi
 	# Share the ~8 GB skia tree if there is one; otherwise meson downloads it.
 	if [ ! -e "$ATLAS_DIR/subprojects/skia" ] && [ -d "$ATLAS_SKIA_DIR" ]; then

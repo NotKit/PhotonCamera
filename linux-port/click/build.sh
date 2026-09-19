@@ -9,7 +9,7 @@
 #       out/classpath/*.jar   the app and its dependencies
 #       out/app.apk           resources, assets and the manifest
 #   arm64, built here:
-#       atlas                 the camera2 branch: framework natives, api-impl.jar
+#       atlas                 framework natives, api-impl.jar
 #                             and the HotSpot launcher (javac is a host tool, so
 #                             the jar is the same bytecode either way)
 #       ncnn                  the inference library the ML nodes link
@@ -20,9 +20,27 @@
 #       art support libs, ART's boot jars, dx, the bionic stubs, GLFW,
 #       libskia.so and the atlas sources — see PROVENANCE.md
 #
-# Unlike the sibling Mercurygram click, atlas is always compiled here: the ATL
-# SDK is built from atl-touch master and this port stands on the camera2 branch.
-# The SDK supplies that build's inputs, not its output.
+# Unlike the sibling Mercurygram click, atlas's natives are always compiled
+# here: the SDK supplies that build's inputs, not its output. Its framework jar
+# is used in one place only -- the AOT image, built on a machine that cannot
+# compile atlas -- and both are pinned to one commit by click/atl-sdk.tag.
+#
+# Two vehicles come out of this script, same package name and version, so
+# installing one over the other is an upgrade and the app's data survives:
+#
+#   hotspot (default)  a jlink'd arm64 OpenJDK 21, the jars on a class path and
+#                      a base CDS archive. The fallback, and the one that gives
+#                      real stack traces.
+#   image              the framework, the shim and the app compiled ahead of
+#                      time by GraalVM native-image into one .so, which atlas's
+#                      android-translation-layer-image creates its VM from. No
+#                      JVM, no class loading, no class-data archive to warm up.
+#
+# clickable does not forward the environment into its container, so the vehicle
+# is read from $ROOT/.vehicle. native-image cannot cross-compile, so the image
+# itself is NOT built here: it comes from an arm64 machine as
+# linux-port/out/image-arm64/ (the `image` job in
+# .github/workflows/linux-port-click.yml, or build-image.sh on an arm64 box).
 #
 # Every step is stamped in $BUILD_DIR/stamps, so a re-run only redoes what
 # changed. The port's own build scripts do the work; this file only retargets
@@ -43,9 +61,19 @@ HOOK="photoncamera-jvm"
 CLICK_DIR="$ROOT/linux-port/click"
 HOST_OUT="$ROOT/linux-port/out"          # products of the x86_64 host build
 PREBUILT="$HOST_OUT/click-prebuilt"      # staged by stage-prebuilt.sh
+IMAGE_IN="$HOST_OUT/image-arm64"         # the AOT image, built on an arm64 host
 STAGE="$BUILD_DIR/stage"
 PREFIX="$STAGE/usr"                      # build-time sysroot for atlas
 STAMPS="$BUILD_DIR/stamps"
+
+# hotspot | image. A file rather than an environment variable because clickable
+# does not forward the environment into the container; make-click.sh writes it.
+VEHICLE="$(tr -d '[:space:]' <"$ROOT/.vehicle" 2>/dev/null || true)"
+VEHICLE="${VEHICLE:-hotspot}"
+case "$VEHICLE" in
+hotspot|image) ;;
+*) echo "unknown vehicle '$VEHICLE' in $ROOT/.vehicle (hotspot|image)" >&2; exit 1 ;;
+esac
 
 log()        { echo -e "\033[1;34m[click]\033[0m $*"; }
 stamp()      { [ -f "$STAMPS/$1.done" ]; }
@@ -79,7 +107,7 @@ export LIBRARY_PATH="$PREFIX/lib:$PREFIX/lib/art${LIBRARY_PATH:+:$LIBRARY_PATH}"
 export PORT_CROSS_LIB_DIRS="$PREFIX/lib $PREFIX/lib/art"
 export PORT_CROSS_INCLUDE_DIRS="$PREFIX/include"
 
-log "target $PORT_TRIPLE, $PORT_JOBS jobs"
+log "vehicle $VEHICLE, target $PORT_TRIPLE, $PORT_JOBS jobs"
 log "host JDK $JAVA_HOME, target JDK $PORT_TARGET_JAVA_HOME"
 
 # --- 1. inputs from the host build ------------------------------------------
@@ -109,6 +137,24 @@ jar_count=$(find "$HOST_OUT/classpath" -name '*.jar' | wc -l)
 	echo "no arm64 JVM at $PORT_TARGET_JAVA_HOME (openjdk-21-jdk-headless:arm64)" >&2
 	exit 1
 }
+
+# The image is an arm64 object and native-image cannot cross-compile, so it
+# cannot be produced in this (amd64) container. It is staged into the repository
+# because the container sees nothing outside it.
+IMAGE_SO="$IMAGE_IN/libphotoncamera.so"
+if [ "$VEHICLE" = image ]; then
+	[ -f "$IMAGE_SO" ] || {
+		echo "no $IMAGE_SO" >&2
+		echo "build it on an arm64 machine with linux-port/build-image.sh and copy" >&2
+		echo "the .so plus IMAGE.txt here, or take them from the workflow's" >&2
+		echo "photoncamera-image-arm64 artifact." >&2
+		exit 1
+	}
+	case "$(file -b "$IMAGE_SO")" in
+	*"ARM aarch64"*) ;;
+	*) echo "$IMAGE_SO is not an aarch64 object: $(file -b "$IMAGE_SO")" >&2; exit 1 ;;
+	esac
+fi
 
 # --- 2. build-time sysroot --------------------------------------------------
 
@@ -213,7 +259,11 @@ mkdir -p "$INSTALL_DIR/lib" "$INSTALL_DIR/atlas" "$INSTALL_DIR/classpath"
 # One flat directory for every native object, launcher included: atlas's natives
 # find each other through their $ORIGIN/ RUNPATH, and the absolute paths the
 # build baked into it (this build tree) do not exist on the device.
-cp "$ATLAS_OUT/android-translation-layer-hotspot" "$INSTALL_DIR/lib/"
+if [ "$VEHICLE" = image ]; then
+	cp "$ATLAS_OUT/android-translation-layer-image" "$INSTALL_DIR/lib/"
+else
+	cp "$ATLAS_OUT/android-translation-layer-hotspot" "$INSTALL_DIR/lib/"
+fi
 cp "$ATLAS_OUT/libtranslation_layer_main.so" "$ATLAS_OUT/libandroid.so.0" \
    "$ATLAS_OUT/libskia.so" "$INSTALL_DIR/lib/"
 ln -sfn libandroid.so.0 "$INSTALL_DIR/lib/libandroid.so"
@@ -235,99 +285,153 @@ cp "$ATLAS_OUT/system/etc/fonts.xml" "$INSTALL_DIR/atlas/system/etc/"
 mkdir -p "$INSTALL_DIR/atlas/system/fonts"
 cp "$ATLAS_OUT/system/fonts"/*.ttf "$INSTALL_DIR/atlas/system/fonts/"
 
-cp "$PORT_OUT/shim.jar" "$INSTALL_DIR/classpath/"
-cp "$HOST_OUT"/classpath/*.jar "$INSTALL_DIR/classpath/"
+# The image has the framework, the shim and the app compiled into it, and no
+# class path at all (vm_image.c warns about --classpath and ignores it), so it
+# ships neither the jars nor api-impl.jar. framework-res.apk and app.apk still
+# travel: those are read as *files* through libandroidfw, not as code.
+if [ "$VEHICLE" = image ]; then
+	rmdir "$INSTALL_DIR/classpath"
+	rm -f "$INSTALL_DIR/atlas/api-impl.jar"
+	cp "$IMAGE_SO" "$INSTALL_DIR/lib/"
+	[ ! -f "$IMAGE_IN/IMAGE.txt" ] || cp "$IMAGE_IN/IMAGE.txt" "$INSTALL_DIR/atlas/"
+
+	# The image baked one framework in; this container just compiled another.
+	# Two atlas revisions mean the framework classes inside the image and
+	# libtranslation_layer_main.so's JNI expectations disagree -- which is a
+	# NoSuchMethodError somewhere in the boot, not a link error.
+	#
+	# The comparison is on the atlas *revision*, not on api-impl.jar's hash: the
+	# image is built over the jar the ATL SDK publishes and the click compiles
+	# its own from the same sources, and two javac runs of one commit agree on
+	# every class while differing in the zip's timestamps. The revision is what
+	# the pin actually promises (env.sh, $ATLAS_PIN_REV).
+	image_atlas=$(sed -n 's/^atlas_rev=//p' "$IMAGE_IN/IMAGE.txt" 2>/dev/null || true)
+	here_atlas=$(sed -n 's/^ATLAS_REV="\(.*\)"/\1/p' "$ATLAS_OUT/artifacts.env")
+	if [ -z "$image_atlas" ] || [ -z "$here_atlas" ]; then
+		echo "  !! cannot compare frameworks: IMAGE.txt says '${image_atlas:-}'," \
+			"artifacts.env says '${here_atlas:-}'" >&2
+	# Short shas of different lengths are the normal case here (a release tag
+	# carries 7, `git rev-parse --short` may hand back more), so one has to be a
+	# prefix of the other rather than equal to it.
+	elif [ "${image_atlas#"$here_atlas"}" = "$image_atlas" ] &&
+	     [ "${here_atlas#"$image_atlas"}" = "$here_atlas" ]; then
+		echo "the image was built over atlas $image_atlas, this build compiled $here_atlas" >&2
+		echo "Both have to be one atl-touch commit -- see click/atl-sdk.tag and env.sh." >&2
+		exit 1
+	else
+		log "  image and framework agree: atlas $here_atlas"
+	fi
+else
+	cp "$PORT_OUT/shim.jar" "$INSTALL_DIR/classpath/"
+	cp "$HOST_OUT"/classpath/*.jar "$INSTALL_DIR/classpath/"
+fi
 cp "$HOST_OUT/app.apk" "$INSTALL_DIR/app.apk"
 
 # --- 7. the bundled JVM ------------------------------------------------------
 
-# A jlink image of the modules the app reaches, not a copy of the whole JDK.
-# jlink is arch-neutral, so the host one builds the arm64 image out of the arm64
-# jmods; nothing here has to run under qemu.
-#
-# jdeps over classpath/ + api-impl + shim finds java.{base,compiler,instrument,
-# sql} and jdk.unsupported (java.xml follows transitively); the rest is what
-# static analysis cannot see — locales, charsets, EC for TLS, the JDWP agent the
-# launcher's JDWP_LISTEN needs. Re-run this when a dependency is added:
-#
-#   jdeps --ignore-missing-deps --print-module-deps --multi-release 21 \
-#         -cp 'classpath/*:atlas/api-impl.jar' classpath/*.jar atlas/api-impl.jar
-#
-# A missing module is not a build error — it is a NoClassDefFoundError on
-# whatever path first needs it, so keep the set generous.
-#
-# A jlink image also fixes what --copy-unsafe-links used to paper over: Debian's
-# JDK is a tree of symlinks into /etc/java-21-openjdk and /etc/ssl/certs, none of
-# which exists on the device. jlink writes real files, including a populated
-# cacerts rather than the build host's symlink.
-PORT_JVM_MODULES="java.base,java.compiler,java.instrument,java.logging"
-PORT_JVM_MODULES="$PORT_JVM_MODULES,java.management,java.naming,java.sql,java.xml"
-PORT_JVM_MODULES="$PORT_JVM_MODULES,jdk.charsets,jdk.crypto.ec,jdk.jdwp.agent"
-PORT_JVM_MODULES="$PORT_JVM_MODULES,jdk.localedata,jdk.unsupported,jdk.zipfs"
-
-[ -d "$PORT_TARGET_JAVA_HOME/jmods" ] || {
-	echo "no jmods at $PORT_TARGET_JAVA_HOME (openjdk-21-jdk-headless:arm64)" >&2
-	echo "jlink needs them; the jre package alone is not enough" >&2
-	exit 1
-}
-# jlink refuses jmods from another JDK build. Both packages come from the same
-# Debian release in the container, so this only fires if one was pinned.
-host_build=$(sed -n 's/^JAVA_VERSION="\(.*\)"/\1/p' "$JAVA_HOME/release")
-target_build=$(sed -n 's/^JAVA_VERSION="\(.*\)"/\1/p' "$PORT_TARGET_JAVA_HOME/release")
-[ "$host_build" = "$target_build" ] || {
-	echo "JDK mismatch: host jlink is $host_build, arm64 jmods are $target_build" >&2
-	exit 1
-}
-
-log "jlinking the arm64 JVM ($PORT_JVM_MODULES)"
-rm -rf "$INSTALL_DIR/jvm"
-"$JAVA_HOME/bin/jlink" \
-	--module-path "$PORT_TARGET_JAVA_HOME/jmods" \
-	--add-modules "$PORT_JVM_MODULES" \
-	--no-header-files --no-man-pages --compress=zip-6 \
-	--output "$INSTALL_DIR/jvm"
-
-# libjvm.so is the launcher's DT_NEEDED and the JVM derives java.home from where
-# it was loaded from, so this one file decides whether the image is usable.
-[ -f "$INSTALL_DIR/jvm/lib/server/libjvm.so" ] ||
-	{ echo "jlink produced no lib/server/libjvm.so" >&2; exit 1; }
-log "  JVM image: $(du -sh "$INSTALL_DIR/jvm" | cut -f1)"
-
-# The base CDS archive. jlink does not write one, and without it HotSpot refuses
-# the app archive run.sh asks for on the device — silently, to its cds log only,
-# so every run would pay full class loading with run.sh doing nothing.
-#
-# A CDS archive is architecture-specific, so this has to be the arm64 java:
-# native on an arm64 builder, otherwise qemu-user. Not fatal; the click works
-# without it, only slower.
-log "dumping the base CDS archive"
-jvm_java="$INSTALL_DIR/jvm/bin/java"
-if [ "$(uname -m)" = "aarch64" ]; then
-	cds_run=("$jvm_java")
-elif command -v qemu-aarch64-static >/dev/null; then
-	cds_run=(qemu-aarch64-static "$jvm_java")
-elif command -v qemu-aarch64 >/dev/null; then
-	cds_run=(qemu-aarch64 "$jvm_java")
+# The image vehicle has none: the .so *is* the VM. What it needs instead is the
+# proof that it really is one -- a native-image built without --no-fallback
+# exports the same three symbols and still wants a JVM at run time, so the
+# symbols alone are not the test; build-image.sh is where --no-fallback is set,
+# and this is the check that it survived the trip here.
+if [ "$VEHICLE" = image ]; then
+	log "no bundled JVM: $(basename "$IMAGE_SO") is the VM ($(du -h "$IMAGE_SO" | cut -f1))"
+	image_exports=$("$PORT_NM" -D --defined-only "$INSTALL_DIR/lib/$(basename "$IMAGE_SO")")
+	for sym in JNI_CreateJavaVM JNI_GetCreatedJavaVMs JNI_GetDefaultJavaVMInitArgs; do
+		grep -qE " T $sym\$" <<<"$image_exports" || {
+			echo "the image does not export $sym; the launcher's dlsym would fail" >&2
+			exit 1
+		}
+	done
 else
-	cds_run=()
-	echo "  !! no qemu-aarch64 — shipping without a base CDS archive" >&2
-fi
-if [ ${#cds_run[@]} -gt 0 ]; then
-	# -Xshare:dump writes lib/server/classes.jsa, which is where the runtime
-	# looks with no -XX:SharedArchiveFile, so the launcher needs no extra flag.
-	"${cds_run[@]}" -Xshare:dump >"$BUILD_DIR/cds-dump.log" 2>&1 ||
-		echo "  !! -Xshare:dump failed, see $BUILD_DIR/cds-dump.log" >&2
-fi
-if [ -f "$INSTALL_DIR/jvm/lib/server/classes.jsa" ]; then
-	log "  base CDS archive: $(du -h "$INSTALL_DIR/jvm/lib/server/classes.jsa" | cut -f1)"
-else
-	echo "  !! no jvm/lib/server/classes.jsa — AppCDS will be off on the device" >&2
-fi
+	# A jlink image of the modules the app reaches, not a copy of the whole JDK.
+	# jlink is arch-neutral, so the host one builds the arm64 image out of the arm64
+	# jmods; nothing here has to run under qemu.
+	#
+	# jdeps over classpath/ + api-impl + shim finds java.{base,compiler,instrument,
+	# sql} and jdk.unsupported (java.xml follows transitively); the rest is what
+	# static analysis cannot see — locales, charsets, EC for TLS, the JDWP agent the
+	# launcher's JDWP_LISTEN needs. Re-run this when a dependency is added:
+	#
+	#   jdeps --ignore-missing-deps --print-module-deps --multi-release 21 \
+	#         -cp 'classpath/*:atlas/api-impl.jar' classpath/*.jar atlas/api-impl.jar
+	#
+	# A missing module is not a build error — it is a NoClassDefFoundError on
+	# whatever path first needs it, so keep the set generous.
+	#
+	# A jlink image also fixes what --copy-unsafe-links used to paper over: Debian's
+	# JDK is a tree of symlinks into /etc/java-21-openjdk and /etc/ssl/certs, none of
+	# which exists on the device. jlink writes real files, including a populated
+	# cacerts rather than the build host's symlink.
+	PORT_JVM_MODULES="java.base,java.compiler,java.instrument,java.logging"
+	PORT_JVM_MODULES="$PORT_JVM_MODULES,java.management,java.naming,java.sql,java.xml"
+	PORT_JVM_MODULES="$PORT_JVM_MODULES,jdk.charsets,jdk.crypto.ec,jdk.jdwp.agent"
+	PORT_JVM_MODULES="$PORT_JVM_MODULES,jdk.localedata,jdk.unsupported,jdk.zipfs"
 
-# The class-path (app) archive is deliberately NOT built here: HotSpot records
-# each entry's size and mtime, so one made against this build tree is stale the
-# moment the click is installed. run.sh creates it on the device, in the cache
-# directory, with -XX:+AutoCreateSharedArchive on top of the base above.
+	[ -d "$PORT_TARGET_JAVA_HOME/jmods" ] || {
+		echo "no jmods at $PORT_TARGET_JAVA_HOME (openjdk-21-jdk-headless:arm64)" >&2
+		echo "jlink needs them; the jre package alone is not enough" >&2
+		exit 1
+	}
+	# jlink refuses jmods from another JDK build. Both packages come from the same
+	# Debian release in the container, so this only fires if one was pinned.
+	host_build=$(sed -n 's/^JAVA_VERSION="\(.*\)"/\1/p' "$JAVA_HOME/release")
+	target_build=$(sed -n 's/^JAVA_VERSION="\(.*\)"/\1/p' "$PORT_TARGET_JAVA_HOME/release")
+	[ "$host_build" = "$target_build" ] || {
+		echo "JDK mismatch: host jlink is $host_build, arm64 jmods are $target_build" >&2
+		exit 1
+	}
+
+	log "jlinking the arm64 JVM ($PORT_JVM_MODULES)"
+	rm -rf "$INSTALL_DIR/jvm"
+	"$JAVA_HOME/bin/jlink" \
+		--module-path "$PORT_TARGET_JAVA_HOME/jmods" \
+		--add-modules "$PORT_JVM_MODULES" \
+		--no-header-files --no-man-pages --compress=zip-6 \
+		--output "$INSTALL_DIR/jvm"
+
+	# libjvm.so is the launcher's DT_NEEDED and the JVM derives java.home from where
+	# it was loaded from, so this one file decides whether the image is usable.
+	[ -f "$INSTALL_DIR/jvm/lib/server/libjvm.so" ] ||
+		{ echo "jlink produced no lib/server/libjvm.so" >&2; exit 1; }
+	log "  JVM image: $(du -sh "$INSTALL_DIR/jvm" | cut -f1)"
+
+	# The base CDS archive. jlink does not write one, and without it HotSpot refuses
+	# the app archive run.sh asks for on the device — silently, to its cds log only,
+	# so every run would pay full class loading with run.sh doing nothing.
+	#
+	# A CDS archive is architecture-specific, so this has to be the arm64 java:
+	# native on an arm64 builder, otherwise qemu-user. Not fatal; the click works
+	# without it, only slower.
+	log "dumping the base CDS archive"
+	jvm_java="$INSTALL_DIR/jvm/bin/java"
+	if [ "$(uname -m)" = "aarch64" ]; then
+		cds_run=("$jvm_java")
+	elif command -v qemu-aarch64-static >/dev/null; then
+		cds_run=(qemu-aarch64-static "$jvm_java")
+	elif command -v qemu-aarch64 >/dev/null; then
+		cds_run=(qemu-aarch64 "$jvm_java")
+	else
+		cds_run=()
+		echo "  !! no qemu-aarch64 — shipping without a base CDS archive" >&2
+	fi
+	if [ ${#cds_run[@]} -gt 0 ]; then
+		# -Xshare:dump writes lib/server/classes.jsa, which is where the runtime
+		# looks with no -XX:SharedArchiveFile, so the launcher needs no extra flag.
+		"${cds_run[@]}" -Xshare:dump >"$BUILD_DIR/cds-dump.log" 2>&1 ||
+			echo "  !! -Xshare:dump failed, see $BUILD_DIR/cds-dump.log" >&2
+	fi
+	if [ -f "$INSTALL_DIR/jvm/lib/server/classes.jsa" ]; then
+		log "  base CDS archive: $(du -h "$INSTALL_DIR/jvm/lib/server/classes.jsa" | cut -f1)"
+	else
+		echo "  !! no jvm/lib/server/classes.jsa — AppCDS will be off on the device" >&2
+	fi
+
+	# The class-path (app) archive is deliberately NOT built here: HotSpot records
+	# each entry's size and mtime, so one made against this build tree is stale the
+	# moment the click is installed. run.sh creates it on the device, in the cache
+	# directory, with -XX:+AutoCreateSharedArchive on top of the base above.
+fi
 
 # --- 8. the package metadata -------------------------------------------------
 
@@ -395,7 +499,7 @@ while read -r f; do
 	*"ARM aarch64"*) ;;
 	*) echo "  NOT aarch64: $f  ($(file -b "$f" | cut -c1-60))" >&2; bad=1 ;;
 	esac
-done < <(find "$INSTALL_DIR/lib" "$INSTALL_DIR/jvm/lib" "$INSTALL_DIR/jvm/bin" -type f \
+done < <(find "$INSTALL_DIR/lib" "$INSTALL_DIR/jvm" -type f \
 	\( -name '*.so' -o -name '*.so.*' -o -perm -u+x \) 2>/dev/null | grep -v '\.jar$')
 [ "$bad" = 0 ] || { echo "the click holds objects for the wrong architecture" >&2; exit 1; }
 

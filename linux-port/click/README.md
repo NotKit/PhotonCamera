@@ -4,12 +4,46 @@ Packages what `linux-port/` builds — PhotonCamera on OpenJDK 21 with atlas's
 framework classes as jars — as an arm64 click for `ubuntu-touch-24.04-1.x`.
 
     linux-port/build-all.sh            # the x86_64 half, first (see ../README.md)
-    linux-port/click/make-click.sh     # -> linux-port/out/click/**/*.click
+    linux-port/click/make-click.sh     # -> linux-port/out/clicks/*-cds.click
+    linux-port/click/make-click.sh --both   # and the ahead-of-time one
 
 `make-click.sh` stages the prebuilt inputs and then runs
 `clickable build --arch arm64`. To iterate on packaging alone,
 `clickable build --arch arm64 --skip-review` from the repository root does the
 same thing without re-staging.
+
+## Two vehicles, one package
+
+Both clicks carry the same package name and the same version, so a device holds
+one at a time and installing the other is an upgrade — the app's data, its
+settings and the pictures it wrote all survive the swap.
+
+| | `-cds` | `-aot` |
+| --- | --- | --- |
+| launcher | `android-translation-layer-hotspot` | `android-translation-layer-image` |
+| the VM | a jlink'd arm64 OpenJDK 21 in `jvm/` | `lib/libphotoncamera.so`, and nothing else |
+| the code | `atlas/api-impl.jar` + `classpath/*.jar`, loaded at run time | compiled into the image ahead of time |
+| start-up | AppCDS, which has to warm up once per install | no class loading at all |
+| when it breaks | a real stack trace | a `NoSuchMethodError` from `GetMethodID`, and a metadata hunt |
+
+`run.sh` on the device reads which one it is off the tree —
+`lib/libphotoncamera.so` is the image — rather than being told, so one launcher
+script drives both.
+
+**The image is not built here.** `native-image` cannot cross-compile and nothing
+fakes it: qemu-user runs the builder 38x slower and Houdini does not finish at
+all (`~/UT/firefox-atl/jvm-run/image/NOTES.md` has the measurements). It is
+built on a real aarch64 machine by `../build-image.sh` and staged into
+`linux-port/out/image-arm64/` — which is what the `image` job in
+`.github/workflows/linux-port-click.yml` rents an arm64 runner for. `build.sh`
+refuses to package an image whose `IMAGE.txt` names a different atlas revision
+than the framework it just compiled: two frameworks in one package is a
+`NoSuchMethodError` somewhere in the boot, not a link error.
+
+The image also needs `../image/ni-config` — the traced reflection and JNI
+metadata, which only a run on a desktop with working GL can record
+(`../trace-metadata.sh`). Without it there is no `-aot` click, and the workflow
+says so in its run summary rather than shipping an image that cannot boot.
 
 `ATL_CAMERA_BACKEND=camera2ndk` is the point of the whole exercise: on the phone
 that is the device's own Android camera2 stack through libhybris, and it is the
@@ -43,9 +77,9 @@ as well as `linux-port/**`.
 
 The sibling Mercurygram click takes the whole framework prebuilt from the ATL
 SDK and never compiles atlas at all. This one cannot: the SDK is built from
-atl-touch **master**, and PhotonCamera stands on the **camera2 branch**
-(`ralph/camera2-gcam`), which carries the camera2, EGL and `SurfaceView` fixes
-the app boots through — see `../BRINGUP_NOTES.md`.
+atl-touch master at whatever commit the release names, and this port needs to
+compile the framework at the commit it is pinned to, with whatever uncommitted
+fixes a bring-up session has in the checkout — see `../BRINGUP_NOTES.md`.
 
 So the SDK is used for that build's *inputs* rather than its output: the
 art_standalone support libraries and boot jars, `dx`, the bionic linker stubs,
@@ -70,15 +104,17 @@ when there is no git to ask.
 
 ## Layout of the click
 
-    lib/        every native object, flat: the launcher, atlas's natives,
+    lib/        every native object, flat: the launcher, the image (`-aot`),
+                atlas's natives,
                 libskia, the app's five JNI libraries, libarchive-jni,
                 libportshim, the art support libs, and each library Ubuntu Touch
                 does not ship (GLFW, libportal, libswscale, maliit-glib,
                 content-hub-glib). One directory, so the natives' $ORIGIN/
                 RUNPATH resolves all of it on the device.
     atlas/      api-impl.jar, framework-res.apk, system/etc/fonts.xml, the fonts
-    classpath/  shim.jar and the app jars
+    classpath/  shim.jar and the app jars          (`-cds` only)
     jvm/        a jlink image of the arm64 OpenJDK 21, not a copy of the JDK
+                                                      (`-cds` only)
     app.apk     resources, assets (the shaders and the ncnn models) and the manifest
     run.sh      the device launcher, mirroring linux-port/run.sh
 
@@ -87,7 +123,7 @@ when there is no git to ask.
 neither on the device nor in the container — that is what stops "it linked on
 the host" from turning into a silent load failure on the phone.
 
-## The bundled JVM
+## The bundled JVM (the `-cds` vehicle only)
 
 `build.sh` jlinks `jvm/` from the arm64 `jmods` instead of copying the JDK.
 jlink is architecture-neutral, so the host's jlink builds the arm64 image — the

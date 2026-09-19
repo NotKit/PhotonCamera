@@ -22,8 +22,19 @@ if [ -z "${ATLAS_DIR:-}" ]; then
 	fi
 fi
 export ATLAS_DIR
-export ATLAS_BRANCH="${ATLAS_BRANCH:-camera2-gcam}"
-export ATLAS_URL="${ATLAS_URL:-git@github.com:NotKit/atl-touch.git}"
+export ATLAS_BRANCH="${ATLAS_BRANCH:-master}"
+export ATLAS_URL="${ATLAS_URL:-https://github.com/NotKit/atl-touch.git}"
+
+# The atl-touch commit this port is pinned to, read off the SDK release tag in
+# click/atl-sdk.tag (`sdk-<sha>`). The SDK supplies the framework build's inputs
+# and the AOT image's api-impl.jar, while the click compiles its own from the
+# sources -- pinning both to one commit is what makes those the same framework,
+# and click/build.sh fails the build when they disagree.
+#
+# An existing $ATLAS_DIR is never moved to it: a bring-up session's checkout is
+# the source of truth for that session. This is what a *fresh* clone gets.
+export ATL_SDK_TAG="${ATL_SDK_TAG:-$(tr -d '[:space:]' <"$PORT_DIR/click/atl-sdk.tag")}"
+export ATLAS_PIN_REV="${ATLAS_PIN_REV:-${ATL_SDK_TAG#sdk-}}"
 
 # The ~8 GB skia checkout is shared between atlas checkouts through a symlink at
 # $ATLAS_DIR/subprojects/skia; build-atlas.sh creates it from here if missing.
@@ -127,5 +138,28 @@ export PORT_PKG_CONFIG="${PORT_PKG_CONFIG:-${PORT_TOOL_PREFIX}pkg-config}"
 # jni.h for the JNI libraries, lib/server/libjvm.so for the launcher. Equal to
 # JAVA_HOME on a native build.
 export PORT_TARGET_JAVA_HOME="${PORT_TARGET_JAVA_HOME:-$JAVA_HOME}"
+
+# --- the ahead-of-time (GraalVM native-image) vehicle ------------------------
+#
+# A second JDK on purpose: atlas, the shim and the app keep being compiled by
+# $JAVA_HOME, and GraalVM is only ever the image *builder*. native-image cannot
+# cross-compile, so $PORT_IMAGE_LIB is always for the machine that built it --
+# the arm64 one comes off an arm64 runner (.github/workflows/linux-port-click.yml).
+export GRAALVM_HOME="${GRAALVM_HOME:-${GRAALVM_21_HOME:-$REPO_DIR/../graalvm-ce-21}}"
+
+# The traced reflection/JNI metadata. Tracked in the repository, written by
+# trace-metadata.sh and never edited by hand: an entry has to come from a run.
+export PORT_NI_CONFIG="${PORT_NI_CONFIG:-$PORT_DIR/image/ni-config}"
+# The image itself, and the launcher that dlopens it instead of libjvm.so.
+export PORT_IMAGE_LIB="${PORT_IMAGE_LIB:-$PORT_OUT/image/libphotoncamera.so}"
+export PORT_IMAGE_LAUNCHER_BIN="$ATLAS_OUT/android-translation-layer-image"
+
+# Extra JVM options for any launcher run, whitespace-separated; each becomes a
+# "-X OPT" pair in the launcher's argv. trace-metadata.sh puts GraalVM's tracing
+# agent here. An array, because the launcher takes a bare "" as an option and
+# fails on it, so an unset variable must expand to nothing at all.
+PORT_EXTRA_JVM_ARGV=()
+for _opt in ${PORT_EXTRA_JVM_ARGS:-}; do PORT_EXTRA_JVM_ARGV+=(-X "$_opt"); done
+unset _opt
 
 mkdir -p "$PORT_OUT" "$PORT_NATIVE_OUT" "$PORT_LIB_OUT"

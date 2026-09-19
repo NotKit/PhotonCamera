@@ -13,9 +13,9 @@ It is the same construction as the Mercurygram port
 (`/home/nekit/UT/mercurygram-src/linux-port/`), which is the reference for
 anything this README does not answer. What is different here is the camera:
 PhotonCamera is a `android.hardware.camera2` app that does all its processing in
-GLES shaders, so the port stands on the **camera2 branch of atlas**
-(`ralph/camera2-gcam`, the branch Google Camera was brought up on) and needs a
-real GL context, where Mercurygram runs happily on CPU raster.
+GLES shaders, so the port stands on atlas's **camera2 support** (the work
+Google Camera was brought up on, on atl-touch master today) and needs a real GL
+context, where Mercurygram runs happily on CPU raster.
 
 Bring-up workarounds and crash notes: `BRINGUP_NOTES.md`. Conventions for
 working in here: `CLAUDE.md`.
@@ -67,6 +67,8 @@ atlas android-translation-layer-hotspot
 | `native/` | the glibc build of `app/src/main/cpp` (`CMakeLists.txt` is an overlay, not an include) |
 | `native/build_ncnn_linux.sh` | ncnn from source, the one dependency this repository ships only as an Android prebuilt |
 | `build-shim.sh`, `shim/` | the libcore/dalvik compat shim and its JNI back end; see `shim/README.md` |
+| `build-image.sh` | the GraalVM `native-image` vehicle: one `.so` with the framework, the shim and the app compiled ahead of time |
+| `trace-metadata.sh`, `image/` | the image's inputs — the traced reflection/JNI metadata (`image/ni-config`, tracked), the generator for what a trace cannot see, and the build-time class-initialisation list |
 | `gradle/` | Gradle glue applied only under `-PlinuxPort` (the `jarForLinuxPort` task) |
 | `tools/` | small Java helpers the checks run |
 | `launcher/display.sh` | the Xvfb/screenshot helper the run scripts share |
@@ -84,7 +86,7 @@ atlas android-translation-layer-hotspot
   NDK is never invoked: `-PlinuxPort` turns `externalNativeBuild` off.
 - Host toolchain: `cc`, `c++`, `cmake`, `ninja`, `pkg-config`, `unzip`, plus
   `meson` and `gn` + `clang` for atlas and its skia subproject.
-- An atlas checkout on the camera2 branch. `env.sh` picks up
+- An atlas checkout. `env.sh` picks up
   `../atlas-camera2` when `linux-port/atlas` does not exist; `build-all.sh`
   clones `$ATLAS_URL` at `$ATLAS_BRANCH` otherwise. atlas's own dependencies
   (`art-standalone`, GTK4, GLFW, the AOSP support libraries in
@@ -112,7 +114,7 @@ atlas android-translation-layer-hotspot
 linux-port/build-all.sh      # build everything
 linux-port/run.sh            # start PhotonCamera
 linux-port/run.sh --seconds 20 --fresh --require-preview # verify synthetic preview
-linux-port/click/make-click.sh  # and the arm64 Ubuntu Touch click
+linux-port/click/make-click.sh --both  # the two arm64 Ubuntu Touch clicks
 ```
 
 ```sh
@@ -139,6 +141,45 @@ ATLAS_BUILDDIR=/home/nekit/UT/atlas-camera2/builddir linux-port/build-atlas.sh
 — which is how the framework install was verified. `build-atlas.sh` reuses a
 builddir it did not configure instead of wiping it, but **never pass `--clean`
 with a borrowed builddir**: that deletes it.
+
+## The ahead-of-time vehicle
+
+The same app again, with the Java compiled ahead of time by GraalVM
+`native-image` instead of loaded, parsed, verified and JIT-ed at run time. The
+framework, the shim and the app become one shared library that exports the JNI
+Invocation API, and atlas's `android-translation-layer-image` creates its VM
+from it by `dlopen` instead of linking `libjvm.so`. On the sibling Fenix port
+this was 1.7–2.3x off first paint.
+
+```sh
+linux-port/trace-metadata.sh          # once: record what the app reaches by name
+linux-port/build-image.sh --stub      # ~30 s: prove the toolchain, none of the app
+linux-port/build-image.sh             # the real image
+linux-port/run.sh --image --seconds 25
+```
+
+Three things about it are not optional, and each cost somebody a week to learn:
+
+* **`native-image` cannot cross-compile.** The image is always for the machine
+  that built it. Every input is architecture-neutral — jars and JSON — so an
+  arm64 image is `build-image.sh` on an arm64 machine, which is what the CI
+  workflow rents. Do not try to emulate it.
+* **The metadata has to be traced, and it is committed.** A closed world has no
+  class loader: anything reached by name — every View in a layout, every
+  `GetMethodID` atlas does on a concrete activity class — must be registered or
+  it is a `NoSuchMethodError` at the moment that screen opens.
+  `image/ni-config/` is the agent's record of real runs, and it is the one
+  generated tree this port tracks, because the machine that builds the arm64
+  image cannot run the app. `image/gen-reflect-config.py` covers the two
+  families a trace structurally cannot see.
+* **A trace only registers the arms it took.** One boot is not every path, which
+  is why `trace-metadata.sh` drives the JNI check and the DNG pipeline as well,
+  and why `image/extra-config/` exists for what an image *run* proves is still
+  missing.
+
+`.github/workflows/linux-port-click.yml` builds both vehicles and publishes them
+as `-aot` and `-cds` clicks: the app's jars on an x86_64 runner, the image on an
+`ubuntu-24.04-arm` one, the cross build and the packaging back on x86_64.
 
 ## The camera
 
