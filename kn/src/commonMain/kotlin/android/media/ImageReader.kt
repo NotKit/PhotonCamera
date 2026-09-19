@@ -14,8 +14,8 @@ import photoncam.camera.SpinLock
  * android.hardware.camera2.impl.CameraDeviceNative, which is Kotlin, so the
  * queue is too.
  *
- * submit() runs on a backend thread and the listener is called from there, the
- * way atlas's is before it posts to the main loop.
+ * submit() runs on a backend thread. Listener delivery uses the supplied
+ * handler, as it does on Android.
  */
 open class ImageReader private constructor(
 	private val width: Int,
@@ -31,8 +31,12 @@ open class ImageReader private constructor(
 
 	private val queue = ArrayDeque<Image>()
 	private val lock = SpinLock()
+	@kotlin.concurrent.Volatile
 	private var listener: OnImageAvailableListener? = null
+	@kotlin.concurrent.Volatile
+	private var handler: Handler? = null
 	private var surface: Surface? = null
+	@kotlin.concurrent.Volatile
 	private var closed = false
 
 	open fun getWidth(): Int = width
@@ -53,6 +57,7 @@ open class ImageReader private constructor(
 
 	open fun setOnImageAvailableListener(listener: OnImageAvailableListener?, handler: Handler?) {
 		this.listener = listener
+		this.handler = if (listener == null) null else handler
 	}
 
 	/** null when the camera has produced nothing since the last acquire. */
@@ -86,6 +91,7 @@ open class ImageReader private constructor(
 		closed = true
 		discardFreeBuffers()
 		listener = null
+		handler = null
 		surface?.imageReader = null
 	}
 
@@ -112,7 +118,13 @@ open class ImageReader private constructor(
 			image.close()
 			return
 		}
-		listener?.onImageAvailable(this)
+		val callback = listener ?: return
+		val delivery = java.lang.Runnable {
+			if (!closed && listener === callback)
+				callback.onImageAvailable(this)
+		}
+		val target = handler
+		if (target != null) target.post(delivery) else delivery.run()
 	}
 
 	companion object {

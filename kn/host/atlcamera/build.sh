@@ -17,7 +17,7 @@ OUT="$HERE/build-$ARCH"
 mkdir -p "$OUT"
 
 SRC="camera_backend.c camera2_metadata.c camera_frame.c camera_streams.c \
-     camera_record.c camera_recording.c camera_replay.c"
+     camera_record.c camera_recording.c camera_replay.c preview_texture.c"
 CFLAGS="-O2 -g -fPIC -std=gnu11 -Wno-unused-result -I$HERE/src -I$HERE -I$HERE/third_party/.."
 CFLAGS="$CFLAGS $(pkg-config --cflags glib-2.0 libzstd)"
 

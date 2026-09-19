@@ -6,6 +6,7 @@ import kotlinx.cinterop.*
 import cnames.structs.atl_camera
 import cnames.structs.atl_camera_metadata
 import cnames.structs.atl_camera_streams
+import java.nio.ByteBuffer
 import photoncam.atlcamera.*
 
 /**
@@ -185,10 +186,19 @@ class CameraBuffer internal constructor(private val ptr: CPointer<atl_camera_buf
 	val format: Int get() = ptr.pointed.format
 	val timestamp: Long get() = ptr.pointed.timestamp
 	val planeCount: Int get() = ptr.pointed.n_planes
+	val hasNativeBuffer: Boolean get() = ptr.pointed.native != null
+	val nativeBuffer: COpaquePointer? get() = ptr.pointed.native
 
 	fun rowStride(plane: Int): Int = ptr.pointed.planes[plane].row_stride
 	fun pixelStride(plane: Int): Int = ptr.pointed.planes[plane].pixel_stride
 	fun planeLength(plane: Int): Int = ptr.pointed.planes[plane].len
+
+	/** A borrowed view, valid until [release]. */
+	fun planeBuffer(plane: Int): ByteBuffer {
+		val p = ptr.pointed.planes[plane]
+		val data = p.data ?: return ByteBuffer.allocate(0)
+		return ByteBuffer.wrapPointer(data, p.len)
+	}
 
 	/** the plane's bytes; a copy, because the buffer goes back to the producer. */
 	fun readPlane(plane: Int): ByteArray {
