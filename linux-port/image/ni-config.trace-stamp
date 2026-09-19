@@ -1,0 +1,9 @@
+checks: natives boot capture
+imported: capture boot natives
+merged onto an existing config: no
+date: 2026-09-19T19:59:47+03:00
+java: /home/nekit/UT/PhotonCamera/../graalvm-ce-21
+atlas: b6cf23c4
+app: 479a3c1100ad1856de3588014a7eb6d23a5054d2
+reflect-config: 96 classes
+jni-config: 63 classes

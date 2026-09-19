@@ -634,5 +634,60 @@ the sources. `click/atl-sdk.tag` names both (`env.sh`, `$ATLAS_PIN_REV`), and
 revision — two frameworks in one package is a `NoSuchMethodError` somewhere in
 the boot, not a link error.
 
-Measured here so far: the stub image (`--stub`, one class, no framework) builds
-in 34 s and 813 MB peak RSS on this host and exports the JNI Invocation API.
+**The agent publishes only its first periodic write.** It creates its temp
+directory *inside* the output directory, which changes that directory, so every
+later write refuses with "... has been modified by another process" and is left
+in a temp directory of its own. A 30 s boot published 3 JNI classes and left 98
+reflection and 61 JNI classes in its last snapshot — and the published files
+look like a perfectly ordinary, tiny trace. Each snapshot is complete, so
+`trace-metadata.sh` takes the newest one as the run's result, traces every check
+into a directory of its own, and merges them with GraalVM's own
+`native-image-configure generate` — which is what the agent's own warning about
+"running multiple processes" points at. `config-merge-dir` across successive
+processes does not work here for a second reason: the agent's `.lock` is
+released from the same shutdown hook that never runs, so the next check dies in
+`Agent_OnLoad` before its VM exists.
+
+**The capture arm needs a real GPU, and this host has no render node.** With the
+replay backend and a scheduled `ATL_DEBUG_TAP` on the shutter, the run gets as
+far as the pipeline's own EGL context and then dies in llvmpipe:
+
+    SIGSEGV ... C  [libLLVM.so.21.1+0x4680514]  LLVMTypeOf+0x4
+
+about 45 s in, right after `egl_context:` is logged for the second time. So the
+committed trace covers the boot, the JNI surface and the capture up to the first
+pipeline shader, and **not** the processing pipeline, the DNG writer or the JPEG
+save. `--import NAME=DIR` exists for that: record the capture arm on a box with
+a GPU and merge it in. kit-pc is the one here, and its framework was two weeks
+stale when this was written, so the first attempt there took no picture at all.
+
+## The first image, and it boots (2026-09-19)
+
+| | |
+|---|---|
+| wall | **114 s** |
+| peak RSS, whole process tree | **3.7 GB** |
+| `libphotoncamera.so` | **74.8 MB** |
+| class path | 106 entries (framework + shim + 104 app jars) |
+| metadata | 96 reflection and 63 JNI classes traced, plus 399 name-instantiated and 94 FindClass names generated |
+
+`android.os.Build$VERSION`, `android.os.SystemProperties` and
+`android.content.res.AssetManager` all came out `RUN_TIME`, which is the gate
+that matters: a build-time `SDK_INT` is constant-folded into every
+`SDK_INT >= N` branch in the capture path.
+
+`run.sh --image --seconds 30` boots to `SplashActivity` with no uncaught
+exception, no `libjvm.so` mapped and the launcher reporting
+`image: opened .../libphotoncamera.so`. The only reflective misses in the log
+are androidx's `TypefaceCompatApi26Impl` probing for
+`Typeface.createFromFamiliesWithDefault`, a hidden API atlas does not have —
+caught, and identical on the HotSpot vehicle.
+
+Not measured yet: start-up against the HotSpot vehicle, and anything past the
+first frame. The walls after the metadata are the ones firefox-atl's lane
+enumerated, and they are found by running the image rather than by reading it.
+
+Also fixed while getting here, and worth repeating because it is silent:
+`init_bt=$(grep ... | paste ...)` in `build-image.sh` exited the whole script
+under `set -e -o pipefail` the moment `initialize-at-build-time.txt` held
+nothing but comments — no image, no message, exit 0 through a pipe.

@@ -312,7 +312,12 @@ build_full() {
 	# initialised during it anyway. Each name in the file answers one such error.
 	# A file rather than a list here, so the set is reviewable as a diff.
 	local bt_file="$PORT_DIR/image/initialize-at-build-time.txt" init_bt=""
-	[ ! -f "$bt_file" ] || init_bt=$(grep -vE '^[[:space:]]*(#|$)' "$bt_file" | paste -sd, -)
+	# `|| true` on the grep, not on the pipeline: the file starts out holding
+	# nothing but comments, grep then exits 1, and under `set -o pipefail` that
+	# is the whole substitution's status -- which `set -e` turns into a silent
+	# exit right here, with no image and no message.
+	[ ! -f "$bt_file" ] ||
+		init_bt=$({ grep -vE '^[[:space:]]*(#|$)' "$bt_file" || true; } | paste -sd, -)
 	local bt_opts=()
 	[ -z "$init_bt" ] || bt_opts=("--initialize-at-build-time=$init_bt")
 

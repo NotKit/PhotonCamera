@@ -1,19 +1,33 @@
 #!/bin/bash
 # Record the native-image metadata: what the app reaches by name.
 #
-# Runs the port's own checks under GraalVM's tracing agent, all merging into one
-# config directory, so the metadata covers the paths those checks take and not
-# just a boot. The agent writes its files when the VM shuts down, so every check
-# has to be allowed to finish -- a killed run contributes nothing.
+# Runs the port's own checks under GraalVM's tracing agent, each into a
+# directory of its own, and merges the results with native-image-configure, so
+# the metadata covers the paths those checks take and not just a boot.
+#
+# Nothing here shuts a VM down -- the launcher ends a --run-class check with a
+# bare exit(0) and run.sh kills a timed one -- so the agent's shutdown hook
+# never runs and none of this works the way the documentation assumes. See
+# "config-write-period-secs" and "resolve_snapshot" below: between them they are
+# the whole reason this script is not three lines.
 #
 #   natives   check-native-libs.sh: every System.loadLibrary the app does, and
 #             the JNI entry points behind them. Seconds, no camera.
-#   boot      run.sh --fresh: the splash, the permission flow, the camera
-#             activity, the GL viewfinder. This is most of the UI's reflection.
-#   pipeline  run-dng-pipeline.sh on a recorded DNG: PostPipeline, the GL nodes
-#             and the DNG writer. Needs a DNG (--dng, or $PORT_TRACE_DNG); it is
+#   boot      run.sh --fresh on the synthetic gst camera: the splash, the
+#             permission flow, the camera activity, the GL viewfinder. This is
+#             most of the UI's reflection.
+#   capture   run.sh on the replay camera, with a scheduled tap on the shutter:
+#             a recorded burst played back as a real camera2 still capture, so
+#             the trace covers HDRX, the GL pipeline, the DNG writer and the
+#             JPEG save. Needs a .atlcam recording (--replay, or
+#             $PORT_TRACE_REPLAY, default: the first one in out/replay/); it is
 #             reported as skipped rather than silently dropped, because an image
-#             without it takes pictures and then fails while processing them.
+#             without it takes a picture and then fails while processing it.
+#
+# The boot check runs with a data dir of its own. --fresh wipes what it is
+# given, and out/data carries the camera id and the save-raw preference the
+# replay run needs (HANDOVER_hdrx_black_jpeg.md) -- wiping those would leave the
+# capture check on the front camera, matching no replay stream.
 #
 # The result belongs in the repository: $PORT_NI_CONFIG is tracked, and
 # build-image.sh reads it. Commit what this writes, and never edit it by hand --
@@ -23,11 +37,19 @@
 # Usage: linux-port/trace-metadata.sh [--config-dir DIR] [--only NAME]...
 #                                     [--merge] [--dng PATH]
 #   --config-dir  where the agent writes; default $PORT_NI_CONFIG
-#   --only NAME   run only this check (natives|boot|pipeline), repeatable. A
+#   --only NAME   run only this check (natives|boot|capture), repeatable. A
 #                 partial trace is not a usable config, so this needs --merge or
 #                 a --config-dir of its own
 #   --merge       add to what is in the config dir instead of wiping it
-#   --dng PATH    the DNG (or burst directory) the pipeline check reads
+#   --replay PATH the .atlcam recording the capture check plays back
+#   --import NAME=DIR
+#                 take an agent directory recorded elsewhere as check NAME's
+#                 result instead of running it. The capture check needs a real
+#                 GPU: llvmpipe segfaults in LLVMTypeOf when the pipeline
+#                 creates its GL context, so a box with no GPU has to borrow
+#                 one (BRINGUP_NOTES.md)
+#   --tap S:X,Y   when and where the capture check taps the shutter; default
+#                 25:270,820, which is the shutter in a 540x960 portrait window
 #
 # Exits non-zero if a check fails or the config dir did not end up complete.
 set -euo pipefail
@@ -37,20 +59,32 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/env.sh"
 config_dir="$PORT_NI_CONFIG"
 config_dir_given=0
 merge=0
-dng="${PORT_TRACE_DNG:-}"
+replay="${PORT_TRACE_REPLAY:-}"
+tap="${PORT_TRACE_TAP:-25:270,820}"
 only=()
+declare -A imported=()
 
 while [ $# -gt 0 ]; do
 	case "$1" in
 	--config-dir) config_dir="$2"; config_dir_given=1; shift 2 ;;
 	--only) only+=("$2"); shift 2 ;;
-	--dng) dng="$2"; shift 2 ;;
+	--replay) replay="$2"; shift 2 ;;
+	--import)
+		[ "${2#*=}" != "$2" ] || { echo "--import wants NAME=DIR, got '$2'" >&2; exit 1; }
+		imported["${2%%=*}"]="${2#*=}"; shift 2 ;;
+	--tap) tap="$2"; shift 2 ;;
 	--merge) merge=1; shift ;;
 	*) echo "unknown option: $1" >&2; exit 1 ;;
 	esac
 done
 
-all_names=(natives boot pipeline)
+all_names=(natives boot capture)
+
+# The recording is large and lives outside the repository; out/replay holds
+# symlinks to it. Any one of them is a full still burst, so the first will do.
+if [ -z "$replay" ] && [ -d "$PORT_OUT/replay" ]; then
+	replay=$(find -L "$PORT_OUT/replay" -maxdepth 1 -name '*.atlcam' | sort | head -1)
+fi
 names=("${all_names[@]}")
 if [ "${#only[@]}" -gt 0 ]; then
 	for want in "${only[@]}"; do
@@ -92,8 +126,7 @@ if [ "$merge" = 0 ] && [ -e "$config_dir" ]; then
 	# rm -rf on a tracked path: only when everything in it is agent output. The
 	# README that documents the directory is allowed to stay.
 	foreign=$(find "$config_dir" -mindepth 1 -maxdepth 1 \
-		! -name '*-config.json' ! -name 'README.md' \
-		! -name 'agent-extracted-predefined-classes' -print)
+		! -name '*-config.json' ! -name 'README.md' -print)
 	[ -z "$foreign" ] || {
 		echo "refusing to wipe $config_dir: it holds files no trace wrote:" >&2
 		printf '%s\n' "$foreign" >&2
@@ -105,21 +138,28 @@ fi
 rm -f "$stamp_file"
 mkdir -p "$config_dir"
 
-# config-write-period-secs, and it is not a tuning knob: the agent writes its
-# files from a JVM shutdown hook, and NOTHING here shuts a VM down. atlas's
-# launcher ends a --run-class check with a bare exit(0) from C (main.c,
-# run_class_main) and never calls DestroyJavaVM, and run.sh ends a timed run
-# with SIGTERM and then SIGKILL. Both leave the config directory empty while
+# config-write-period-secs is not a tuning knob: the agent writes its files from
+# a JVM shutdown hook, and nothing here shuts a VM down. atlas's launcher ends a
+# --run-class check with a bare exit(0) from C (main.c, run_class_main) and
+# never calls DestroyJavaVM; run.sh ends a timed run with SIGTERM and then
+# SIGKILL. Without a periodic write both leave the config directory empty while
 # every check still passes -- which is exactly how this looks when it is wrong.
-# A periodic write means the last few seconds of a run are what is lost, rather
-# than all of it.
-agent_opt="-agentlib:native-image-agent=config-merge-dir=$config_dir"
-agent_opt="$agent_opt,config-write-period-secs=3,config-write-initial-delay-secs=1"
+#
+# Every check traces into a directory of its own, and the results are merged at
+# the end with GraalVM's own native-image-configure. One agent per directory is
+# what the agent is built for: config-merge-dir across successive processes
+# leaves a .lock the next run dies on, because the lock is dropped from the same
+# shutdown hook that never runs here.
+trace_root="$PORT_OUT/ni-trace"
+
 # The trace has to see what the image will do, not what HotSpot does: atlas
 # gates some getDeclaredMethod calls on this property, and without it the agent
 # records entries the image never asks for.
 image_opt="-Dorg.graalvm.nativeimage.imagecode=runtime"
-export PORT_EXTRA_JVM_ARGS="$agent_opt $image_opt"
+
+configure="$GRAALVM_HOME/bin/native-image-configure"
+[ -x "$configure" ] ||
+	{ echo "no native-image-configure in $GRAALVM_HOME/bin" >&2; exit 1; }
 
 # Counts, not diffs: this is what goes in BRINGUP_NOTES.md and what says at a
 # glance whether a check contributed anything.
@@ -151,11 +191,35 @@ config_stats() { # dir prefix
 	PY
 }
 
+# The agent's periodic writer publishes only its FIRST write into the output
+# directory. It creates its temp directory *inside* that directory, which
+# changes it, so every later write refuses ("... has been modified by another
+# process") and is left in a temp directory of its own. Each of those is a
+# complete snapshot, so the newest one is the run's real config -- what got
+# published is the first second of it. Measured: a 30 s boot published 3 JNI
+# classes and left 98 reflection and 61 JNI classes in its last snapshot.
+#
+# A run that did shut its VM down cleanly would publish properly and leave no
+# snapshots, so the directory itself is the fallback rather than an error.
+resolve_snapshot() { # name -> writes $trace_root/<name>.final
+	local name="$1" dir="$trace_root/$name" final="$trace_root/$name.final" newest
+	rm -rf "$final"; mkdir -p "$final"
+	newest=$(find "$dir" -mindepth 1 -maxdepth 1 -type d -name 'agent-pid*' \
+		-printf '%T@ %p\n' 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2-)
+	[ -n "$newest" ] || newest="$dir"
+	find "$newest" -maxdepth 1 -name '*-config.json' -exec cp {} "$final/" \; 2>/dev/null
+	[ -n "$(ls -A "$final" 2>/dev/null)" ] || { rm -rf "$final"; return 1; }
+	echo "  snapshot: $(basename "$newest")"
+}
+
 run_check() { # name script args...
 	local name="$1" script="$2"; shift 2
 	local log="$PORT_OUT/trace-$name.log" started status=0
 	echo
 	echo "=== $name: $script $* ==="
+	rm -rf "${trace_root:?}/$name" "$trace_root/$name.final"
+	mkdir -p "$trace_root/$name"
+	export PORT_EXTRA_JVM_ARGS="-agentlib:native-image-agent=config-output-dir=$trace_root/$name,config-write-period-secs=3,config-write-initial-delay-secs=1 $image_opt"
 	started=$(date +%s)
 	# set +e, not `|| true`: `||` runs another command, and that command's status
 	# is what PIPESTATUS then holds, so the check would always look successful.
@@ -164,52 +228,108 @@ run_check() { # name script args...
 	status=${PIPESTATUS[0]}
 	set -e
 	echo "--- $name exited $status after $(( $(date +%s) - started ))s"
-	config_stats "$config_dir" "  after $name:"
+	# run.sh and the --run-class checks all write the launcher's own output to
+	# out/run.log, so the next check overwrites it. That log is where the agent
+	# reports itself ("jvm option: -agentlib:..."), which is the only evidence
+	# of why a check contributed nothing -- keep one per check.
+	[ ! -f "$PORT_OUT/run.log" ] || cp "$PORT_OUT/run.log" "$PORT_OUT/trace-$name-run.log"
+	# A failed check can still have traced something useful before it died, so
+	# the snapshot is resolved either way and its own status is separate.
+	if resolve_snapshot "$name"; then
+		config_stats "$trace_root/$name.final" "  $name traced:"
+	else
+		echo "  $name traced nothing"
+	fi
 	return "$status"
 }
 
 echo "tracing into $config_dir with JAVA_HOME=$JAVA_HOME"
-echo "agent option: $PORT_EXTRA_JVM_ARGS"
+[ -z "$replay" ] || echo "replay recording: $replay, tap $tap"
+echo "agent: periodic writes into $trace_root/<check>, merged at the end"
 config_stats "$config_dir" "before:"
 
 failed=()
 skipped=()
 for name in "${names[@]}"; do
+	# A check recorded on another machine. Resolved the same way a local one is,
+	# so an imported directory may be either a published config or the agent's
+	# snapshot directories.
+	if [ -n "${imported[$name]:-}" ]; then
+		echo
+		echo "=== $name: imported from ${imported[$name]} ==="
+		[ -d "${imported[$name]}" ] ||
+			{ echo "no directory at ${imported[$name]}" >&2; failed+=("$name"); continue; }
+		rm -rf "${trace_root:?}/$name"
+		mkdir -p "$trace_root"
+		cp -r "${imported[$name]}" "$trace_root/$name"
+		if resolve_snapshot "$name"; then
+			config_stats "$trace_root/$name.final" "  $name imported:"
+		else
+			echo "  $name imported nothing" >&2
+			failed+=("$name")
+		fi
+		continue
+	fi
 	case "$name" in
 	natives) run_check "$name" check-native-libs.sh || failed+=("$name") ;;
 	# --fresh: the first-launch path is the one with the permission flow in it,
 	# and that flow is reflection the second launch never does again.
 	boot)
-		run_check "$name" run.sh --seconds 40 --fresh --require-preview ||
+		run_check "$name" run.sh --seconds 40 --fresh \
+			--data-dir "$PORT_OUT/trace-data" --require-preview ||
 			failed+=("$name") ;;
-	pipeline)
-		if [ -z "$dng" ]; then
+	capture)
+		if [ -z "$replay" ]; then
 			echo
-			echo "=== pipeline: skipped, no DNG (--dng PATH or \$PORT_TRACE_DNG) ==="
+			echo "=== capture: skipped, no recording (--replay PATH or \$PORT_TRACE_REPLAY) ==="
 			skipped+=("$name")
-		elif [ ! -e "$dng" ]; then
-			echo "no DNG at $dng" >&2
+		elif [ ! -e "$replay" ]; then
+			echo "no recording at $replay" >&2
 			failed+=("$name")
 		else
-			run_check "$name" run-dng-pipeline.sh "$dng" \
-				"$PORT_OUT/trace-pipeline.png" || failed+=("$name")
+			# ATL_DEBUG_TAP is atlas's own scheduled tap (ATLWindow.c): there is
+			# no other way to press the shutter on a headless run, and a capture
+			# is the whole point of this check.
+			ATL_CAMERA_REPLAY="$replay" ATL_DEBUG_TAP="$tap" \
+				run_check "$name" run.sh --camera replay --seconds 120 ||
+				failed+=("$name")
 		fi ;;
 	esac
 done
 
-echo
-config_stats "$config_dir" "merged:"
-
 if [ "${#failed[@]}" -gt 0 ]; then
 	echo
 	echo "trace incomplete: ${#failed[@]} check(s) failed: ${failed[*]}" >&2
-	echo "(their logs are in $PORT_OUT/trace-<name>.log)" >&2
+	echo "(their logs are in $PORT_OUT/trace-<name>.log," \
+		"the launcher's own in trace-<name>-run.log)" >&2
 	exit 1
 fi
 
-# Every check passing is not the same as the agent having written a config: it
-# writes at VM shutdown, and an option that never reached the VM leaves the
-# directory as it was while each check still exits 0.
+# --- merge ------------------------------------------------------------------
+
+# GraalVM's own tool, which is what the agent's "running multiple processes"
+# warning points at. One --input-dir per check; --merge adds what was in the
+# config directory already, through a copy, because it is also the output.
+inputs=()
+for name in "${names[@]}"; do
+	[ -d "$trace_root/$name.final" ] || continue
+	inputs+=("--input-dir=$trace_root/$name.final")
+done
+if [ "$merge" = 1 ] && compgen -G "$config_dir/*-config.json" >/dev/null; then
+	rm -rf "$trace_root/previous"; mkdir -p "$trace_root/previous"
+	cp "$config_dir"/*-config.json "$trace_root/previous/"
+	inputs+=("--input-dir=$trace_root/previous")
+fi
+[ "${#inputs[@]}" -gt 0 ] ||
+	{ echo "no check traced anything; nothing to merge" >&2; exit 1; }
+
+echo
+echo "=== merging ${#inputs[@]} traces into $config_dir ==="
+"$configure" generate "${inputs[@]}" --output-dir="$config_dir"
+config_stats "$config_dir" "merged:"
+
+# A merge that produced no file is not something to find out about at image
+# build time, an hour later.
 missing=()
 for f in reflect-config.json jni-config.json resource-config.json \
 	proxy-config.json serialization-config.json; do
@@ -217,8 +337,9 @@ for f in reflect-config.json jni-config.json resource-config.json \
 done
 if [ "${#missing[@]}" -gt 0 ]; then
 	echo
-	echo "the agent left $config_dir incomplete, missing: ${missing[*]}" >&2
-	echo "(did every run load the agent? grep 'jvm option' in the trace logs)" >&2
+	echo "$config_dir is incomplete, missing: ${missing[*]}" >&2
+	echo "(did every run load the agent? grep 'jvm option: -agentlib'" \
+		"in $PORT_OUT/trace-<name>-run.log)" >&2
 	exit 1
 fi
 count_entries() { # file
@@ -237,6 +358,7 @@ jni_n=$(count_entries "$config_dir/jni-config.json")
 merge_word=no; [ "$merge" = 0 ] || merge_word=yes
 {
 	printf 'checks: %s\n' "${names[*]}"
+	[ "${#imported[@]}" = 0 ] || printf 'imported: %s\n' "${!imported[*]}"
 	[ "${#skipped[@]}" = 0 ] || printf 'skipped: %s\n' "${skipped[*]}"
 	printf 'merged onto an existing config: %s\ndate: %s\njava: %s\n' \
 		"$merge_word" "$(date -Is)" "$JAVA_HOME"
