@@ -1,7 +1,8 @@
 {
     "policy_groups": [
         "camera",
-        "picture_files"
+        "picture_files",
+        "sensors"
     ],
     "read_path": [
         "/proc/sys/kernel/random/boot_id"
