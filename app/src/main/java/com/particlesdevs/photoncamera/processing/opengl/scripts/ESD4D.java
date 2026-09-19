@@ -824,7 +824,12 @@ public class ESD4D extends GLOneScript {
         final AtomicReference<KernelNetResult> kernelNetResult = new AtomicReference<>();
         Thread kernelNetThread = new Thread(() -> {
             try {
-                kernelNetResult.set(runKernelNetInference(kernelSigmaArg));
+                // Held in a local and null-tested rather than passed straight
+                // in: inference returns null whenever the build has no ncnn,
+                // and the Kotlin/Native conversion asserts non-null on an
+                // argument, which made that a crash instead of a fallback.
+                KernelNetResult inferred = runKernelNetInference(kernelSigmaArg);
+                if (inferred != null) kernelNetResult.set(inferred);
             } catch (Throwable t) {
                 Log.e("ESD4D", "KernelNet worker failed", t);
             }
@@ -974,7 +979,11 @@ public class ESD4D extends GLOneScript {
                     Thread.currentThread().interrupt();
                 }
                 kernelNetThread = null;
-                kernelsMap = createKernelsMap(kernelNetResult.get());
+                // Null when the model was unavailable; the combine pass then
+                // runs with an unbound kernelsMap, as it does on an Android ABI
+                // with no ncnn prebuilt.  Same reason for the local as above.
+                KernelNetResult inferred = kernelNetResult.get();
+                if (inferred != null) kernelsMap = createKernelsMap(inferred);
             }
 
             glProg.setLayout(tile, tile, 1);
