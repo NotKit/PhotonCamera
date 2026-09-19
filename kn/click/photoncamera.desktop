@@ -12,3 +12,12 @@ Type=Application
 Categories=Graphics;Photography;
 X-Ubuntu-Touch=true
 X-Lomiri-Touch=true
+# THE SHELL ROTATES THE SURFACE UNLESS THE APP SAYS IT CANNOT TAKE IT.  With no
+# key here lomiri-app-launch reports every orientation, so a turned phone
+# resizes this window to landscape -- and CameraScreen's viewfinder box is
+# fillMaxWidth().aspectRatio(3/4), which then overflows the screen.  Android
+# locks the activity the same way (CameraActivity.onCreate's
+# setRequestedOrientation(SCREEN_ORIENTATION_PORTRAIT)) and turns the CONTROLS
+# instead, off the accelerometer.
+X-Ubuntu-Supported-Orientations=portrait
+X-Lomiri-Supported-Orientations=portrait
