@@ -127,15 +127,25 @@ build_from_source() {
 	fi
 	if [ -d "$KN/gen" ] && [ -d "$KN/gen-atlas" ]; then
 		log "  kn/gen is here: building the app (-PwithApp)"
+		# ncnn FIRST: host/natives/build.sh links ncnnMl.cpp only when the
+		# prefix is already there, and compiles the "not available" half
+		# otherwise -- which is a click whose merge runs with no kernel map.
+		# Cheap to repeat: a shallow clone of one pinned commit and a static
+		# CPU-only cmake build, skipped outright once the archive exists (CI
+		# caches it; the host built it long ago).
+		if [ -f "$KN/out/ncnn-arm64/lib/libncnn.a" ]; then
+			log "  arm64 ncnn is here: $KN/out/ncnn-arm64"
+		else
+			log "  no arm64 ncnn: building it (FlowNet and KernelNet need it)"
+			PORT_ARCH=arm64 PORT_JOBS="$(nproc)" \
+				"$KN/host/natives/build_ncnn.sh"
+		fi
 		# The app's own C++ behind a plain C ABI, cross-compiled.  The compiler
 		# is left at that script's default, clang with --target: it is what the
 		# host build used, and swapping in the cross gcc changes the answer to
 		# its own jpeglib.h/png.h probe -- which would put -ljpeg -lpng on the
 		# link line for a sysroot that has neither.
 		PORT_ARCH=arm64 "$KN/host/natives/build.sh"
-		[ -f "$KN/out/ncnn-arm64/lib/libncnn.a" ] ||
-			log "  NOTE: no arm64 ncnn under kn/out -- FlowNet and KernelNet will report unavailable
-        (host/natives/build_ncnn.sh builds one; it is not part of this build)"
 		# atlas's camera2 backend.
 		CC="$TRIPLE-gcc" "$KN/host/atlcamera/build.sh" arm64
 		gradle_args+=(-PwithApp)

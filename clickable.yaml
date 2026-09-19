@@ -68,6 +68,12 @@ dependencies_host:
   # glib's and zstd's include paths, asked for by host/atlcamera/build.sh and by
   # kn/build.gradle.kts
   - pkg-config
+  # ncnn is the one dependency built from source in here: FlowNet's custom
+  # layers index a 4D ncnn::Mat that no release tag has, so there is nothing to
+  # apt-get and host/natives/build_ncnn.sh cross-builds a pinned master commit.
+  # Without it KernelNet is unavailable and the merge runs with no kernel map.
+  - cmake
+  - ninja-build
 
 # The binary's own DT_NEEDED, as -dev packages. Nothing links against them here,
 # so they are in the target sysroot for two reasons: they are the link contract

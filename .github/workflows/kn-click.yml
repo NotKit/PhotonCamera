@@ -146,6 +146,21 @@ jobs:
             kn/out/click/.gradle
           key: kn-toolchain-${{ hashFiles('kn/build.gradle.kts', 'kn/gradle.properties', 'gradle/wrapper/gradle-wrapper.properties') }}
 
+      # ncnn cross-built from source (kn/click/build.sh runs
+      # host/natives/build_ncnn.sh when this is absent).  One pinned commit and
+      # a CPU-only static build, so the key is the script that names both -- a
+      # different NCNN_REF is a different key and rebuilds.  Only the installed
+      # prefix is kept; $prefix/build and the shallow clone are not worth
+      # carrying.
+      - name: Restore the cross-built ncnn
+        id: ncnn
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            kn/out/ncnn-arm64/lib
+            kn/out/ncnn-arm64/include
+          key: kn-ncnn-arm64-${{ hashFiles('kn/host/natives/build_ncnn.sh', 'kn/host/natives/toolchain-arm64.cmake') }}
+
       - name: Install clickable
         run: |
           pipx install clickable-ut
@@ -189,6 +204,15 @@ jobs:
             kn/deps/aurora-maven
             kn/deps/sysroot-arm64
           key: kn-deps-${{ hashFiles('kn/scripts/fetch-deps.sh') }}
+
+      - name: Save the cross-built ncnn
+        if: steps.build.outcome == 'success' && steps.ncnn.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            kn/out/ncnn-arm64/lib
+            kn/out/ncnn-arm64/include
+          key: kn-ncnn-arm64-${{ hashFiles('kn/host/natives/build_ncnn.sh', 'kn/host/natives/toolchain-arm64.cmake') }}
 
       # Only after a build that got all the way through: a failed one may have
       # left a partly-extracted konan bundle, and this key is never rewritten.
@@ -234,9 +258,9 @@ jobs:
             fi
             # `a && b` as a statement is an AND-LIST: under set -e a failing
             # grep would take the whole step with it, hence the `|| true`
-            grep -q 'no arm64 ncnn' kn/out/click-build.log 2>/dev/null &&
-              echo "* no arm64 ncnn: FlowNet and KernelNet report unavailable" || true
-            echo "* deps cache: ${{ steps.deps.outputs.cache-hit == 'true' && 'hit' || 'miss' }}, toolchain cache: ${{ steps.toolchain.outputs.cache-hit == 'true' && 'hit' || 'miss' }}"
+            grep -q 'FlowNet/KernelNet report unavailable' kn/out/click-build.log 2>/dev/null &&
+              echo "* ⚠️ no arm64 ncnn: FlowNet and KernelNet report unavailable, and the merge runs with no kernel map" || true
+            echo "* deps cache: ${{ steps.deps.outputs.cache-hit == 'true' && 'hit' || 'miss' }}, toolchain cache: ${{ steps.toolchain.outputs.cache-hit == 'true' && 'hit' || 'miss' }}, ncnn cache: ${{ steps.ncnn.outputs.cache-hit == 'true' && 'hit' || 'miss' }}"
             bin=kn/out/click/install/photoncam-kn
             if [ -f "$bin" ]; then
               echo
