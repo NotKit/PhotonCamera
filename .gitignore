@@ -95,3 +95,6 @@ lint/tmp/
 
 # Clickable build container state
 .clickable/
+
+# Which vehicle click/build.sh packages; make-click.sh writes it per build.
+.vehicle

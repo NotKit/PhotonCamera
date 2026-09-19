@@ -7,7 +7,7 @@
 #
 # Usage: linux-port/run.sh [--seconds N] [--stop-file PATH] [--data-dir DIR]
 #                          [--fresh] [--activity CLASS] [--camera BACKEND]
-#                          [--require-preview]
+#                          [--require-preview] [--image]
 #                          [--no-gpu] [-- ARGS...]
 #   --seconds N   quit after N seconds and check run.log (0 = run until closed)
 #   --stop-file   with --seconds, quit as soon as this file appears
@@ -17,6 +17,10 @@
 #   --camera      ATL_CAMERA_BACKEND for this run (gst|camera2ndk|hybris|none)
 #   --no-gpu      set ATL_NO_GPU=1. The app renders its whole pipeline with
 #                 GLES, so this only makes sense for a UI-only smoke run.
+#   --image       run the ahead-of-time vehicle: atlas's image launcher creating
+#                 its VM from $PORT_IMAGE_LIB (build-image.sh) instead of
+#                 libjvm.so. The launcher warns about --api-impl-jar and
+#                 --classpath and ignores them, so one argv drives both.
 #   --require-preview  with --seconds, require a synthetic camera frame and
 #                 its GL presentation into the SurfaceView.
 #   The window is portrait $PORT_WINDOW_WIDTH x $PORT_WINDOW_HEIGHT by
@@ -35,6 +39,7 @@ data_dir="${ANDROID_APP_DATA_DIR:-$PORT_OUT/data}"
 fresh=0
 no_gpu=0
 require_preview=0
+image=0
 activity="$PORT_ACTIVITY"
 extra_args=()
 
@@ -47,6 +52,7 @@ while [ $# -gt 0 ]; do
 	--camera) export ATL_CAMERA_BACKEND="$2"; shift 2 ;;
 	--fresh) fresh=1; shift ;;
 	--no-gpu) no_gpu=1; shift ;;
+	--image) image=1; shift ;;
 	--require-preview) require_preview=1; shift ;;
 	--) shift; extra_args=("$@"); break ;;
 	*) echo "unknown option: $1" >&2; exit 1 ;;
@@ -59,6 +65,13 @@ if [ "$require_preview" = 1 ] && { [ "$seconds" = 0 ] || [ "$ATL_CAMERA_BACKEND"
 fi
 
 launcher="$PORT_LAUNCHER_BIN"
+vehicle_args=()
+if [ "$image" = 1 ]; then
+	launcher="$PORT_IMAGE_LAUNCHER_BIN"
+	vehicle_args=(--vm-library "$PORT_IMAGE_LIB")
+	[ -f "$PORT_IMAGE_LIB" ] ||
+		{ echo "no image at $PORT_IMAGE_LIB (run build-image.sh)" >&2; exit 1; }
+fi
 log="$PORT_OUT/run.log"
 shots="$PORT_OUT/screenshots"
 
@@ -101,6 +114,7 @@ run_launcher() {
 	# exec, so that backgrounding this function gives $! the launcher's own pid
 	# and not that of the subshell wrapping it.
 	exec "$launcher" \
+		${vehicle_args[@]+"${vehicle_args[@]}"} \
 		--api-impl-jar "$ATLAS_API_IMPL_JAR" \
 		--framework-res "$ATLAS_FRAMEWORK_RES" \
 		--natives-dir "$ATLAS_NATIVES_DIR" \
@@ -110,13 +124,15 @@ run_launcher() {
 		--library-path "$PORT_LIB_OUT" \
 		--launch-activity "$activity" \
 		-X "-XX:ErrorFile=$PORT_OUT/hs_err_pid%p.log" \
+		${PORT_EXTRA_JVM_ARGV[@]+"${PORT_EXTRA_JVM_ARGV[@]}"} \
 		"${extra_args[@]}" \
 		"$PORT_OUT/app.apk"
 }
 
 # Interactive run: no timeout, no checks, the window is the output.
 if [ "$seconds" = 0 ]; then
-	echo "running PhotonCamera ($activity, camera $ATL_CAMERA_BACKEND), log in $log"
+	echo "running PhotonCamera ($activity, camera $ATL_CAMERA_BACKEND," \
+		"$([ "$image" = 1 ] && echo image || echo hotspot)), log in $log"
 	run_launcher 2>&1 | tee "$log"
 	exit "${PIPESTATUS[0]}"
 fi

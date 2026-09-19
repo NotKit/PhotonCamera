@@ -1,0 +1,599 @@
+name: Build Ubuntu Touch click (OpenJDK / GraalVM port)
+
+# The arm64 clicks of linux-port/: PhotonCamera on atlas's Android framework as
+# plain jars, with no ART, no dex and no bionic. Two of them, same package name
+# and version, so a device holds one at a time and installing the other is an
+# upgrade:
+#
+#   -aot  the framework, the shim and the app compiled ahead of time by GraalVM
+#         native-image into one .so. Smaller and faster to start: nothing is
+#         loaded, parsed, verified or linked at run time.
+#   -cds  the same app on a jlink'd OpenJDK 21 with AppCDS. The fallback, and
+#         the one that gives real stack traces.
+#
+# Three jobs, because each half has to run somewhere different:
+#
+#   host   x86_64. AGP's aapt2 is an x86_64 binary, so the app's jars and apk
+#          can only be built here. They are architecture-neutral.
+#   image  ubuntu-24.04-arm. native-image CANNOT cross-compile, and nothing
+#          fakes it -- qemu-user runs the builder 38x slower and Houdini does
+#          not finish at all (~/UT/firefox-atl/jvm-run/image/NOTES.md). A real
+#          aarch64 machine is the whole answer, and GitHub rents one.
+#   click  x86_64 again: clickable's container is an amd64 host toolchain with
+#          an aarch64 target sysroot, which is what keeps the atlas and JNI
+#          cross-build in minutes rather than hours.
+#
+# The AOT half needs linux-port/image/ni-config -- the traced reflection and JNI
+# metadata, which only a run on a real desktop can record. Without it this
+# workflow still publishes the -cds click and says so in the run summary,
+# rather than shipping an image that boots into a NoSuchMethodError.
+
+on:
+  push:
+    branches: [linux-port-hdrx-desktop]
+    paths:
+      - 'linux-port/**'
+      - 'app/src/main/cpp/**'
+      - 'app/src/main/assets/**'
+      - 'app/build.gradle'
+      - 'app/version.properties'
+      - 'build.gradle'
+      - 'clickable.yaml'
+      - '.github/workflows/linux-port-click.yml'
+  pull_request:
+    paths:
+      - 'linux-port/**'
+      - 'app/src/main/cpp/**'
+      - 'app/src/main/assets/**'
+      - 'app/build.gradle'
+      - 'app/version.properties'
+      - 'build.gradle'
+      - 'clickable.yaml'
+      - '.github/workflows/linux-port-click.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: linux-port-click-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GRAALVM_VERSION: "21.0.2"
+
+jobs:
+  # A minute of checks for the packaging mistakes that would otherwise surface
+  # an hour into the container build, where they cost a whole run.
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      atlas_rev: ${{ steps.pins.outputs.atlas_rev }}
+      sdk_tag: ${{ steps.pins.outputs.sdk_tag }}
+      has_metadata: ${{ steps.metadata.outputs.present }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Parse every script and every config
+        run: |
+          set -eu
+          # every TRACKED script under linux-port/, so a new one is covered
+          # without anyone remembering to list it here
+          mapfile -t scripts < <(git ls-files -- 'linux-port/*.sh' 'linux-port/**/*.sh')
+          for f in "${scripts[@]}"; do bash -n "$f"; done
+          echo "parsed ${#scripts[@]} scripts"
+          # the device launcher is /bin/sh, not bash: check it as what it is
+          sh -n linux-port/click/run.sh
+          python3 -c 'import yaml' 2>/dev/null ||
+            pip3 install --break-system-packages -q pyyaml
+          python3 -c 'import yaml; yaml.safe_load(open("clickable.yaml"))'
+          # the version substitution build.sh does, so a broken manifest is
+          # caught here rather than after the cross build
+          v=$(sed -n 's/^VERSION_NAME=//p' app/version.properties | tr -d ' \r')
+          [ -n "$v" ] || { echo "no VERSION_NAME in app/version.properties" >&2; exit 1; }
+          sed "s|@CLICK_VERSION@|$v|" linux-port/click/manifest.json |
+            python3 -c 'import json,sys; json.load(sys.stdin)'
+          python3 -c 'import ast; ast.parse(open("linux-port/image/gen-reflect-config.py").read())'
+          echo "app version: $v"
+
+      # The same drift build.sh refuses to package: with the hook and the
+      # .desktop basename out of step, Lomiri never associates the surface with
+      # the app it launched and SIGSTOPs the process as a background one.
+      - name: Check the hook and the .desktop agree
+        run: |
+          set -eu
+          hook=$(basename linux-port/click/*.desktop .desktop)
+          grep -q "\"$hook\"" linux-port/click/manifest.json ||
+            { echo "manifest hook is not '$hook'" >&2; exit 1; }
+          grep -q "^Exec=" linux-port/click/"$hook".desktop
+          echo "hook: $hook"
+
+      # Tracked inputs the build reads and cannot make: without them the failure
+      # is a shader that will not compile or a click that cannot resolve a
+      # library, an hour in.
+      - name: Check the tracked inputs are there
+        run: |
+          set -eu
+          for d in app/src/main/assets/shaders app/src/main/assets/models; do
+            [ -d "$d" ] || { echo "missing $d" >&2; exit 1; }
+          done
+          test -s fastlane/metadata/android/en-US/images/icon.png
+          test -s linux-port/click/device-libs.txt
+          test -s linux-port/click/atl-sdk.tag
+          echo "assets: $(find app/src/main/assets -type f | wc -l) files"
+
+      # One atl-touch commit for both halves. The SDK supplies the framework the
+      # image is built over and the inputs the click's own atlas build needs, so
+      # a tag and a checkout that disagreed would put two different frameworks
+      # in one package -- which is a NoSuchMethodError somewhere in the boot,
+      # not a link error. click/build.sh fails on it; this names it up front.
+      - name: Resolve the atlas pin
+        id: pins
+        run: |
+          set -eu
+          tag=$(tr -d '[:space:]' <linux-port/click/atl-sdk.tag)
+          echo "sdk_tag=$tag" >>"$GITHUB_OUTPUT"
+          echo "atlas_rev=${tag#sdk-}" >>"$GITHUB_OUTPUT"
+          echo "atl-touch pinned at ${tag#sdk-} (SDK release $tag)"
+
+      # An image without the traced metadata builds and then dies on the first
+      # thing atlas looks up by name, so the AOT half is skipped rather than
+      # shipped broken. linux-port/trace-metadata.sh records it.
+      - name: Is there traced native-image metadata?
+        id: metadata
+        run: |
+          set -eu
+          present=false
+          if [ -s linux-port/image/ni-config/reflect-config.json ] &&
+             [ -s linux-port/image/ni-config/jni-config.json ]; then
+            n=$(python3 -c 'import json;print(len(json.load(open("linux-port/image/ni-config/reflect-config.json"))))')
+            [ "$n" -gt 0 ] && present=true
+            echo "reflect-config: $n classes"
+          fi
+          echo "present=$present" >>"$GITHUB_OUTPUT"
+          [ "$present" = true ] ||
+            echo "::warning::no linux-port/image/ni-config: the AOT click will be skipped"
+
+  # The architecture-independent half: AGP's javac output jarred instead of
+  # dexed, plus the apk that carries the resources, the shaders and the ncnn
+  # models. aapt2 ships as an x86_64 ELF, so this cannot run on the arm runner.
+  host:
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # compileSdk 36 with AGP 8.10.1: the runner image does not promise that
+      # platform, and AGP downloads one only with the licences accepted, which
+      # is what this action is for. Named explicitly so a missing platform is a
+      # one-line failure here rather than a Gradle stack trace.
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-36 build-tools;36.0.0'
+
+      - name: Build the app jars and the apk
+        run: |
+          # env.sh falls back to two paths that exist on a developer's box and
+          # not here. $ANDROID_SDK_ROOT is the runner image's own variable, and
+          # it is NOT in the `env` expression context -- it has to be read in
+          # the shell, where it actually exists.
+          export ANDROID_HOME="$ANDROID_SDK_ROOT"
+          linux-port/build-classpath.sh
+
+      - name: Report
+        run: |
+          {
+            echo "## App class path"
+            echo
+            echo "* $(find linux-port/out/classpath -name '*.jar' | wc -l) jars, \`app.apk\` $(( $(stat -c%s linux-port/out/app.apk) / 1024 / 1024 )) MB"
+            echo "* source rev \`$(cat linux-port/out/app-source-rev)\`"
+          } >>"$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: photoncamera-port-classpath
+          path: |
+            linux-port/out/classpath/*.jar
+            linux-port/out/app.apk
+            linux-port/out/app-source-rev
+          if-no-files-found: error
+
+  # native-image on a real aarch64 machine. Everything it consumes is
+  # architecture-neutral -- the framework jar, the shim jar, the app jars and
+  # the traced JSON -- which is why this is one added job and not a port.
+  image:
+    needs: [checks, host]
+    if: needs.checks.outputs.has_metadata == 'true'
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: photoncamera-port-classpath
+          path: linux-port/out
+
+      # A hit skips the whole body. These are the only inputs the .so has: the
+      # framework (the SDK tag), the class path (the app source rev), the
+      # metadata and the image scripts, and the compiler.
+      - name: Cache the image
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: linux-port/out/image-arm64
+          key: pc-image-${{ needs.checks.outputs.sdk_tag }}-${{ hashFiles('linux-port/out/app-source-rev') }}-${{ hashFiles('linux-port/image/**', 'linux-port/build-image.sh', 'linux-port/shim/**') }}-graal${{ env.GRAALVM_VERSION }}
+
+      - name: Free disk space
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+                      /usr/local/.ghcup /usr/local/share/boost \
+                      /opt/hostedtoolcache/CodeQL || true
+          df -h /
+          echo "cpus: $(nproc)"; free -g
+
+      # native-image links the image with the system toolchain, so a C compiler
+      # and zlib's headers are not optional -- that is the exact pair the phone
+      # does not have, and the reason this is not built on one.
+      - name: Install build dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            build-essential zlib1g-dev zstd unzip curl file \
+            openjdk-21-jdk-headless python3
+
+      - name: Cache the downloads
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache@v4
+        with:
+          path: dl
+          key: pc-image-dl-${{ needs.checks.outputs.sdk_tag }}-${{ env.GRAALVM_VERSION }}
+
+      - name: Install GraalVM CE ${{ env.GRAALVM_VERSION }} for aarch64
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p dl
+          f="graalvm-community-jdk-${GRAALVM_VERSION}_linux-aarch64_bin.tar.gz"
+          [ -f "dl/$f" ] || curl -Lf --retry 3 -o "dl/$f" \
+            "https://github.com/graalvm/graalvm-ce-builds/releases/download/jdk-${GRAALVM_VERSION}/$f"
+          mkdir -p graalvm && tar -C graalvm --strip-components=1 -xzf "dl/$f"
+          echo "GRAALVM_HOME=$PWD/graalvm" >>"$GITHUB_ENV"
+          ./graalvm/bin/native-image --version
+
+      # The framework the image is built over. atl-touch's CI publishes
+      # api-impl_classes.jar -- javac output, architecture-neutral -- per commit,
+      # and click/atl-sdk.tag pins the release. The click compiles the same
+      # commit's sources for its natives; build.sh checks the two agree.
+      #
+      # The natives come along for a different reason: gen-reflect-config.py
+      # reads the internal class names out of their string tables, which is the
+      # only way to see what atlas calls FindClass with.
+      - name: Fetch the pinned ATL SDK
+        if: steps.cache.outputs.cache-hit != 'true'
+        env:
+          SDK_TAG: ${{ needs.checks.outputs.sdk_tag }}
+          ATLAS_REV: ${{ needs.checks.outputs.atlas_rev }}
+        run: |
+          set -euo pipefail
+          mkdir -p dl
+          url="https://github.com/NotKit/atl-touch/releases/download/$SDK_TAG/atl-sdk-arm64.tar.zst"
+          [ -f "dl/$SDK_TAG.tar.zst" ] ||
+            curl -Lf --retry 3 -o "dl/$SDK_TAG.tar.zst" "$url"
+          if curl -Lf --retry 3 -so "dl/$SDK_TAG.sha256" "$url.sha256"; then
+            echo "$(awk '{print $1}' "dl/$SDK_TAG.sha256")  dl/$SDK_TAG.tar.zst" | sha256sum -c -
+          fi
+          rm -rf sdk && mkdir -p sdk
+          zstd -dc "dl/$SDK_TAG.tar.zst" | tar -C sdk -x
+
+          # $ATLAS_OUT as build-atlas.sh would leave it, so build-image.sh and
+          # gen-reflect-config.py need no special case for this job.
+          out=linux-port/out/atlas
+          mkdir -p "$out"
+          cp sdk/usr/lib/java/api-impl_classes.jar "$out/api-impl.jar"
+          cp sdk/usr/lib/java/dex/android_translation_layer/natives/libtranslation_layer_main.so "$out/"
+          cp sdk/usr/lib/libandroid.so.0 "$out/"
+          sha=$(sha256sum "$out/api-impl.jar" | cut -c1-16)
+          cat >"$out/artifacts.env" <<EOF
+          # Generated by .github/workflows/linux-port-click.yml from ATL SDK $SDK_TAG
+          ATLAS_API_IMPL_JAR="$PWD/$out/api-impl.jar"
+          ATLAS_NATIVES_DIR="$PWD/$out"
+          ATLAS_BRANCH="master"
+          ATLAS_REV="$ATLAS_REV"
+          ATLAS_API_IMPL_SHA="$sha"
+          EOF
+          echo "framework: $(unzip -l "$out/api-impl.jar" | grep -c '\.class$') classes, sha $sha"
+
+      # The classes ART's boot class path has and a JDK lacks. The jar is what
+      # the image needs; libportshim.so is built here too and thrown away, since
+      # the click builds its own arm64 copy.
+      - name: Build the compat shim
+        if: steps.cache.outputs.cache-hit != 'true'
+        env:
+          JAVA_HOME: /usr/lib/jvm/java-21-openjdk-arm64
+          PORT_CC: gcc
+          # Without this env.sh defaults to x86_64, decides an aarch64 machine
+          # is a cross build, and build-image.sh refuses (it cannot be one).
+          PORT_ARCH: arm64
+        run: linux-port/build-shim.sh
+
+      - name: Build the image
+        id: build
+        if: steps.cache.outputs.cache-hit != 'true'
+        env:
+          JAVA_HOME: /usr/lib/jvm/java-21-openjdk-arm64
+          PORT_CC: gcc
+          # Without this env.sh defaults to x86_64, decides an aarch64 machine
+          # is a cross build, and build-image.sh refuses (it cannot be one).
+          PORT_ARCH: arm64
+          # 16 GB on this runner, and a builder left to its own devices takes
+          # 80% of RAM and then swaps, which takes the machine with it.
+          PORT_IMAGE_XMX: 10g
+          PORT_IMAGE_LIB: ${{ github.workspace }}/linux-port/out/image-arm64/libphotoncamera.so
+        run: linux-port/build-image.sh
+
+      # IMAGE.txt travels with the .so: it is what click/build.sh checks its own
+      # atlas build against, so a cached image still says what it was built over.
+      - name: Record what the image holds
+        if: steps.cache.outputs.cache-hit != 'true'
+        env:
+          SDK_TAG: ${{ needs.checks.outputs.sdk_tag }}
+          ATLAS_REV: ${{ needs.checks.outputs.atlas_rev }}
+        run: |
+          set -euo pipefail
+          . linux-port/out/atlas/artifacts.env
+          . linux-port/out/image-arm64/build-stats.env
+          cat >linux-port/out/image-arm64/IMAGE.txt <<EOF
+          sdk=$SDK_TAG
+          atlas_rev=$ATLAS_REV
+          atlas_api_impl_sha=$ATLAS_API_IMPL_SHA
+          app_rev=$(cat linux-port/out/app-source-rev)
+          graalvm=$GRAALVM_VERSION
+          bytes=$PORT_IMAGE_BYTES
+          built=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          run=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EOF
+          cat linux-port/out/image-arm64/IMAGE.txt
+
+      - name: Report
+        if: always()
+        run: |
+          {
+            echo "## native-image on $(uname -m)"
+            echo
+            if [ "${{ steps.cache.outputs.cache-hit }}" = "true" ]; then
+              echo "Cache hit, not rebuilt. It was built over:"
+              echo
+              echo '```'
+              cat linux-port/out/image-arm64/IMAGE.txt 2>/dev/null
+              echo '```'
+            else
+              s=linux-port/out/image-arm64/build-stats.env
+              if [ -f "$s" ]; then
+                . "$s"
+                echo "* \`libphotoncamera.so\`: $(( PORT_IMAGE_BYTES / 1024 / 1024 )) MB"
+                echo "* ${PORT_IMAGE_BUILD_SECONDS}s wall, $(( PORT_IMAGE_PEAK_RSS_KB / 1024 )) MB peak RSS"
+                echo "* $PORT_IMAGE_GRAALVM, atlas \`$ATLAS_REV\`"
+              else
+                echo "* the image was not produced"
+              fi
+              echo
+              echo '<details><summary>builder tail</summary>'
+              echo
+              echo '```'
+              tail -60 linux-port/out/image-arm64/build.log 2>/dev/null || true
+              echo '```'
+              echo '</details>'
+            fi
+          } >>"$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the build logs
+        if: always() && steps.cache.outputs.cache-hit != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: photoncamera-image-logs
+          path: |
+            linux-port/out/image-arm64/*.log
+            linux-port/out/image-arm64/*.env
+            linux-port/out/image-arm64/*-argv.txt
+            linux-port/out/image-arm64/reports/*
+          if-no-files-found: warn
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: photoncamera-image-arm64
+          path: |
+            linux-port/out/image-arm64/libphotoncamera.so
+            linux-port/out/image-arm64/IMAGE.txt
+          if-no-files-found: error
+
+  # clickable's cross container: an amd64 host toolchain with an aarch64 target
+  # sysroot. atlas, ncnn and the app's five JNI libraries are cross-compiled
+  # here; nothing is built by an emulated arm64 toolchain, which is what keeps a
+  # rebuild in minutes.
+  click:
+    needs: [checks, host, image]
+    # `always()` so a skipped image job (no traced metadata) still builds the
+    # HotSpot click. A *failed* image is different: that is a red run, not a
+    # quiet fallback.
+    if: always() && needs.host.result == 'success' && needs.image.result != 'failure'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    permissions:
+      contents: write   # for the release step
+    env:
+      CLICKABLE_NON_INTERACTIVE: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: photoncamera-port-classpath
+          path: linux-port/out
+
+      # clickable does not forward the environment into its container, so the
+      # image cannot be pointed at with a variable; build.sh looks for this
+      # path, which the repository bind mount makes visible inside.
+      - name: Take the image from the image job
+        if: needs.image.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: photoncamera-image-arm64
+          path: linux-port/out/image-arm64
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+                      /usr/local/.ghcup /usr/local/share/boost \
+                      /opt/hostedtoolcache/CodeQL || true
+          df -h /
+
+      # The 50 MB SDK tarball and the atl-touch clone: the only network the
+      # container build needs, and the part that changes only when the pin does.
+      - name: Restore the staged prebuilt inputs
+        id: prebuilt
+        uses: actions/cache/restore@v4
+        with:
+          path: linux-port/out/downloads
+          key: pc-click-sdk-${{ needs.checks.outputs.sdk_tag }}
+
+      - name: Install clickable
+        run: |
+          pipx install clickable-ut
+          clickable --version
+
+      # stage-prebuilt.sh clones atl-touch at the pin when there is no checkout
+      # next door, then fills out/click-prebuilt with what the container cannot
+      # produce -- the SDK's art support libraries, GLFW, libskia and the atlas
+      # sources themselves.
+      - name: Stage the arm64 prebuilt inputs
+        run: linux-port/click/stage-prebuilt.sh
+
+      - name: Save the staged prebuilt inputs
+        if: always() && steps.prebuilt.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: linux-port/out/downloads
+          key: pc-click-sdk-${{ needs.checks.outputs.sdk_tag }}
+
+      # Two clicks, same package name and version. build.sh reads .vehicle
+      # because clickable does not forward the environment into its container,
+      # and clickable always names its output <package>_<version>_<arch>.click,
+      # so each build is moved aside before the next overwrites it. The staged
+      # sysroot, atlas and the JNI libraries in build_dir are reused by the
+      # second build: only the assembly and the packaging run twice.
+      - name: Build the clicks
+        id: build
+        run: |
+          set -o pipefail
+          mkdir -p linux-port/out/clicks
+          vehicles=hotspot
+          [ "${{ needs.image.result }}" != success ] || vehicles="hotspot image"
+          for v in $vehicles; do
+            echo "$v" >.vehicle
+            clickable build --arch arm64 --skip-review --verbose 2>&1 |
+              tee "linux-port/out/click-build-$v.log"
+            case $v in image) sfx=aot ;; hotspot) sfx=cds ;; esac
+            click=$(ls linux-port/out/click/*.click)
+            mv "$click" "linux-port/out/clicks/$(basename "${click%.click}")-$sfx.click"
+          done
+          rm -f .vehicle
+          ls -la linux-port/out/clicks
+
+      # click-review's findings, which OpenStore runs too. NOT allowed to fail
+      # the build: this package is `unconfined` by design (a translation layer
+      # needs the camera, the microphone and a writable pictures path, and no
+      # confined template covers that), which is a standing NEEDS REVIEW
+      # finding. A blocking review would mean a permanently red workflow.
+      - name: Review the click
+        id: review
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          clickable review --arch arm64 2>&1 | tee linux-port/out/click-review.log
+
+      - name: Report
+        if: always()
+        run: |
+          {
+            echo "## Ubuntu Touch clicks (linux-port)"
+            echo
+            for c in linux-port/out/clicks/*.click; do
+              [ -e "$c" ] || continue
+              echo "* \`$(basename "$c")\` — $(( $(stat -c%s "$c") / 1024 / 1024 )) MB"
+            done
+            if [ "${{ needs.image.result }}" = success ]; then
+              echo
+              echo '```'
+              cat linux-port/out/image-arm64/IMAGE.txt 2>/dev/null
+              echo '```'
+            elif [ "${{ needs.checks.outputs.has_metadata }}" != true ]; then
+              echo
+              echo "* ⚠️ **no AOT click**: \`linux-port/image/ni-config\` holds no trace, so"
+              echo "  there is no metadata to build an image from. Run"
+              echo "  \`linux-port/trace-metadata.sh\` on a desktop with working GL and commit"
+              echo "  what it writes."
+            fi
+            if [ -f linux-port/out/click-review.log ]; then
+              echo
+              echo "<details><summary>clickable review (${{ steps.review.outcome }})</summary>"
+              echo
+              echo '```'
+              tail -40 linux-port/out/click-review.log
+              echo '```'
+              echo '</details>'
+            fi
+          } >>"$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: photoncamera-click-logs
+          path: linux-port/out/*.log
+          if-no-files-found: warn
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: photoncamera-jvm-click-arm64
+          path: linux-port/out/clicks/*.click
+          if-no-files-found: error
+
+      # Actions artifacts need a GitHub login to download; a release does not,
+      # which is what testers actually use. Tagged by the app version and the
+      # atl-touch commit that built it, so two clicks from the same app but
+      # different framework revisions are distinguishable.
+      - name: Publish to a GitHub release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ATLAS_REV: ${{ needs.checks.outputs.atlas_rev }}
+        run: |
+          set -eu
+          clicks=(linux-port/out/clicks/*.click)
+          version=$(basename "${clicks[0]}" | cut -d_ -f2)
+          tag="jvm-v${version}-atl.${ATLAS_REV}"
+          notes=$(printf '%s\n' \
+            "Unofficial test build of PhotonCamera for Ubuntu Touch 24.04 (arm64), running on the Android Translation Layer (atlas commit \`${ATLAS_REV}\`) with no ART and no dex. Not a stable release — for testing only." \
+            "" \
+            "Same package name, so install one, not both; installing the other is an upgrade and the app's data survives:" \
+            "" \
+            "* \`-aot\` — compiled ahead of time by GraalVM \`native-image\`. Smaller, and it starts without loading a class. **Take this one.**" \
+            "* \`-cds\` — the same app on a bundled OpenJDK 21 with AppCDS. The fallback, and the one that gives real stack traces." \
+            "" \
+            "Install with \`pkcon install-local --allow-untrusted <file>.click\` on the device.")
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" "${clicks[@]}" --clobber
+          else
+            gh release create "$tag" "${clicks[@]}" \
+              --title "PhotonCamera ${version} (JVM/AOT, Ubuntu Touch) — atl-touch ${ATLAS_REV}" \
+              --prerelease --notes "$notes"
+          fi

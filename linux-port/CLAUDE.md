@@ -6,8 +6,10 @@
   one place.
 - All products go under `linux-port/out/` (gitignored). Nothing generated is
   committed; scripts must be idempotent and safe to re-run.
-- `$ATLAS_DIR` is an atl-touch checkout on the camera2 branch — its own git repo,
-  gitignored here. It is a source dependency the port builds, not a place
+- `$ATLAS_DIR` is an atl-touch checkout — its own git repo, gitignored here,
+  pinned by `click/atl-sdk.tag` (`env.sh`, `$ATLAS_PIN_REV`) on a fresh clone and
+  left alone when one already exists. The camera2 work is on master now; there is
+  no separate branch to track. It is a source dependency the port builds, not a place
   artifacts are copied from. Fix framework bugs there as commits that go upstream
   to atl-touch; never patch atlas from this repository and never paper over a
   framework bug in the shim jar or the launcher.
@@ -74,13 +76,27 @@
   `out/click-prebuilt/` first (`click/stage-prebuilt.sh`) — the ATL SDK's
   prebuilt dependencies and the atlas sources alike. A build script that reaches
   outside `$REPO_DIR` works on the desktop and fails in the container.
-- atlas is always compiled for the click, never taken from the ATL SDK: the SDK
-  is built from atl-touch master and this port stands on the camera2 branch. The
-  SDK supplies that build's inputs (art_standalone, skia, GLFW, `dx`), not its
-  output.
+- atlas's **natives** are always compiled, never taken from the ATL SDK: the SDK
+  supplies that build's inputs (art_standalone, skia, GLFW, `dx`), not its output.
+  Its **`api-impl_classes.jar`** is a different matter — the AOT image is built
+  over it on a runner that cannot compile atlas, and that is sound only because
+  the SDK tag and `$ATLAS_PIN_REV` name one commit. `click/build.sh` fails the
+  build when the image and the compiled framework disagree on the revision.
 - Record every deviation from the Android build in `BRINGUP_NOTES.md` as it is
   found, and read it before chasing a symptom.
 - The sibling Mercurygram port (`/home/nekit/UT/mercurygram-src/linux-port/`) is
   the reference implementation for everything not written here yet: the
   native-image backend and the driving checks. Read it before inventing a second
   way of doing the same thing.
+- There are two vehicles, and `build-all.sh` builds neither of the extra ones:
+  the click (`click/make-click.sh`) and the ahead-of-time image
+  (`build-image.sh`, GraalVM `native-image`). Both stand on the desktop build's
+  products; neither is a step of it.
+- `image/ni-config/` is the one generated tree this port commits. native-image
+  cannot cross-compile, so the arm64 image is built on a runner that cannot run
+  the app — the metadata has to travel with the source. `trace-metadata.sh`
+  writes it, nothing edits it by hand, and an entry an image *run* proves the
+  trace could not see goes in `image/extra-config/` with its failure recorded.
+- `PORT_EXTRA_JVM_ARGS` puts extra `-X` options on any launcher run (`run.sh`,
+  `check-native-libs.sh`, `run-dng-pipeline.sh`). It is how the tracing agent
+  gets onto a run; do not add a second mechanism for it.

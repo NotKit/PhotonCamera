@@ -595,3 +595,44 @@ it used to replay the entire burst.
 
 With that, a desktop replay run takes eight frames, merges them and saves the
 scene: the port's own end-to-end HDRX check, no phone in the loop.
+
+## The ahead-of-time vehicle, and what the tracing agent does not see (2026-09-19)
+
+`build-image.sh` compiles the framework, the shim and the app into one GraalVM
+`native-image` shared library, which atlas's `android-translation-layer-image`
+creates its VM from. The build arguments and most of the traps are the sibling
+Fenix lane's work — `~/UT/firefox-atl/jvm-run/image/NOTES.md`, and the click
+packaging's `image/build-image.sh` — and are not re-derived here.
+
+Three things are this port's own.
+
+**The tracing agent writes from a JVM shutdown hook, and nothing here shuts a VM
+down.** atlas's launcher ends a `--run-class` check with a bare `exit(0)` from C
+(`main.c`, `run_class_main`) and never calls `DestroyJavaVM`; `run.sh` ends a
+timed run with SIGTERM and then SIGKILL. Both leave the config directory empty
+while every check still exits 0 — a silent, total loss that reads as "the agent
+did not load". It did: `grep 'jvm option: -agentlib'` in the run log says so.
+`trace-metadata.sh` therefore adds `config-write-period-secs=3`, so what is lost
+is the last few seconds of a run rather than all of it. Fixing the launcher to
+destroy its VM would be better and belongs in atlas.
+
+**The app's own JNI libraries name almost nothing.** `app/src/main/cpp` has two
+`FindClass` calls in total — `dalvik/system/VMRuntime` and `java/lang/String`,
+both in the hidden-API unsealing hack in `native-engine.cpp`. So the FindClass
+name scan in `image/gen-reflect-config.py` is really about **atlas's** natives:
+`libtranslation_layer_main.so` drives the whole framework from C, and it is
+where a missed `GetMethodID` becomes a fatal `NoSuchMethodError` rather than a
+caught `NoSuchMethodException`. A first scan over the build here found 69
+framework and app classes plus 25 JDK names, against 399 classes reached by name
+from layouts, fragments and view models.
+
+**One atl-touch commit, two consumers.** The image is built over the
+`api-impl_classes.jar` the ATL SDK publishes, because the arm64 machine that
+builds it cannot compile atlas; the click compiles the framework's natives from
+the sources. `click/atl-sdk.tag` names both (`env.sh`, `$ATLAS_PIN_REV`), and
+`click/build.sh` refuses to package an image whose `IMAGE.txt` names a different
+revision — two frameworks in one package is a `NoSuchMethodError` somewhere in
+the boot, not a link error.
+
+Measured here so far: the stub image (`--stub`, one class, no framework) builds
+in 34 s and 813 MB peak RSS on this host and exports the JNI Invocation API.

@@ -1,16 +1,29 @@
 #!/bin/sh
-# Device launcher: run PhotonCamera on the bundled OpenJDK 21 through atlas's
-# HotSpot launcher. The click is unconfined, so this may use external tools.
+# Device launcher: run PhotonCamera through atlas. The click is unconfined, so
+# this may use external tools.
 #
 # Mirrors linux-port/run.sh (the desktop boot loop) with device paths and the
 # device's own camera2 stack in place of the synthetic GStreamer one.
+#
+# Two vehicles ship under the same package name, and which one is installed is
+# read off the tree rather than configured: lib/libphotoncamera.so is the
+# ahead-of-time image (no JVM, no class path, no CDS), and its absence means the
+# jlink'd OpenJDK 21 with the jars and the class-data archive.
 
 APP_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 PKG_NAME=photoncamera-jvm.nekit
 
 # Prefer the version-independent 'current' path: it is stable across upgrades.
 PKG_ROOT="/opt/click.ubuntu.com/${PKG_NAME}/current"
-[ -x "${PKG_ROOT}/lib/android-translation-layer-hotspot" ] || PKG_ROOT="${APP_DIR}"
+[ -d "${PKG_ROOT}/lib" ] || PKG_ROOT="${APP_DIR}"
+
+if [ -f "${PKG_ROOT}/lib/libphotoncamera.so" ]; then
+    VEHICLE=image
+    LAUNCHER="${PKG_ROOT}/lib/android-translation-layer-image"
+else
+    VEHICLE=hotspot
+    LAUNCHER="${PKG_ROOT}/lib/android-translation-layer-hotspot"
+fi
 
 # Lomiri starts a click app with XDG_RUNTIME_DIR=~/.cache and
 # WAYLAND_DISPLAY=wayland-0, and the compositor's socket is in neither: it is in
@@ -24,13 +37,16 @@ if [ ! -S "${XDG_RUNTIME_DIR:-}/${WAYLAND_DISPLAY:-wayland-0}" ]; then
     done
 fi
 
-export JAVA_HOME="${PKG_ROOT}/jvm"
-
-# libjvm.so is deliberately not in the launcher's RUNPATH (linux-port/CLAUDE.md).
-# lib/ holds every native object the click carries — atlas's framework natives,
-# the app's five JNI libraries and the art support libraries — so $ORIGIN covers
-# the rest.
-export LD_LIBRARY_PATH="${JAVA_HOME}/lib/server:${PKG_ROOT}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+# lib/ holds every native object the click carries — the launcher, atlas's
+# framework natives, the app's five JNI libraries and the art support libraries
+# — so $ORIGIN covers the rest. The image vehicle stops there; the HotSpot one
+# also needs jvm/lib/server, because libjvm.so is deliberately not in the
+# launcher's RUNPATH (linux-port/CLAUDE.md).
+export LD_LIBRARY_PATH="${PKG_ROOT}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+if [ "${VEHICLE}" = hotspot ]; then
+    export JAVA_HOME="${PKG_ROOT}/jvm"
+    export LD_LIBRARY_PATH="${JAVA_HOME}/lib/server:${LD_LIBRARY_PATH}"
+fi
 
 # Keep app data in one dedicated place. atlas appends "<apk basename>_" to this,
 # so the app's own dir is <this>/app.apk_ — where the DNGs and the logs land.
@@ -98,11 +114,12 @@ export ATL_SDK_INT="${ATL_SDK_INT:-34}"
 #     place; it has to be removed first or every later run falls back for ever.
 #
 # This layers on the base archive build.sh dumped into jvm/lib/server/classes.jsa.
-# PHOTONCAMERA_CDS=off turns the whole thing off.
+# PHOTONCAMERA_CDS=off turns the whole thing off. None of it applies to the image
+# vehicle: there are no classes to load, so there is nothing to archive.
 CACHE="${XDG_CACHE_HOME:-${HOME}/.cache}/${PKG_NAME}"
 mkdir -p "${CACHE}"
 CDSOPT=""
-if [ "${PHOTONCAMERA_CDS:-auto}" != off ]; then
+if [ "${VEHICLE}" = hotspot ] && [ "${PHOTONCAMERA_CDS:-auto}" != off ]; then
     JSA="${CACHE}/app.jsa"
     CDSOPT="-X -XX:+AutoCreateSharedArchive -X -XX:SharedArchiveFile=${JSA}"
     CDSOPT="${CDSOPT} -X -Xlog:cds=warning:file=${CACHE}/cds.log"
@@ -122,11 +139,23 @@ if [ "${PHOTONCAMERA_CDS:-auto}" != off ]; then
     [ -n "${CDSFP}" ] && printf '%s' "${CDSFP}" > "${JSA}.fp"
 fi
 
-exec "${PKG_ROOT}/lib/android-translation-layer-hotspot" \
-    --api-impl-jar "${PKG_ROOT}/atlas/api-impl.jar" \
+# The image already contains the framework, the shim and the app, so it takes
+# neither --api-impl-jar nor --classpath: the launcher warns about both and
+# ignores them, and this click does not ship the jars at all.
+#
+# Prepended to "$@" rather than built into a string: the class path ends in a
+# literal "*", which the launcher expands itself (a JVM does not), and an
+# unquoted variable would hand it to the shell's globbing first.
+if [ "${VEHICLE}" = image ]; then
+    set -- --vm-library "${PKG_ROOT}/lib/libphotoncamera.so" "$@"
+else
+    set -- --api-impl-jar "${PKG_ROOT}/atlas/api-impl.jar" \
+           --classpath "${PKG_ROOT}/classpath/shim.jar:${PKG_ROOT}/classpath/*" "$@"
+fi
+
+exec "${LAUNCHER}" \
     --framework-res "${PKG_ROOT}/atlas/framework-res.apk" \
     --natives-dir "${PKG_ROOT}/lib" \
-    --classpath "${PKG_ROOT}/classpath/shim.jar:${PKG_ROOT}/classpath/*" \
     --library-path "${PKG_ROOT}/lib" \
     --launch-activity com.particlesdevs.photoncamera.ui.SplashActivity \
     ${CDSOPT} \

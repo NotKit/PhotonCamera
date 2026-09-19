@@ -38,7 +38,7 @@ ok "atlas: $ATLAS_DIR on $atlas_branch ($(git -C "$ATLAS_DIR" rev-parse --short 
 # The camera2 half of the framework is what this port is built on; a checkout
 # without it boots the UI and reports zero cameras, which reads like an app bug.
 [ -f "$ATLAS_DIR/src/api-impl/android/hardware/camera2/CameraManager.java" ] ||
-	fail "$ATLAS_DIR has no android.hardware.camera2: the port needs the camera2 branch ($ATLAS_BRANCH)"
+	fail "$ATLAS_DIR has no android.hardware.camera2: too old for this port (pin $ATLAS_PIN_REV)"
 ok "atlas camera2: $(ls "$ATLAS_DIR/src/api-impl-jni/camera" | grep -c '^camera_backend_') backends"
 [ -f "$ATLAS_DIR/src/main-executable-hotspot/vm_hotspot.c" ] ||
 	fail "$ATLAS_DIR has no src/main-executable-hotspot: this atlas cannot boot a JVM"

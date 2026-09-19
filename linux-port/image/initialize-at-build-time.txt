@@ -1,0 +1,11 @@
+# --initialize-at-build-time, one class name per line.
+#
+# native-image's default policy is run-time initialisation for everything it has
+# not proven safe, and it FAILS the build when a class it expected at run time
+# was initialised during the build anyway ("... was unintentionally initialized
+# at build time"). Each name here answers one such error from a named build.
+#
+# Nothing under android.*, com.particlesdevs.* or the app's dependencies belongs
+# here without reading the class first: those are the ones whose <clinit> can
+# read a -D property, open a file or touch GL state that the build host cannot
+# answer for. Record the build that demanded each entry in BRINGUP_NOTES.md.

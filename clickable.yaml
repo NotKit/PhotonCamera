@@ -1,0 +1,92 @@
+clickable_minimum_required: 8.3.0
+
+# Ubuntu Touch 24.04 (glibc 2.39, arm64). The click bundles the atlas framework
+# natives, PhotonCamera's own JNI libraries and — depending on the vehicle — an
+# arm64 OpenJDK 21 or a GraalVM native image, so it is arm64-only. The
+# arch-independent halves (the app jars and app.apk) come from the x86_64 host
+# build under linux-port/out/, and the native image from an arm64 one
+# (linux-port/click/README.md, "Two vehicles, one package").
+framework: ubuntu-touch-24.04-1.x
+restrict_arch: arm64
+
+builder: custom
+build: ${ROOT}/linux-port/click/build.sh
+build_dir: ${ROOT}/linux-port/out/click
+
+# The launcher process to stop on install/redeploy (see linux-port/click/run.sh).
+# clickable turns this into a `pkill -f` substring, so the common prefix covers
+# both vehicles: -hotspot for the JVM click, -image for the ahead-of-time one.
+kill: android-translation-layer
+
+# Cross container: aarch64-linux-gnu-gcc plus an arm64 target sysroot. Nothing
+# here is built by an emulated arm64 toolchain — that is what makes a rebuild
+# minutes rather than hours. atlas's expensive dependencies (art_standalone,
+# skia) are not built at all: they come prebuilt from the ATL SDK, staged by
+# linux-port/click/stage-prebuilt.sh.
+dependencies_host:
+  # atlas
+  - meson
+  - ninja-build
+  # ncnn and the app's JNI libraries
+  - cmake
+  # javac for the framework and the shim, jlink for the bundled JVM
+  - openjdk-21-jdk-headless
+  - ca-certificates-java
+  - pkg-config
+  - python-is-python3
+  - python3
+  - curl
+  - git
+  - rsync
+  - unzip
+  - zip
+  - xz-utils
+  - zstd
+  - patch
+  # `file` is how build.sh proves every staged object is aarch64
+  - file
+  # qemu-user: the base CDS archive is arch-specific, so build.sh dumps it by
+  # running the click's own arm64 java. Skipped (with a warning) if absent.
+  - qemu-user-static
+
+dependencies_target:
+  # atlas: libtranslation_layer_main.so and libandroid.so.0
+  - libasound2-dev
+  - libavcodec-dev
+  - libswscale-dev
+  - libdrm-dev
+  - libegl-dev
+  - libgl-dev
+  - libgles-dev
+  - libglib2.0-dev
+  - libgraphene-1.0-dev
+  - libgstreamer1.0-dev
+  - libgstreamer-plugins-base1.0-dev
+  - libgudev-1.0-dev
+  - libportal-dev
+  - libsqlite3-dev
+  - libvulkan-dev
+  - libwayland-dev
+  - wayland-protocols
+  - libfontconfig-dev
+  - libmaliit-glib-dev
+  # content-hub import: meson takes this as optional, so without it the
+  # ATLContentHub natives are dropped and sharing a picture falls back silently.
+  - liblomiri-content-hub-glib-dev
+  - libxkbcommon-dev
+  - libgbm-dev
+  - libicu-dev
+  - libopenxr-dev
+  # libarchive-jni.so: a stub whose DT_NEEDED is what dngCreator's dlopen/dlsym
+  # resolves the archive_* calls through. The apk's own arm64 copy is a bionic
+  # object and unusable here.
+  - libarchive-dev
+  # the prebuilt libskia.so's own DT_NEEDED (it vendors libjpeg but not these)
+  - libfreetype-dev
+  - libharfbuzz-dev
+  - libpng-dev
+  - libwebp-dev
+  - zlib1g-dev
+  # the arm64 JVM the click bundles: jni.h + libjvm.so to link the launcher
+  # against, and the jmods jlink builds the runtime image from
+  - openjdk-21-jdk-headless

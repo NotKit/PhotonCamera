@@ -47,6 +47,7 @@ timeout 120 "$launcher" \
 	--classpath "$PORT_OUT/shim.jar:$PORT_OUT/classpath/*:$tools_out" \
 	--library-path "$PORT_LIB_OUT" \
 	-X "-XX:ErrorFile=$PORT_OUT/hs_err_pid%p.log" \
+	${PORT_EXTRA_JVM_ARGV[@]+"${PORT_EXTRA_JVM_ARGV[@]}"} \
 	--run-class NativeLibCheck \
 	"$PORT_OUT/app.apk" >"$log" 2>&1 || status=$?
 
