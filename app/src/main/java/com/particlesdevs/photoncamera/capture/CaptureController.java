@@ -2555,6 +2555,9 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                     //Surface texture related
                     //activity.runOnUiThread(() -> UpdateCameraCharacteristics(PhotonCamera.getSettings().mCameraID));
                     if (PhotonCamera.getSettings().selectedMode != CameraMode.UNLIMITED && PhotonCamera.getSettings().selectedMode != CameraMode.RAWVIDEO) {
+                        if (!isDualSession) {
+                            mBackgroundHandler.post(() -> unlockFocus());
+                        }
                         //processExecutor.submit(() -> mImageSaver.runRaw(mCameraCharacteristics, mCaptureResult, new ArrayList<>(BurstShakiness), cameraRotation));
                         /*taskResults.removeIf(Future::isDone); //remove already completed results
                         Future<?> result =processExecutor.submit(() -> {
@@ -2587,12 +2590,9 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                                     cnt++;
                             }
                             PhotonCamera.getGyro().CompleteSequence();
-                            mBackgroundHandler.post(() -> {
-                                if (!isDualSession)
-                                    unlockFocus();
-                                else
-                                    createCameraPreviewSession(false);
-                            });
+                            if (isDualSession) {
+                                mBackgroundHandler.post(() -> createCameraPreviewSession(false));
+                            }
                             try{
                             if(mImageSaver.bufferSize() == 0){
                                 return;
