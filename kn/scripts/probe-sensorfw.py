@@ -4,14 +4,20 @@ DEVICE; it needs nothing but python3-dbus, which Ubuntu Touch has.
 
     python3 probe-sensorfw.py [seconds] [accel|gyro]
 
-WHAT IT IS FOR.  The axis signs are the one thing no source in this tree can
-answer: sensorfw's hybris adaptor is free to negate what the Android HAL
-reports, and Gravity.getRotation() is written against Android's axes (x right,
-y up, z out of the screen).  So this prints the vector AND the rotation
-Gravity would derive from it -- hold the phone upright and it must say 90,
-turn it left-side-up and it must say 0, right-side-up 270, upside down 180.
-If it does not, PC_SENSOR_AXES (host/sensorfw.c) remaps without a rebuild:
-e.g. PC_SENSOR_AXES=-x,-y,-z.
+WHAT IT IS FOR.  sensorfw's hybris adaptor is free to negate what the Android
+HAL reports, and everything downstream (Gravity.getRotation,
+OrientationEventListener) is written against Android's axes -- x right, y up,
+z out of the screen.  On eqe they match already -- propped upright and
+leaning back 25 degrees it reads (0.09, 8.81, 4.13), which is Android's pose
+exactly -- so the default transform is identity and this applies whatever
+host/sensorfw.c applies.
+
+The printed rotation is what Gravity would derive: hold the phone upright and it must say 90,
+left-side-up 0, right-side-up 270, upside down 180.  A phone lying flat says 90
+whatever it is doing -- that branch tests z alone, so PICK IT UP.
+
+If a device disagrees, PC_SENSOR_AXES (host/sensorfw.c) remaps without a
+rebuild, and AXES here matches it: "x,y,z" identity, "-y,x,z" a quarter turn.
 
 THREE THINGS THAT COST A SESSION EACH, all of them load-bearing in the C:
   * ONE D-BUS CONNECTION for the whole session.  sensorfw releases every
@@ -25,6 +31,18 @@ THREE THINGS THAT COST A SESSION EACH, all of them load-bearing in the C:
 """
 import os, socket, struct, sys, time
 import dbus
+
+# Must match g_sign/g_axis in host/sensorfw.c, or this tool answers a different
+# question from the app.  PC_SENSOR_AXES overrides both the same way.
+AXES = os.environ.get("PC_SENSOR_AXES", "x,y,z")
+
+def transform(x, y, z):
+    v = (x, y, z)
+    out = []
+    for part in AXES.replace(" ", "").split(","):
+        sign = -1.0 if part.startswith("-") else 1.0
+        out.append(sign * v["xyz".index(part.lstrip("+-"))])
+    return out
 
 SENSORS = {
     "accel": ("accelerometersensor", "local.AccelerometerSensor", "xyz",
@@ -64,7 +82,8 @@ def main():
     sensor.setInterval(dbus.Int32(session), dbus.Int32(10))
     sensor.setDownsampling(dbus.Int32(session), dbus.Boolean(False))
     sensor.start(dbus.Int32(session))
-    print("session %d on %s, interval %d ms" % (session, plugin, int(obj.Get(iface, "interval"))))
+    print("session %d on %s, interval %d ms, axes %s"
+          % (session, plugin, int(obj.Get(iface, "interval")), AXES))
 
     sock.settimeout(0.5)
     end, n, last = time.time() + secs, 0, 0.0
@@ -85,6 +104,7 @@ def main():
                     ts, x, y, z = struct.unpack_from("<Qfff", buf, off + 4 + i * 24)
                     n += 1
                 off += 4 + count * 24
+            x, y, z = transform(x, y, z)
             x, y, z = x * scale, y * scale, z * scale
             now = time.time()
             if now - last < 0.25:
