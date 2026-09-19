@@ -216,12 +216,49 @@ open class EGL14Api {
         ok.toInt() != 0
     }
 
+    /** Every context this shim makes is the pipeline's -- the window's is
+     *  mgwl's and never comes through here -- so it asks to be the one that
+     *  yields to the compositor.  PC_GL_PRIORITY=high|medium|low|off. */
     fun eglCreateContext(dpy: EGLDisplay?, config: EGLConfig?, share_context: EGLContext?,
-                         attrib_list: IntArray, offset: Int): EGLContext =
-        EGLContext(attrib_list.usePinned {
+                         attrib_list: IntArray, offset: Int): EGLContext {
+        val attribs = withContextPriority(dpy, attrib_list, offset)
+        return EGLContext(attribs.usePinned {
             photoncam.gles.eglCreateContext(dpy?.handle, config?.handle, share_context?.handle,
-                it.addressOf(offset))
+                it.addressOf(0))
         })
+    }
+
+    private fun withContextPriority(dpy: EGLDisplay?, attrib_list: IntArray, offset: Int): IntArray {
+        // The caller's list from `offset` up to and including its EGL_NONE.
+        val end = (offset until attrib_list.size).firstOrNull { attrib_list[it] == EGL_NONE }
+            ?: return attrib_list.copyOfRange(offset, attrib_list.size)
+        val own = attrib_list.copyOfRange(offset, end)
+        val level = contextPriority ?: return own + EGL_NONE
+        // An EGL that does not know the attribute fails the create outright
+        // with EGL_BAD_ATTRIBUTE, so it is only ever appended where advertised.
+        val ext = eglQueryString(dpy, EGL_EXTENSIONS).orEmpty()
+        if (!ext.split(' ').contains("EGL_IMG_context_priority")) {
+            println("[pc] GL: no EGL_IMG_context_priority, the pipeline runs at the default")
+            return own + EGL_NONE
+        }
+        println("[pc] GL: pipeline context priority 0x${level.toString(16)}")
+        return own + intArrayOf(EGL_CONTEXT_PRIORITY_LEVEL_IMG, level, EGL_NONE)
+    }
+
+    /** EGL_IMG_context_priority, spelled out: naming it links nothing. */
+    private val EGL_CONTEXT_PRIORITY_LEVEL_IMG = 0x3100
+    private val EGL_CONTEXT_PRIORITY_HIGH_IMG = 0x3101
+    private val EGL_CONTEXT_PRIORITY_MEDIUM_IMG = 0x3102
+    private val EGL_CONTEXT_PRIORITY_LOW_IMG = 0x3103
+
+    private val contextPriority: Int? by lazy {
+        when (platform.posix.getenv("PC_GL_PRIORITY")?.toKString()) {
+            "off" -> null
+            "high" -> EGL_CONTEXT_PRIORITY_HIGH_IMG
+            "medium" -> EGL_CONTEXT_PRIORITY_MEDIUM_IMG
+            else -> EGL_CONTEXT_PRIORITY_LOW_IMG
+        }
+    }
 
     fun eglDestroyContext(dpy: EGLDisplay?, ctx: EGLContext?): Boolean =
         photoncam.gles.eglDestroyContext(dpy?.handle, ctx?.handle).toInt() != 0
