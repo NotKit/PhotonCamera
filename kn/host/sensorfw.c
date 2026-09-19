@@ -62,18 +62,35 @@ static pthread_t       g_thread;
 static volatile int    g_running;   /* set before the thread starts, cleared to stop it */
 static int             g_started;
 
-/* The device frame, as three signed axis picks -- PC_SENSOR_AXES="-y,x,z" and
- * so on.  It exists because sensorfw's hybris adaptor is free to negate what
- * the Android HAL reports, and Gravity.getRotation() is written against
- * Android's axes; one env var settles it on the device instead of a rebuild.
- * Default is identity, which is what eqe's accelerometer measured face up. */
+/* SENSORFW'S AXES ARE ANDROID'S ON THIS DEVICE, and that is measured, not
+ * assumed: eqe propped upright in portrait and leaning back 25 degrees reads
+ * (0.09, 8.81, 4.13) m/s^2, which is exactly Android's g*cos(tilt) on y and
+ * g*sin(tilt) on z for that pose.  So the default is identity.
+ *
+ * It still has to be settable.  sensorfw's hybris adaptor is free to negate
+ * what the Android HAL reports, and everything downstream is written against
+ * Android's frame -- x right, y up, z out of the screen: Gravity.getRotation,
+ * OrientationEventListener's atan2, Gyro's integration.  A device whose adaptor
+ * differs is 180 degrees out in the whole x-y plane, which looks like every
+ * counter-rotated icon sitting upside down and JPEG_ORIENTATION wrong with it.
+ *
+ * PC_SENSOR_AXES fixes that without a rebuild: "-x,-y,z" is a half turn about
+ * z, "-y,x,z" a quarter turn.  scripts/probe-sensorfw.py applies the same
+ * transform and prints the rotation Gravity would derive, so a tilt tells you
+ * in seconds which one a phone needs.  A phone lying FLAT cannot answer -- that
+ * branch of getRotation tests z alone -- so pick it up before believing it. */
 static int   g_axis[3]  = { 0, 1, 2 };
 static float g_sign[3]  = { 1.0f, 1.0f, 1.0f };
 
 static void parse_axes(void)
 {
 	const char *s = getenv("PC_SENSOR_AXES");
-	if (!s || !*s) return;
+	/* Always said out loud: a report of "the icons are upside down" is then one
+	 * grep away from the transform that was actually in force. */
+	if (!s || !*s) {
+		fprintf(stderr, "[pc] sensor axes: x,y,z (sensorfw is already Android's)\n");
+		return;
+	}
 	int axis[3], i = 0;
 	float sign[3];
 	while (*s && i < 3) {
