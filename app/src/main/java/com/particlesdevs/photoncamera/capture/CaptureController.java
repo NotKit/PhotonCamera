@@ -611,6 +611,10 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                 Log.w(TAG, "Timed out waiting for pre-capture sequence to complete.");
                 mState = STATE_PICTURE_TAKEN;
                 captureStillPicture();
+                // Without this the afState tests below run as well and start a
+                // second burst, which resets mExposures and IMAGE_BUFFER while
+                // the first one is still in flight.
+                return;
             }
             if (afState == null) {
                 mState = STATE_PICTURE_TAKEN;
@@ -4399,6 +4403,12 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
             }
         } catch (CameraAccessException e) {
             Log.e(TAG, Log.getStackTraceString(e));
+            // The preview was stopped for this burst and only
+            // onCaptureSequenceCompleted brings it back, which a refused burst
+            // never reaches. Clear burst first: lockFocus() and
+            // rebuildPreviewBuilder() both return early while it is set.
+            burst = false;
+            unlockFocus();
         }
     }
 
