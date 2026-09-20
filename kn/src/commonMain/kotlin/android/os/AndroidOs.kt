@@ -3,23 +3,57 @@
 
 package android.os
 
+import kotlinx.cinterop.ByteVar
+import kotlinx.cinterop.CFunction
+import kotlinx.cinterop.CPointer
 import kotlinx.cinterop.alloc
+import kotlinx.cinterop.allocArray
+import kotlinx.cinterop.cstr
+import kotlinx.cinterop.invoke
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
+import kotlinx.cinterop.reinterpret
+import kotlinx.cinterop.toKString
 
-/** The device identity, off the host.  SDK_INT is 34 -- the app's newest
- *  guarded path -- because every Build.VERSION check here means "modern". */
+/* Android's system properties, through libhybris' libandroid-properties.  A
+ * desktop has no property area and no such library, so dlopen fails there and
+ * every field below falls back to the port's own identity. */
+private const val PROP_VALUE_MAX = 92
+
+private val propertyGet:
+    CPointer<CFunction<(CPointer<ByteVar>, CPointer<ByteVar>, CPointer<ByteVar>) -> Int>>? by lazy {
+    val lib = platform.posix.dlopen("libandroid-properties.so.1", platform.posix.RTLD_NOW)
+        ?: platform.posix.dlopen("libandroid-properties.so", platform.posix.RTLD_NOW)
+        ?: return@lazy null
+    platform.posix.dlsym(lib, "property_get")?.reinterpret()
+}
+
+private fun prop(key: String, fallback: String): String {
+    val fn = propertyGet ?: return fallback
+    return memScoped {
+        val buf = allocArray<ByteVar>(PROP_VALUE_MAX)
+        fn(key.cstr.ptr, buf, fallback.cstr.ptr)
+        buf.toKString().ifEmpty { fallback }
+    }
+}
+
+/** The device identity: the phone's own properties where there are any, else
+ *  the port's.  It is not cosmetic -- CameraManager2 picks the camera id format
+ *  off BRAND, and a wrong one makes it open a physical camera directly, which
+ *  the HAL refuses.  SDK_INT stays 34 -- the app's newest guarded path --
+ *  because every Build.VERSION check here means "modern". */
 object Build {
-    val BRAND: String = "photoncamera"
-    val DEVICE: String = "linux"
-    val MODEL: String = "kn"
-    val MANUFACTURER: String = "particlesdevs"
-    val PRODUCT: String = "photoncamera"
-    val HARDWARE: String = "linux"
-    val BOARD: String = "linux"
-    val ID: String = "kn"
-    val DISPLAY: String = "kn"
-    val FINGERPRINT: String = "particlesdevs/photoncamera/kn:14/kn/kn:user/release-keys"
+    val BRAND: String = prop("ro.product.brand", "photoncamera")
+    val DEVICE: String = prop("ro.product.device", "linux")
+    val MODEL: String = prop("ro.product.model", "kn")
+    val MANUFACTURER: String = prop("ro.product.manufacturer", "particlesdevs")
+    val PRODUCT: String = prop("ro.product.name", "photoncamera")
+    val HARDWARE: String = prop("ro.hardware", "linux")
+    val BOARD: String = prop("ro.product.board", "linux")
+    val ID: String = prop("ro.build.id", "kn")
+    val DISPLAY: String = prop("ro.build.display.id", "kn")
+    val FINGERPRINT: String =
+        prop("ro.build.fingerprint", "particlesdevs/photoncamera/kn:14/kn/kn:user/release-keys")
 
     object VERSION {
         const val SDK_INT: Int = 34
