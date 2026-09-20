@@ -80,7 +80,7 @@ if(NOT EXISTS "${CMAKE_BINARY_DIR}/include-deps/deps")
 	file(CREATE_LINK "${PORT_DEPS_DIR}" "${CMAKE_BINARY_DIR}/include-deps/deps" SYMBOLIC)
 endif()
 
-set(APP_JNI_LIBS dngCreator allocator flacRecorder camera2native ncnnMl)
+set(APP_JNI_LIBS dngCreator allocator flacRecorder camera2native ncnnMl mcraw)
 
 # ncnnMl: the real library when native/build_ncnn_linux.sh has installed an ncnn
 # prefix, and otherwise the same stub the Android CMakeLists generates for an ABI
@@ -129,9 +129,28 @@ add_library(dngCreator SHARED "${APP_CPP_DIR}/dngCreator.cpp")
 target_compile_definitions(dngCreator PRIVATE
 	VERSION_BUILD="${VERSION_BUILD}" VERSION_NAME="${VERSION_NAME}")
 
-add_library(allocator SHARED "${APP_CPP_DIR}/allocator.cpp")
+# rawF16.cpp is part of liballocator.so upstream, and the fp16 raw path calls
+# into it on every capture. AndroidBitmap_* comes from atlas's libandroid.so.0.
+add_library(allocator SHARED
+	"${APP_CPP_DIR}/allocator.cpp"
+	"${APP_CPP_DIR}/rawF16.cpp")
+if(EXISTS "${PORT_ANDROID_LIB}")
+	target_link_libraries(allocator PRIVATE "${PORT_ANDROID_LIB}")
+else()
+	message(WARNING "no ${PORT_ANDROID_LIB}: allocator's bitmap entry points will not resolve")
+endif()
+
 add_library(flacRecorder SHARED "${APP_CPP_DIR}/flacRecorder.cpp")
 add_library(camera2native SHARED "${APP_CPP_DIR}/native-engine.cpp")
+
+# MediaCinemaRAW (.mcraw) raw-video container. Globbed the same way the Android
+# CMakeLists does it, test/ excluded.
+file(GLOB MCRAW_SOURCES
+	"${APP_CPP_DIR}/mediacinemaraw/*.cpp"
+	"${APP_CPP_DIR}/mediacinemaraw/src/*.cpp")
+add_library(mcraw SHARED ${MCRAW_SOURCES})
+target_include_directories(mcraw PRIVATE "${APP_CPP_DIR}/mediacinemaraw/include")
+target_compile_options(mcraw PRIVATE -O3)
 
 foreach(lib ${APP_JNI_LIBS})
 	target_include_directories(${lib} PRIVATE

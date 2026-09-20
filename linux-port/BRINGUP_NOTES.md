@@ -691,3 +691,58 @@ Also fixed while getting here, and worth repeating because it is silent:
 `init_bt=$(grep ... | paste ...)` in `build-image.sh` exited the whole script
 under `set -e -o pipefail` the moment `initialize-at-build-time.txt` held
 nothing but comments — no image, no message, exit 0 through a pipe.
+
+## Rebased onto upstream `dev` ba55cec5 (2026-09-20)
+
+The branch had been sitting on `9efb24a4` while upstream took 136 commits: the
+M3E UI rework, HEIC, the fp16 raw path, `.mcraw` raw video and Halide CPU
+alignment. Only `.gitignore` conflicted. Four things broke the port, in the
+order a run finds them.
+
+### The natives overlay drifted from `app/src/main/cpp/CMakeLists.txt`
+
+Upstream added `rawF16.cpp` to the `allocator` target and a new `mcraw` library;
+`native/CMakeLists.txt` mirrors that file target by target and had neither.
+`Allocator.createF16()` is on the HDRX path for every capture, so the miss would
+have been an `UnsatisfiedLinkError` at merge time, not at load time.
+
+`allocator` now also needs `AndroidBitmap_getInfo`/`lockPixels`/`unlockPixels`
+(`wrapBitmap`). atlas's `libandroid.so.0` exports all three, so it is linked in
+rather than stubbed. `halidealign` is deliberately absent: the kernels are
+prebuilt arm64 `.a` files and `HalideAlignment` falls back to the GL pyramid
+when the library will not load.
+
+### `KeyguardManager$KeyguardDismissCallback` took down `SplashActivity`
+
+Upstream's secure-camera support calls `SecureCameraHelper.applyLockscreenFlags()`
+from `SplashActivity.onCreate`. HotSpot verifies a whole class on first use, and
+verifying `SecureCameraHelper.requestDismissKeyguard()` loads the callback type
+even though nothing calls that method — `NoClassDefFoundError` before the first
+activity. ART verifies per method, which is why this is a port-only failure.
+
+Fixed in atlas: `KeyguardManager.KeyguardDismissCallback`,
+`requestDismissKeyguard()` (nothing is locked, so it succeeds immediately),
+`createConfirmDeviceCredentialIntent()` (null, no credential configured) and
+no-op `Activity.setShowWhenLocked()`/`setTurnScreenOn()`.
+
+### `View.invalidateDrawable()` recursed until the stack ran out
+
+atlas routed it through the no-arg `invalidate()`. Material's
+`BaseProgressIndicator` overrides `invalidate()` and calls
+`getCurrentDrawable().invalidateSelf()` from it, which comes straight back —
+`StackOverflowError` out of `CameraActivity`'s layout, twice per run. AOSP
+damages the drawable's dirty bounds through `invalidate(l,t,r,b)` instead and
+never touches the no-arg overload. Fixed in atlas to match.
+
+### `org.json` is on ART's boot classpath and not in the JDK
+
+`RawVideoProcessor` writes the `.mcraw` container metadata with `JSONObject`, so
+`DefaultSaver`'s constructor — reached the moment the camera opens — died on
+`NoClassDefFoundError: org/json/JSONException`. It is not `android.*`, so it is
+not an atlas gap; it is a runtime the JDK lacks, the same case as `org.xmlpull`.
+Implemented in `shim/src/org/json/`. `ShimCheck` pins the writer's exact output,
+because that string is what ends up inside the container.
+
+After all four: `run.sh --seconds 35 --fresh --require-preview` boots to the
+camera, the gst test pattern reaches the viewfinder, and the new M3E shutter and
+mode switcher render. Nothing here was run on a device.

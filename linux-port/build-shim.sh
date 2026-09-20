@@ -3,7 +3,7 @@
 #
 # The shim holds classes ART's boot classpath has and the JDK lacks:
 # libcore.*, dalvik.*, android.system.*, android.icu.*, org.xmlpull.*,
-# org.kxml2.*. It compiles against the JDK alone — never against api-impl.jar —
+# org.kxml2.*, org.json.*. It compiles against the JDK alone — never against api-impl.jar —
 # and it is the last resort: a framework gap belongs in $ATLAS_DIR as a commit
 # on the atlas branch, not here (shim/README.md).
 #

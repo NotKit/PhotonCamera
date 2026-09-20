@@ -6,7 +6,7 @@ the app or the framework reaches for outside `java.*` and outside `android.*`
 has to come from somewhere — this jar.
 
 **Allowed here:** `libcore.*`, `dalvik.*`, `android.system.*`, `android.icu.*`,
-`org.xmlpull.*`, `org.kxml2.*`.
+`org.xmlpull.*`, `org.kxml2.*`, `org.json.*`.
 
 **Not allowed here:**
 
@@ -35,6 +35,7 @@ the sibling Mercurygram port's shim (`../BRINGUP_NOTES.md` records the runs):
 | `libcore.io.Libcore`, `Os`, `Posix`, `IoUtils` | process and preference code | Process IDs use `ProcessHandle`; raw descriptor calls use `libportshim.so`. |
 | `android.system.Os`, `OsConstants`, `ErrnoException`, `StructStat`, `StructStatVfs` | shared preferences | Filesystem metadata uses JDK NIO; descriptor calls use the shim JNI library. |
 | `dalvik.system.BlockGuard`, `VMRuntime`, `CloseGuard` | preferences, layouts, cursors | StrictMode and leak warnings are disabled. Arrays are ordinary HotSpot arrays; `addressOf` returns zero. |
+| `org.json.*` | `RawVideoProcessor`, the .mcraw container metadata | None known. `ShimCheck` pins the writer's exact output, which is what the container carries. |
 
 `../build-shim.sh` builds both `out/shim.jar` and `out/lib/libportshim.so`.
 `../tools/ShimCheck.java` exercises the native free function, thread IDs and
@@ -55,3 +56,10 @@ Framework gaps that were fixed in `$ATLAS_DIR` rather than shimmed here.
 - `CameraMetadata.getKeys(Class, Class, CameraMetadata, int[], boolean)`, AOSP's
   package-private key enumerator, which camera apps reach by reflection to read
   vendor keys.
+- `KeyguardManager.KeyguardDismissCallback` and `requestDismissKeyguard()`, plus
+  no-op `Activity.setShowWhenLocked()`/`setTurnScreenOn()`. HotSpot verifies a
+  whole class at once, so the missing callback type killed the splash activity
+  through a method nothing calls.
+- `View.invalidateDrawable()` damaging the drawable's bounds instead of calling
+  the no-arg `invalidate()`, which recursed forever against Material's progress
+  indicators.

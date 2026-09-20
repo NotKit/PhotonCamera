@@ -43,7 +43,8 @@
   output in a variable, then grep it.
 - The compat shim (`shim/`, built by `build-shim.sh`) may only contain classes
   ART's boot classpath has and the JDK lacks: `libcore.*`, `dalvik.*`,
-  `android.system.*`, `android.icu.*`, `org.xmlpull.*`, `org.kxml2.*`. It
+  `android.system.*`, `android.icu.*`, `org.xmlpull.*`, `org.kxml2.*`,
+  `org.json.*`. It
   compiles against the JDK alone. Nothing can be shimmed into `java.*`. A
   framework gap goes to `$ATLAS_DIR` instead, and is listed in `shim/README.md`
   under "Fixed in atlas".
