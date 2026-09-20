@@ -836,6 +836,17 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
         }
     }
     /**
+     * Whether this camera id names something the scan actually found.  The id
+     * may be a plain one ("2") or a logical-physical pair ("0-2"); the
+     * characteristics are keyed by the physical half either way.
+     */
+    private boolean hasCharacteristicsFor(String id) {
+        if (id == null || id.isEmpty()) return false;
+        String physical = id.contains("-") ? id.split("-")[1] : id;
+        return mCameraCharacteristicsMap.containsKey(physical);
+    }
+
+    /**
      * The viewfinder's lifecycle: the camera is opened once its texture exists.
      */
     public final PreviewSurface.Listener mSurfaceTextureListener
@@ -852,22 +863,27 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                 return;
             }
             try {
+                // mCameraID is cached when the application starts, which is
+                // before addIds() below has registered the ids this device
+                // really has -- so on a first run it still holds the built-in
+                // "0".  On a device whose ids carry a logical prefix ("0-2")
+                // that is not one of them, and an id the scan never found is no
+                // more usable than an empty one, so check rather than trust it.
                 String curID = PhotonCamera.getSettings().mCameraID;
-                if (curID == null || curID.isEmpty()) {
-                    // Settings caches mCameraID when the application starts,
-                    // which is before this controller's addIds() registers a
-                    // default for CAMERA_ID -- so on a first run it is still
-                    // unset here. Ask the preference store again, and failing
-                    // that take the first camera this device actually has.
+                if (!hasCharacteristicsFor(curID)) {
                     String stored = PreferenceKeys.getCameraID();
-                    if (stored == null || stored.isEmpty()) {
-                        if (mCameraCharacteristicsMap.isEmpty()) {
+                    if (hasCharacteristicsFor(stored)) {
+                        curID = stored;
+                    } else {
+                        // The scanned ids, which carry the logical prefix; the
+                        // characteristics map is keyed by the physical half
+                        // alone and so cannot name a camera to open.
+                        String[] known = mCameraManager2.getCameraIdList();
+                        if (known == null || known.length == 0) {
                             showToast("No cameras available");
                             return;
                         }
-                        curID = mCameraCharacteristicsMap.keySet().iterator().next();
-                    } else {
-                        curID = stored;
+                        curID = known[0];
                     }
                     PhotonCamera.getSettings().mCameraID = curID;
                 }
@@ -876,22 +892,14 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                 CameraCharacteristics chars = mCameraCharacteristicsMap.get(physicalID);
                 if (chars == null) {
                     Log.e(TAG, "No characteristics for physicalID=" + physicalID
-                            + " (mCameraID=" + PhotonCamera.getSettings().mCameraID + "). Falling back to first available.");
+                            + " (mCameraID=" + PhotonCamera.getSettings().mCameraID + ")");
                     // The ids that DO exist, which is what makes the line above
                     // actionable; there is no reason to list them otherwise.
                     for (String id : mCameraCharacteristicsMap.keySet()) {
                         Log.d(TAG, "Available camera ID: " + id);
                     }
-                    if (!mCameraCharacteristicsMap.isEmpty()) {
-                        String firstId = mCameraCharacteristicsMap.keySet().iterator().next();
-                        physicalID = firstId;
-                        logicalID = physicalID;
-                        PhotonCamera.getSettings().mCameraID = physicalID;
-                        chars = mCameraCharacteristicsMap.get(firstId);
-                    } else {
-                        showToast("No cameras available");
-                        return;
-                    }
+                    showToast("No cameras available");
+                    return;
                 }
                 Log.d(TAG, "ID:" + chars);
                 Size optimal = getPreviewOutputSize(getDisplaySize(), chars,
