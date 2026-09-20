@@ -546,6 +546,9 @@ public class CameraFragment extends Fragment {
         if (PhotonCamera.getCaptureController() == this.captureController) {
             PhotonCamera.setCaptureController(null);
         }
+        if (this.captureController != null) {
+            this.captureController.shutdownSessionExecutor();
+        }
         this.captureController = null;
 
         processExecutorService.shutdown();

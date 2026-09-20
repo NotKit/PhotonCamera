@@ -117,6 +117,7 @@ import java.util.Objects;
 import android.media.Image;
 import java.util.ArrayDeque;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -153,6 +154,14 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
     private static final String TAG = CaptureController.class.getSimpleName();
     public List<Future<?>> taskResults = new ArrayList<>();
     private final ExecutorService processExecutor;
+    /**
+     * A thread of its own for the capture session's callbacks.  They used to
+     * share processExecutor with the HDR merge, and a Kotlin/Native worker owns
+     * its queue: onConfigured -- which is what submits the repeating request
+     * that restarts the preview -- waited out a whole merge, so switching
+     * lenses during one left the viewfinder frozen until it finished.
+     */
+    private final ExecutorService sessionExecutor = Executors.newSingleThreadExecutor();
     /**
      * Camera state: Showing camera preview.
      */
@@ -1196,6 +1205,11 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
     /**
      * Closes the current {@link CameraDevice}.
      */
+    /** Called when the fragment holding this controller is going away. */
+    public void shutdownSessionExecutor() {
+        sessionExecutor.shutdown();
+    }
+
     public void closeCamera() {
         mCameraOpening.set(false);
         isCameraResumed = false;
@@ -3042,7 +3056,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                 SessionConfiguration configuration = new SessionConfiguration(
                         resolveVideoSessionType(),
                         outputConfigurations,
-                        processExecutor,
+                        sessionExecutor,
                         stateCallback
                 );
                 if (sessionParams != null) {
