@@ -79,24 +79,45 @@ class MessageQueue internal constructor() {
     }
 
     internal fun isEmpty(): Boolean = lock.withLock { items.isEmpty() }
-    internal fun quit() { lock.withLock { quitting = true; items.clear() } }
+
+    /** Android has two of these and they differ in what they owe the queue:
+     *  quit() drops everything still pending, quitSafely() keeps what is
+     *  already due and drops only what was timed for later.  Running the one
+     *  as the other loses work -- a capture's initProcess sits on this queue. */
+    internal fun quit(safe: Boolean) = lock.withLock {
+        quitting = true
+        if (safe) {
+            val now = SystemClock.uptimeMillis()
+            items.removeAll { it.dueAt > now }
+        } else {
+            items.clear()
+        }
+    }
+
     internal fun isQuitting(): Boolean = quitting
 }
 
 class Looper internal constructor() {
     val queue: MessageQueue = MessageQueue()
 
-    fun quit() = queue.quit()
-    fun quitSafely() = queue.quit()
+    fun quit() = queue.quit(safe = false)
+    fun quitSafely() = queue.quit(safe = true)
     fun getQueue(): MessageQueue = queue
     fun getThread(): java.lang.Thread = java.lang.Thread.currentThread()
 
     /** Drain until quit().  Sleeps 200 us between empty passes -- no condvar,
      *  but a pending message is never missed and the idle cost is negligible. */
     fun loop() {
-        while (!queue.isQuitting()) {
+        while (true) {
             val msg = queue.poll(SystemClock.uptimeMillis())
-            if (msg == null) { platform.posix.usleep(200u); continue }
+            if (msg == null) {
+                // Only once there is nothing left to run: a quitSafely() leaves
+                // its due messages behind on purpose, and leaving here on the
+                // quitting flag alone would throw them away again.
+                if (queue.isQuitting()) return
+                platform.posix.usleep(200u)
+                continue
+            }
             val cb = msg.callback
             if (cb != null) cb.run() else msg.target?.handleMessage(msg)
         }
@@ -204,15 +225,15 @@ class HandlerThread(private val threadName: String) {
         return looper
     }
 
+    // Neither of these waits, as on Android: they ask the looper to stop and
+    // return.  join() is what waits -- so the worker has to outlive them, and
+    // nulling it here made the join that follows a no-op.
     fun quit(): Boolean { looper?.quit(); return true }
 
-    fun quitSafely(): Boolean {
-        looper?.quit()
-        worker?.requestTermination(processScheduledJobs = false)
-        worker = null
-        return true
-    }
+    fun quitSafely(): Boolean { looper?.quitSafely(); return true }
 
+    /** Blocks until loop() has returned, which needs a quit first -- as on
+     *  Android, a join without one waits forever. */
     fun join() { worker?.requestTermination(processScheduledJobs = true)?.result; worker = null }
     fun getName(): String = threadName
     fun interrupt() {}
