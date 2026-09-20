@@ -59,8 +59,9 @@ log_text=$(cat "$log")
 
 for expected in "loaded libdngCreator.so" "loaded liballocator.so" \
                 "loaded libflacRecorder.so" "loaded libcamera2native.so" \
-                "loaded libncnnMl.so" \
-                "Allocator round trip ok" "native lib check: passed"; do
+                "loaded libncnnMl.so" "loaded libmcraw.so" \
+                "Allocator round trip ok" "Allocator.createF16 round trip ok" \
+                "native lib check: passed"; do
 	grep -qF "$expected" <<<"$log_text" || { echo "run.log has no '$expected'" >&2; exit 1; }
 done
 
