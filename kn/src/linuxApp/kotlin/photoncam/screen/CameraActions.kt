@@ -6,12 +6,14 @@
  * DECIDED is not View glue though, and this file is that, event for event, in
  * the order the Java wrote it:
  *
- *   CameraUiEvent -> a preference write, a CaptureController call, or both.
+ *   CameraUiEvent -> a preference write, a CaptureController call, a call into
+ *   the manual-mode console, or some of the three.
  *
  * Keep this file next to the Java when reading it.  Every branch below names
  * the Java method it came from, and where the port cannot do what the Java did
- * (there is no gallery activity and no manual-mode console yet) it says so and
- * logs, rather than silently doing nothing.
+ * (there is no gallery activity) it says so and logs, rather than silently
+ * doing nothing.  Swipe's manual-panel arm is here in full: ManualConsole.kt
+ * builds the console the Views used to, so both gestures do what they did.
  */
 package photoncam.screen
 
@@ -25,6 +27,7 @@ import com.particlesdevs.photoncamera.app.PhotonCamera
 import com.particlesdevs.photoncamera.capture.CaptureController
 import com.particlesdevs.photoncamera.composeui.state.CameraUiEvent
 import com.particlesdevs.photoncamera.composeui.state.SettingType
+import com.particlesdevs.photoncamera.circularbarlib.control.ManualParamModel
 import com.particlesdevs.photoncamera.control.CountdownTimer
 import com.particlesdevs.photoncamera.processing.parameters.IsoExpoSelector
 import com.particlesdevs.photoncamera.settings.PreferenceKeys
@@ -105,25 +108,59 @@ internal class CameraActions(
 			}
 			is CameraUiEvent.SetSetting -> applySetting(event.type, event.value)
 			is CameraUiEvent.SetSettingsBarVisible -> host.setSettingsBarVisible(event.visible)
-			// Swipe.SwipeUp/SwipeDown's manual-panel arm needs ManualModeConsole,
-			// whose knob Views are dropped; what is left of both gestures is the
-			// settings bar, which is the arm that does not touch the console.
 			is CameraUiEvent.ToggleManualBar ->
-				log("ToggleManualBar: the manual-mode console is not wired on this port yet")
-			is CameraUiEvent.SwipeUp -> host.setSettingsBarVisible(false)
-			is CameraUiEvent.SwipeDown -> host.setSettingsBarVisible(true)
-			// Swipe.onTap: the bar goes away and the tap focuses where it landed.
-			// The Java gates this on the manual focus knob being on AUTO; with no
-			// console there is no manual focus to be in the way.
+				if (rig.manualConsole?.isPanelVisible() == true) swipeDown() else swipeUp()
+			is CameraUiEvent.SwipeUp -> swipeUp()
+			is CameraUiEvent.SwipeDown -> swipeDown()
+			// ManualModeModel's ParamClickListener, which the console installed.
+			is CameraUiEvent.SelectManualParam ->
+				rig.manualUi.clicks?.onParamClicked(event.param.toConsole())
+			is CameraUiEvent.ResetManualParam ->
+				rig.manualUi.clicks?.onParamLongClicked(event.param.toConsole())
+			is CameraUiEvent.ManualKnobTick -> rig.manualUi.setTick(event.tick)
+			// Swipe.onTap: the bar goes away and the tap focuses where it landed
+			// -- but only while the focus knob is on AUTO, or a tap would undo
+			// the distance the knob was just set to.
 			is CameraUiEvent.ViewfinderTap -> {
 				host.setSettingsBarVisible(false)
-				rig.touchFocus?.processTouchToFocus(event.x, event.y)
+				if (manualFocusValue() == ManualParamModel.FOCUS_AUTO)
+					rig.touchFocus?.processTouchToFocus(event.x, event.y)
 			}
 			is CameraUiEvent.ViewfinderLongPress ->
 				rig.touchFocus?.processSpotWb(event.x, event.y)
 			else -> log("unhandled $event")
 		}
 	}
+
+	// -- Swipe.SwipeUp / Swipe.SwipeDown -------------------------------------
+
+	private fun swipeUp() {
+		// The settings bar is in front of the panel; the first swipe only closes it.
+		if (host.state.settingsBarVisible) {
+			host.setSettingsBarVisible(false)
+			return
+		}
+		rig.manualConsole?.setPanelVisibility(true)
+		host.setManualBarExpanded(true)
+		rig.touchFocus?.resetFocusCircle()
+	}
+
+	private fun swipeDown() {
+		val console = rig.manualConsole
+		if (console != null && console.isPanelVisible()) {
+			rig.touchFocus?.resetFocusCircle()
+			rig.controller?.reset3Aparams()
+			console.setPanelVisibility(false)
+			console.retractAllKnobs()
+			host.setManualBarExpanded(false)
+		} else {
+			host.setSettingsBarVisible(true)
+		}
+	}
+
+	private fun manualFocusValue(): Double =
+		rig.manualConsole?.getManualParamModel()?.getCurrentFocusValue()
+			?: ManualParamModel.FOCUS_AUTO
 
 	// -- CameraUIController.onShutter ---------------------------------------
 

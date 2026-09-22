@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import com.particlesdevs.photoncamera.composeui.state.CameraMode as UiCameraMode
 import com.particlesdevs.photoncamera.composeui.state.CameraUiEvent
+import com.particlesdevs.photoncamera.composeui.state.ManualParam
 import com.particlesdevs.photoncamera.ui.camera.compose.CameraScreenHost
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.toKString
@@ -100,6 +101,11 @@ private fun parse(name: String, surface: ComposePreviewSurface): CameraUiEvent? 
 		"hdrx" -> CameraUiEvent.ToggleHdrx
 		"swipeup" -> CameraUiEvent.SwipeUp
 		"swipedown" -> CameraUiEvent.SwipeDown
+		// The manual console: raise the panel, put a knob on the dial, turn it.
+		"manual" -> CameraUiEvent.ToggleManualBar
+		"mparam" -> manualParam(arg)?.let { CameraUiEvent.SelectManualParam(it) }
+		"mreset" -> manualParam(arg)?.let { CameraUiEvent.ResetManualParam(it) }
+		"mtick" -> arg.toIntOrNull()?.let { CameraUiEvent.ManualKnobTick(it) }
 		"bar" -> CameraUiEvent.SetSettingsBarVisible(arg != "off" && arg != "0")
 		"mode" -> runCatching { UiCameraMode.valueOf(arg.uppercase()) }.getOrNull()
 			?.let { CameraUiEvent.SelectMode(it) }
@@ -110,6 +116,9 @@ private fun parse(name: String, surface: ComposePreviewSurface): CameraUiEvent? 
 		else -> null
 	}
 }
+
+private fun manualParam(arg: String): ManualParam? =
+	runCatching { ManualParam.valueOf(arg.uppercase()) }.getOrNull()
 
 private fun point(arg: String, surface: ComposePreviewSurface): Pair<Float, Float>? {
 	// A comma would end the step, so the fractions are separated by an 'x'.

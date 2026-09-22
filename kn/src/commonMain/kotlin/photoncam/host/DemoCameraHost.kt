@@ -17,6 +17,11 @@ import com.particlesdevs.photoncamera.composeui.state.AuxLens
 import com.particlesdevs.photoncamera.composeui.state.CameraMode
 import com.particlesdevs.photoncamera.composeui.state.CameraUiEvent
 import com.particlesdevs.photoncamera.composeui.state.CameraUiState
+import com.particlesdevs.photoncamera.composeui.state.ManualBarState
+import com.particlesdevs.photoncamera.composeui.state.ManualKnobIcon
+import com.particlesdevs.photoncamera.composeui.state.ManualKnobItem
+import com.particlesdevs.photoncamera.composeui.state.ManualKnobState
+import com.particlesdevs.photoncamera.composeui.state.ManualParam
 import com.particlesdevs.photoncamera.composeui.state.SettingType
 import com.particlesdevs.photoncamera.composeui.state.SettingsBarEntry
 import com.particlesdevs.photoncamera.composeui.state.SettingsBarOption
@@ -108,8 +113,141 @@ object DemoCameraHost {
 			is CameraUiEvent.SwipeDown -> s.copy(settingsBarVisible = false)
 			is CameraUiEvent.OpenGallery -> s
 			is CameraUiEvent.OpenSettings -> s
+			// The console owns these; see reduceManual below.
+			is CameraUiEvent.SelectManualParam -> s
+			is CameraUiEvent.ResetManualParam -> s
+			is CameraUiEvent.ManualKnobTick -> s
 		}
 	)
+
+	// -- the manual console, without one -------------------------------------
+
+	/**
+	 * The five knobs, off a table instead of off CameraCharacteristics.  It is
+	 * the same shape ManualUiKn publishes from the real models, so the widget
+	 * can be turned and photographed on a headless sway with no camera at all.
+	 */
+	private val DEMO_KNOBS: Map<ManualParam, ManualKnobState> = mapOf(
+		ManualParam.ISO to sweep(
+			// IsoModel: a quarter-stop a tick, a label every fourth, 150/30.
+			angleMax = 150, autoAngle = 30,
+			values = generateSequence(50.0) { it * 1.1892 }.takeWhile { it < 6400 }.toList(),
+			label = { i, v -> if (i % 4 == 0) v.toInt().toString() else null },
+			text = { v -> v.toInt().toString() },
+		),
+		ManualParam.EXPOSURE to sweep(
+			angleMax = 250, autoAngle = 30,
+			values = generateSequence(1.0 / 8000) { it * 1.1892 }.takeWhile { it < 8 }.toList(),
+			label = { i, v -> if (i % 4 == 0) shutterText(v) else null },
+			text = { v -> shutterText(v) },
+		),
+		ManualParam.FOCUS to sweep(
+			angleMax = 120, autoAngle = 30,
+			values = (0..40).map { it / 10.0 },
+			label = { _, _ -> null },
+			text = { v -> fixed2(v) },
+			icons = true,
+		),
+		ManualParam.WB to sweep(
+			angleMax = 120, autoAngle = 30,
+			values = (2000..10000 step 50).map { it.toDouble() },
+			label = { _, v -> if (v.toInt() % 1000 == 0) "${'$'}{v.toInt() / 1000}K" else null },
+			text = { v -> "${'$'}{v.toInt()}K" },
+		),
+		// EvModel is the one knob that runs either way from its centre.
+		ManualParam.EV to centred(),
+	)
+
+	fun initialManual(): ManualBarState = ManualBarState(
+		values = ManualParam.entries.associateWith { "Auto" },
+	)
+
+	fun reduceManual(m: ManualBarState, e: CameraUiEvent): ManualBarState = when (e) {
+		is CameraUiEvent.ToggleManualBar -> m.copy(visible = !m.visible)
+		is CameraUiEvent.SwipeUp -> m
+		is CameraUiEvent.SwipeDown -> m
+		// ManualModeConsoleImpl.setModelToKnob: the tab already on the dial
+		// puts it away again, and another one swaps the wheel under it.
+		is CameraUiEvent.SelectManualParam ->
+			if (m.selected == e.param) m.copy(selected = null, knobVisible = false)
+			else m.copy(
+				selected = e.param,
+				knobVisible = true,
+				knob = DEMO_KNOBS[e.param] ?: ManualKnobState(),
+			)
+		is CameraUiEvent.ResetManualParam -> m.copy(
+			knob = m.knob.copy(selectedTick = 0),
+			values = m.values + (e.param to "Auto"),
+		)
+		is CameraUiEvent.ManualKnobTick -> {
+			val item = m.knob.itemAtTick(e.tick)
+			m.copy(
+				knob = m.knob.copy(selectedTick = e.tick),
+				values = if (item == null || m.selected == null) m.values
+				else m.values + (m.selected!! to item.text),
+			)
+		}
+		else -> m
+	}
+
+	/** A knob that starts at Auto and runs one way, as four of the five do. */
+	private fun sweep(
+		angleMax: Int,
+		autoAngle: Int,
+		values: List<Double>,
+		label: (Int, Double) -> String?,
+		text: (Double) -> String,
+		icons: Boolean = false,
+	): ManualKnobState = ManualKnobState(
+		angleMin = 0,
+		angleMax = angleMax,
+		tickMin = 0,
+		tickMax = values.size,
+		autoAngle = autoAngle,
+		selectedTick = 0,
+		items = listOf(ManualKnobItem(0, 0.0, "Auto", "Auto")) +
+			values.mapIndexed { i, v ->
+				ManualKnobItem(
+					tick = i + 1,
+					value = v,
+					text = text(v),
+					label = label(i, v),
+					icon = when {
+						!icons -> ManualKnobIcon.NONE
+						i == 0 -> ManualKnobIcon.FOCUS_NEAR
+						i == values.lastIndex -> ManualKnobIcon.FOCUS_FAR
+						else -> ManualKnobIcon.NONE
+					},
+				)
+			},
+	)
+
+	/** EvModel: -3..+3 in quarter stops, the auto gap straddling zero. */
+	private fun centred(): ManualKnobState {
+		val steps = (1..12).toList()
+		val items = listOf(ManualKnobItem(0, 0.0, "Auto", "Auto")) + steps.flatMap { i ->
+			val v = i * 0.25
+			listOf(
+				ManualKnobItem(i, v, fixed2(v), if (i % 4 == 0) "+${'$'}{(v).toInt()}" else null),
+				ManualKnobItem(-i, -v, fixed2(-v), if (i % 4 == 0) "-${'$'}{(v).toInt()}" else null),
+			)
+		}
+		return ManualKnobState(
+			angleMin = -40, angleMax = 40, tickMin = -12, tickMax = 12,
+			autoAngle = 5, selectedTick = 0, items = items,
+		)
+	}
+
+	private fun shutterText(seconds: Double): String =
+		if (seconds >= 1.0) "${'$'}{fixed2(seconds)}s" else "1/${'$'}{(1.0 / seconds).toInt()}"
+
+	/** String.format("%.2f") is JVM-only; two decimals by hand instead. */
+	private fun fixed2(v: Double): String {
+		val scaled = kotlin.math.round(v * 100).toLong()
+		val sign = if (scaled < 0) "-" else ""
+		val a = kotlin.math.abs(scaled)
+		return "${'$'}sign${'$'}{a / 100}.${'$'}{(a % 100).toString().padStart(2, '0')}"
+	}
 
 	/**
 	 * The event, for a log a person reads.  The `object` members of
