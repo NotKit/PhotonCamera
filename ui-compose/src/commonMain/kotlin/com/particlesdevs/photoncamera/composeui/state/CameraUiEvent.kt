@@ -27,4 +27,12 @@ sealed interface CameraUiEvent {
     data class ViewfinderLongPress(val x: Float, val y: Float) : CameraUiEvent
     object SwipeUp : CameraUiEvent
     object SwipeDown : CameraUiEvent
+
+    /**
+     * The manual-mode console. ParamClickListener's two calls, and the knob
+     * reporting the tick a turn came to rest on.
+     */
+    data class SelectManualParam(val param: ManualParam) : CameraUiEvent
+    data class ResetManualParam(val param: ManualParam) : CameraUiEvent
+    data class ManualKnobTick(val tick: Int) : CameraUiEvent
 }

@@ -41,6 +41,9 @@ import com.particlesdevs.photoncamera.composeui.camera.CameraIcons
 import com.particlesdevs.photoncamera.composeui.state.AuxLens
 import com.particlesdevs.photoncamera.composeui.state.CameraUiEvent
 import com.particlesdevs.photoncamera.composeui.state.CameraUiState
+import com.particlesdevs.photoncamera.composeui.state.ManualBarState
+import com.particlesdevs.photoncamera.composeui.state.ManualKnobState
+import com.particlesdevs.photoncamera.composeui.state.ManualParam
 import com.particlesdevs.photoncamera.composeui.state.SettingsBarEntry
 import com.particlesdevs.photoncamera.composeui.state.SettingsBarOption
 import com.particlesdevs.photoncamera.composeui.state.TopBarState
@@ -60,6 +63,14 @@ import com.particlesdevs.photoncamera.ui.camera.model.SettingsBarEntryModel
 class CameraScreenHost(private val context: Context) {
 
 	var state by mutableStateOf(CameraUiState(modeLabels = modeLabels(context)))
+		private set
+
+	/**
+	 * The manual-mode console, which the Android host keeps in the inflated
+	 * manual_palette.xml instead.  It is its own state because the console owns
+	 * it: ManualUiKn writes here on every KnobModel/ManualModeModel change.
+	 */
+	var manualBar by mutableStateOf(ManualBarState())
 		private set
 
 	/** Java-friendly, so a converted caller can pass a method reference. */
@@ -97,13 +108,34 @@ class CameraScreenHost(private val context: Context) {
 
 	// -- state the host pushes in -------------------------------------------
 
-	fun setOrientation(orientation: Int) = update { it.copy(orientation = orientation) }
+	fun setOrientation(orientation: Int) {
+		update { it.copy(orientation = orientation) }
+		updateManualBar { it.copy(orientation = orientation) }
+	}
 
 	fun setGalleryThumbnail(bitmap: ImageBitmap?) = update { it.copy(galleryThumbnail = bitmap) }
 
 	fun setSettingsBarVisible(visible: Boolean) = update { it.copy(settingsBarVisible = visible) }
 
 	fun setManualBarExpanded(expanded: Boolean) = update { it.copy(manualBarExpanded = expanded) }
+
+	// -- the manual console's, one per ManualModeModel/KnobModel field --------
+
+	fun updateManualBar(block: (ManualBarState) -> ManualBarState) {
+		manualBar = block(manualBar)
+	}
+
+	fun setManualPanelVisible(visible: Boolean) = updateManualBar { it.copy(visible = visible) }
+
+	fun setManualKnobVisible(visible: Boolean) = updateManualBar { it.copy(knobVisible = visible) }
+
+	fun setManualKnob(knob: ManualKnobState) = updateManualBar { it.copy(knob = knob) }
+
+	fun setManualSelectedParam(param: ManualParam?) = updateManualBar { it.copy(selected = param) }
+
+	fun setManualValueText(param: ManualParam, text: String?) = updateManualBar {
+		it.copy(values = it.values + (param to text.orEmpty()))
+	}
 
 	fun setFrameCount(text: String?) = update { it.copy(frameCount = text.orEmpty()) }
 

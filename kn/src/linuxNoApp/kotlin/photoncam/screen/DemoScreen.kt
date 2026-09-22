@@ -13,6 +13,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.particlesdevs.photoncamera.composeui.camera.CameraScreen
+import com.particlesdevs.photoncamera.composeui.camera.ManualPalette
 import com.particlesdevs.photoncamera.composeui.theme.PhotonTheme
 import photoncam.host.DemoCameraHost
 import photoncam.host.PlaceholderViewfinder
@@ -26,13 +27,19 @@ import photoncam.host.PlaceholderViewfinder
 fun CameraScreenContent() {
 	PhotonTheme {
 		var state by remember { mutableStateOf(DemoCameraHost.initial()) }
+		var manual by remember { mutableStateOf(DemoCameraHost.initialManual()) }
+		val onEvent: (com.particlesdevs.photoncamera.composeui.state.CameraUiEvent) -> Unit = { event ->
+			println("[pc] CameraUiEvent ${DemoCameraHost.describe(event)}")
+			state = DemoCameraHost.reduce(state, event)
+			manual = DemoCameraHost.reduceManual(manual, event)
+		}
 		CameraScreen(
 			state = state,
-			onEvent = { event ->
-				println("[pc] CameraUiEvent ${DemoCameraHost.describe(event)}")
-				state = DemoCameraHost.reduce(state, event)
-			},
+			onEvent = onEvent,
 			viewfinder = { PlaceholderViewfinder("viewfinder\n(no camera in this build)") },
+			// The console's own models are the app's, so the no-app build drives
+			// the knob off a table instead -- enough to turn it and look at it.
+			manualBar = { ManualPalette(manual, onEvent) },
 		)
 	}
 }

@@ -44,6 +44,8 @@ import com.particlesdevs.photoncamera.R_PREFERENCE_DEFAULTS
 import com.particlesdevs.photoncamera.R_PREFERENCE_VALUES
 import com.particlesdevs.photoncamera.app.PhotonCamera
 import com.particlesdevs.photoncamera.capture.CaptureController
+import com.particlesdevs.photoncamera.circularbarlib.console.ManualModeConsoleImpl
+import com.particlesdevs.photoncamera.composeui.camera.ManualPalette
 import com.particlesdevs.photoncamera.control.TouchFocus
 import com.particlesdevs.photoncamera.composeui.camera.CameraScreen
 import com.particlesdevs.photoncamera.composeui.settings.SettingsScreen
@@ -236,6 +238,10 @@ private class HostCameraEvents(private val rig: CameraRig) : CameraEventsListene
 	override fun onCharacteristicsUpdated(characteristics: CameraCharacteristics?) {
 		val flash = characteristics?.get(CameraCharacteristics.FLASH_INFO_AVAILABLE)
 		host.showFlashButton(flash != null && flash)
+		// CameraFragment's three lines here: the knobs' ranges come off THESE
+		// characteristics, so the console is rebuilt for every lens.
+		runCatching { rig.initManualConsole(characteristics) }
+			.onFailure { e -> report("manual console", e) }
 	}
 
 	override fun onError(o: Any?) = logE("onError: $o")
@@ -265,6 +271,10 @@ internal class CameraRig(
 	/** CameraFragment.mTouchFocus, built once the preview surface exists. */
 	var touchFocus: TouchFocus? = null
 		private set
+	/** CameraFragment.manualModeConsole, and the Compose surface it draws on. */
+	val manualUi = ManualUiKn(host)
+	var manualConsole: ManualModeConsoleImpl? = null
+		private set
 	/** The window is pinned portrait, so the CONTROLS turn instead. */
 	private var orientation: OrientationWatcher? = null
 
@@ -280,6 +290,16 @@ internal class CameraRig(
 		c.isDualSession = application.getSupportedDevice()?.specific?.specificSetting
 			?.isDualSessionSupported ?: false
 		PhotonCamera.setCaptureController(c)
+		// CameraFragment.onViewCreated's console lines.  The knobs themselves
+		// need characteristics and are added in onCharacteristicsUpdated; what
+		// is set up here is the surface and the observer that carries a knob's
+		// value into the preview request.
+		val console = ManualModeConsoleImpl.newInstance()
+		manualConsole = console
+		console?.setUiFactory(ManualUiKnFactory(manualUi))
+		console?.addParamObserver(c.getParamController())
+		// Swipe.init: the panel starts down.
+		console?.setPanelVisibility(false)
 		c.startBackgroundThread()
 		c.resumeCamera()
 		// CameraFragment.initTouchFocus, which runs right after resumeCamera and
@@ -305,6 +325,15 @@ internal class CameraRig(
 		println("[pc] camera resumed against ${HostWindow.widthPx}x${HostWindow.heightPx}")
 	}
 
+	/** CameraFragment.onCharacteristicsUpdated's console half. */
+	fun initManualConsole(characteristics: CameraCharacteristics?) {
+		val console = manualConsole ?: return
+		console.setPreserveManualWb(PreferenceKeys.isPreserveManualWbOn())
+		console.init(HostActivity(application), characteristics)
+		controller?.setManualModeConsole(console)
+		console.onResume()
+	}
+
 	fun stop() {
 		// CameraFragment.onPause's, and it matters: the sessions keep the
 		// hardware powered for the life of the process otherwise.
@@ -312,6 +341,9 @@ internal class CameraRig(
 		orientation = null
 		runCatching { PhotonCamera.getGravity()?.unregister() }
 		runCatching { PhotonCamera.getGyro()?.unregister() }
+		runCatching { manualConsole?.onPause() }
+		runCatching { manualConsole?.onDestroy() }
+		manualConsole = null
 		runCatching { controller?.closeCamera() }
 		runCatching { controller?.stopBackgroundThread() }
 		runCatching { preview.release() }
@@ -385,5 +417,6 @@ private fun CameraContent(onOpenSettings: () -> Unit) {
 		state = host.state,
 		onEvent = { host.onEvent(it) },
 		viewfinder = { CameraViewfinder(rig.preview, rig.overlay) },
+		manualBar = { ManualPalette(host.manualBar, { host.onEvent(it) }) },
 	)
 }
