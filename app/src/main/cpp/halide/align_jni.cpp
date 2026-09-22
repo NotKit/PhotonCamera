@@ -8,11 +8,15 @@
 // the kernels are caught, logged to logcat with the faulting PC, the raw
 // instruction word at the PC and the nearest symbol, and - when they hit the
 // thread that entered the JNI call - converted into a Java
-// IllegalStateException carrying the same text. On a Halide worker thread a
-// longjmp would unwind the wrong stack, so there we log and re-raise for a
-// normal tombstone. The handler uses snprintf/__android_log_print/dladdr,
-// which are not strictly async-signal-safe; this is a debugging aid, not a
-// production crash reporter.
+// IllegalStateException carrying the same text. A signal on any other thread is
+// handed straight back to the handler installed before this one and is not
+// reported here: a managed runtime raises these on purpose (HotSpot and
+// native-image both take every implicit null check as a SIGSEGV), so swallowing
+// one turns an ordinary NullPointerException into a crash. Only when nobody else
+// was handling it does this file log and re-raise for a normal tombstone, since
+// a longjmp off a Halide worker would unwind the wrong stack. The handler uses
+// snprintf/__android_log_print/dladdr, which are not strictly
+// async-signal-safe; this is a debugging aid, not a production crash reporter.
 
 #include <jni.h>
 #include <android/log.h>
@@ -159,7 +163,36 @@ void log_frames() {
     }
 }
 
+// Hand a signal back to whoever was handling it before us. Returns false when
+// nobody was (SIG_DFL/SIG_IGN), which is the only case this file may act on.
+bool chain_to_previous(int sig, siginfo_t *info, void *uctx) {
+    for (auto &s : g_trapped) {
+        if (s.sig != sig) continue;
+        if (s.old.sa_flags & SA_SIGINFO) {
+            if (s.old.sa_sigaction == nullptr) return false;
+            s.old.sa_sigaction(sig, info, uctx);
+            return true;
+        }
+        if (s.old.sa_handler == SIG_DFL || s.old.sa_handler == SIG_IGN) return false;
+        s.old.sa_handler(sig);
+        return true;
+    }
+    return false;
+}
+
 void fault_handler(int sig, siginfo_t *info, void *uctx) {
+    // Only a fault on the thread that entered the JNI call can be ours.
+    // Everything else belongs to whoever installed a handler before us, and
+    // under a managed runtime that is the common case rather than the rare one:
+    // HotSpot and GraalVM native-image both take every implicit null check as a
+    // SIGSEGV, so reporting one - let alone dying on it - turns an ordinary
+    // NullPointerException into a crash. Chain before anything else; the
+    // reporting below calls dladdr and snprintf, which are not async-signal-safe
+    // and have no business running on a signal that was never ours.
+    if (!(g_guard_active && pthread_equal(pthread_self(), g_guard_thread)) &&
+        chain_to_previous(sig, info, uctx))
+        return;
+
     ucontext_t *uc = (ucontext_t *)uctx;
     uintptr_t pc = 0;
 #if defined(__aarch64__)
@@ -200,9 +233,10 @@ void fault_handler(int sig, siginfo_t *info, void *uctx) {
         g_guard_active = 0;
         siglongjmp(g_fault_jmp, sig);
     }
-    // Fault on a Halide worker (or any non-guarded) thread: longjmp would
-    // unwind the wrong stack, so restore the default disposition and die with
-    // a proper tombstone - the report above is already in logcat.
+    // Fault on a Halide worker (or any non-guarded) thread, with no previous
+    // handler to chain to: longjmp would unwind the wrong stack, so restore the
+    // default disposition and die with a proper tombstone - the report above is
+    // already in logcat.
     LOGE("fault on non-guarded thread; re-raising %s", sig_name(sig));
     for (auto &s : g_trapped) {
         if (s.sig == sig) {
