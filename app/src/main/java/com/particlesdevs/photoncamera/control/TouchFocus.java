@@ -745,10 +745,18 @@ public class TouchFocus {
             // Never send an empty region array — a zero-area, zero-weight rectangle
             // clears the region without tripping strict HALs.
             MeteringRectangle zero = new MeteringRectangle(0, 0, 0, 0, 0);
+            // Both fields are set to null when there are no regions, and the
+            // null test has to be HERE, on the statement after the read: j2k
+            // asserts on a field read it cannot see tested, and the assertion
+            // throws on exactly the case regionsOr was written for.
+            MeteringRectangle[] afRegions = captureController.mPreviewMeteringAF;
+            if (afRegions == null) afRegions = new MeteringRectangle[]{zero};
+            MeteringRectangle[] aeRegions = captureController.mPreviewMeteringAE;
+            if (aeRegions == null) aeRegions = new MeteringRectangle[]{zero};
             if (maxRegions(characteristics, CameraCharacteristics.CONTROL_MAX_REGIONS_AF) > 0)
-                builder.set(CaptureRequest.CONTROL_AF_REGIONS, regionsOr(captureController.mPreviewMeteringAF, zero));
+                builder.set(CaptureRequest.CONTROL_AF_REGIONS, regionsOr(afRegions, zero));
             if (maxRegions(characteristics, CameraCharacteristics.CONTROL_MAX_REGIONS_AE) > 0)
-                builder.set(CaptureRequest.CONTROL_AE_REGIONS, regionsOr(captureController.mPreviewMeteringAE, zero));
+                builder.set(CaptureRequest.CONTROL_AE_REGIONS, regionsOr(aeRegions, zero));
             builder.set(CaptureRequest.CONTROL_AF_MODE, captureController.mPreviewAFMode);
             builder.set(CaptureRequest.CONTROL_AE_MODE, captureController.mPreviewAEMode);
             builder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_IDLE);

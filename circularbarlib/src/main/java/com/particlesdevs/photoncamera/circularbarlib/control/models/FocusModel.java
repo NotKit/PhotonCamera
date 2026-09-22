@@ -52,7 +52,7 @@ public class FocusModel extends ManualModel<Float> {
                 icon = KnobIcon.FOCUS_FAR;
             }
             String text = String.format(Locale.ROOT, "%.2f", values.get(tick));
-            getKnobInfoList().add(new KnobItemInfo(text, null, icon, tick + 1, (double) values.get(tick)));
+            getKnobInfoList().add(new KnobItemInfo(text, "", icon, tick + 1, (double) values.get(tick)));
         }
         knobInfo = new KnobInfo(0, KnobAngles.FOCUS_HALF, 0, values.size(), KnobAngles.FOCUS_AUTO);
     }

@@ -17,6 +17,10 @@ import java.util.ArrayList;
  */
 public class WbModel extends ManualModel<Integer> {
 
+    /** The scale's ends, which the console passes back in as the range. */
+    public static final int MIN_KELVIN = 2000;
+    public static final int MAX_KELVIN = 10000;
+
     public WbModel(CameraCharacteristics cameraCharacteristics, Range<Integer> range,
                    ManualParamModel manualParamModel, ValueChangedEvent valueChangedEvent, Vibrator v) {
         super(cameraCharacteristics, range, manualParamModel, valueChangedEvent, v);
@@ -32,8 +36,8 @@ public class WbModel extends ManualModel<Integer> {
         ArrayList<String> labels = new ArrayList<>();
         ArrayList<Integer> values = new ArrayList<>();
 
-        int minK = 2000;
-        int maxK = 10000;
+        int minK = range != null ? range.getLower() : MIN_KELVIN;
+        int maxK = range != null ? range.getUpper() : MAX_KELVIN;
         int stepK = 50;
 
         // Generate uniform steps from 2000K to 10000K
@@ -46,7 +50,7 @@ public class WbModel extends ManualModel<Integer> {
                 int thousand = k / 1000;
                 labels.add(String.valueOf(thousand) + "K");
             } else {
-                labels.add(null); // Null label instructs the knob to draw an intermediate tick mark
+                labels.add(""); // An empty label instructs the knob to draw an intermediate tick mark
             }
         }
 
@@ -57,7 +61,7 @@ public class WbModel extends ManualModel<Integer> {
             if (label != null && !label.isEmpty()) {
                 indicatorCount++;
             } else {
-                label = null;
+                label = "";
             }
             getKnobInfoList().add(new KnobItemInfo(candidates.get(tick), label, tick + 1, (double) values.get(tick)));
             tick++;
