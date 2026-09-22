@@ -32,7 +32,10 @@ fun CameraBottomBar(
 ) {
     Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 16.dp),
+            // layout_bottombuttons' own 5dp margin, and the 16dp the bottombar adds
+            // ON TOP of it only - padding both ends pushed the mode chips 24dp down
+            // where the View layout leaves 13dp.
+            Modifier.fillMaxWidth().padding(start = 5.dp, end = 5.dp, top = 21.dp, bottom = 5.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -41,8 +44,10 @@ fun CameraBottomBar(
                     painterResource(Res.drawable.ic_flip_camera),
                     contentDescription = "Lens Switch Button",
                     tint = Color.White,
+                    // match_parent in a camera_switch_button_size box, as
+                    // layout_bottombuttons.xml has it - not an inset icon.
                     modifier = Modifier
-                        .size(44.dp)
+                        .fillMaxSize()
                         .uprightIn(state.orientation)
                         .clickableNoRipple(enabled = !state.uiLocked) { onEvent(CameraUiEvent.FlipCamera) },
                 )

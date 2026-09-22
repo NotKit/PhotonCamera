@@ -76,15 +76,16 @@ fun CameraScreen(
                 }
             }
 
-            Box(Modifier.fillMaxWidth().weight(1f)) {
-                // The preview keeps the stream's aspect ratio and hugs the top, the way
-                // the dummy_reference_view anchored it.
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(state.viewfinderAspect)
-                        .align(Alignment.TopCenter),
-                ) {
+            // camera_container: the picture and nothing else. Everything below it
+            // belongs to layout_bottombar, and that boundary is the line the manual
+            // strip, the arrow and the shutter row are all measured from - split them
+            // across two lines and the knob floats away from its own arrow.
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(state.viewfinderAspect),
+            ) {
+                Box(Modifier.matchParentSize()) {
                     viewfinder()
                     ViewfinderOverlay(state)
                     // Swipe.java: tap focuses and puts the settings bar away, a long press
@@ -117,7 +118,10 @@ fun CameraScreen(
                     // through the activity, and hides itself with setPanelVisibility,
                     // which makes it measure zero.
                     Column(
-                        Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .padding(bottom = ManualBarLine),
                         horizontalAlignment = Alignment.End,
                     ) {
                         AuxButtons(
@@ -175,7 +179,11 @@ fun CameraScreen(
                 }
             }
 
-            Box(Modifier.fillMaxWidth()) {
+            // layout_bottombar: it reaches from the foot of the picture to the
+            // bottom of the screen and its content is CENTRED in that - the
+            // ConstraintLayout pinned the row to both edges, so the buttons float
+            // in the space rather than sitting on the screen's edge.
+            Box(Modifier.fillMaxWidth().weight(1f)) {
                 if (state.manualBarAvailable) {
                     val chevron by animateFloatAsState(
                         if (state.manualBarExpanded) 180f else 0f, label = "manualChevron",
@@ -186,17 +194,42 @@ fun CameraScreen(
                         tint = Color.White,
                         modifier = Modifier
                             .align(Alignment.TopCenter)
+                            // open_close_manual: its bottom is 10dp BELOW the line
+                            // the strip hangs from, so most of the arrow sits over
+                            // the strip rather than inside the bar.
+                            .offset(y = -(PhotonDimens.arrow - 10.dp + ManualBarLine))
                             .size(PhotonDimens.arrow)
                             .rotate(chevron)
                             .clickableNoRipple { onEvent(CameraUiEvent.ToggleManualBar) },
                     )
                 }
-                CameraBottomBar(state, onEvent, Modifier.padding(top = PhotonDimens.arrow / 2))
+                CameraBottomBar(
+                    state,
+                    onEvent,
+                    Modifier
+                        .align(Alignment.Center)
+                        // A screen too short for both keeps the buttons their own
+                        // size and lets them reach up over the picture, which is
+                        // what the constraint layout did when the space ran out.
+                        .wrapContentHeight(unbounded = true)
+                        .padding(top = PhotonDimens.arrow / 2),
+                )
             }
         }
 
     }
 }
+
+/**
+ * How far above the foot of the picture the manual strip and its arrow hang.
+ *
+ * In the app that line is the top of layout_bottombar, which dummy_reference_view
+ * puts a little above the preview box rather than exactly on it; here the bottom
+ * bar starts at the foot of the picture, so the line is carried as this. Measured
+ * off the app on a 20:9 panel: the arrow's box ends 9dp above the picture, the
+ * strip 19dp.
+ */
+private val ManualBarLine = 19.dp
 
 /** GestureDetector's SWIPE_THRESHOLD, in the same 100px units. */
 private const val SWIPE_THRESHOLD_PX = 100f
