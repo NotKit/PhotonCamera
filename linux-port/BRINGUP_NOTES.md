@@ -746,3 +746,92 @@ because that string is what ends up inside the container.
 After all four: `run.sh --seconds 35 --fresh --require-preview` boots to the
 camera, the gst test pattern reaches the viewfinder, and the new M3E shutter and
 mode switcher render. Nothing here was run on a device.
+
+### The Halide aligner's fault handler took SIGSEGV away from HotSpot
+
+The first device capture after the rebase saved its JPEG and then died. The only
+report is from the aligner, long after it finished:
+
+```
+D/ESD4D   : Halide alignment time: 341ms
+D/CameraEventsListener: ImageSaved: .../IMG_20260922_220650.jpg
+E/HalideAlignment: caught fault in halidealign native code: SIGSEGV
+                   pc=0x7f90bdaf7c insn=0xb940084a si_addr=0x8 sym=? base=0x0
+E/HalideAlignment: fault on non-guarded thread; re-raising SIGSEGV
+```
+
+Nothing is wrong with the kernels, and nothing is wrong with the camera. The
+faulting instruction is `ldr w10, [x2, #8]` with `si_addr=0x8`: a load of the
+compressed klass word from a null oop, at a PC `dladdr` cannot place in any ELF
+object. That is JIT'd Java in HotSpot's code cache taking an **implicit null
+check** — the ordinary way a `NullPointerException` is raised, several hundred
+times a second in a running VM.
+
+`align_jni.cpp`'s `ensure_fault_trap()` installs a process-wide handler for
+SIGILL/SIGBUS/SIGFPE/SIGSEGV/SIGABRT on the first `HalideAlignment` JNI call and
+never removes it — `ALIGN_FAULT_GUARD` arms only the per-thread `g_guard_active`
+flag, not the handlers. The handler saves the previous disposition but never
+delegates to it: off the guarded thread it restores the default and `raise()`s,
+so the first null check on any other thread after one burst is fatal. Upstream
+added it in `fbc9aa06`; the aligner itself is fine.
+
+This is a port-visible bug, not a port-only one — ART uses SIGSEGV for implicit
+null checks too — but the port is where it bites, because
+`linux-port/native/CMakeLists.txt` now builds `halidealign` for arm64 (it used
+to be absent, and `ESD4D` fell back to the GL pyramid, which is why captures
+worked before the rebase).
+
+Fixed in the launchers, not in the app: `port_preload_jsig` (`env.sh`, called by
+`run.sh`, `check-native-libs.sh`, `run-dng-pipeline.sh`, and open-coded in
+`click/run.sh`, which cannot source it) puts the JDK's **`libjsig.so`** in
+`LD_PRELOAD`. It interposes `sigaction()`, so the VM's handler stays in front and
+hands on only what it does not recognise. `PHOTONCAMERA_JSIG=off` drops it.
+
+Measured on oneplus11, same `ATL_DEBUG_TAP` shutter press each time:
+
+| aligner | `libjsig` | result |
+| --- | --- | --- |
+| `halide` | no | JPEG saved, then SIGSEGV — twice out of two |
+| `gl` | no | JPEG saved, app alive |
+| `halide` | yes | JPEG saved, app alive, alignment still 331 ms |
+
+One caveat found while confirming this. With `libjsig` the handler is still
+installed, and HotSpot now *delegates* to it what it does not recognise — so a
+genuine native fault reads as a `halidealign` report with the VM in the frames:
+
+```
+#00 libhalidealign.so   #01 libjvm.so   #02 JVM_handle_linux_signal
+#03 __kernel_rt_sigreturn   #04 pc ... ? ((nil))
+```
+
+`JVM_handle_linux_signal` in the trace is how to tell the two apart: present
+means HotSpot saw the signal first and declined it (a real crash), absent means
+the handler stole it (the bug above). One such fault does happen on the SIGTERM
+shutdown path, in EGL teardown (`si_addr=0x421`, `ldr x11, [x11]`, right after an
+`eglCreateContext`), which is what `click/device.sh stop` sends to get the AppCDS
+dump — so that dump may not complete. It is not spontaneous: left alone after a
+capture the app ran on for 4.5 min with zero faults, so it does not affect
+shooting.
+
+The null check itself is real and still there: with the GL aligner the same
+moment logs a *caught* `ClassNotFoundException:
+android.graphics.ImageDecoder$OnHeaderDecodedListener` out of Glide's decode
+path, loading the gallery thumbnail of the picture just written. That is an
+atlas gap worth closing, but it is not what killed the process.
+
+**The `-aot` vehicle needed the handler fixed, not the launcher.**
+`native-image` takes implicit null checks as SIGSEGV exactly as HotSpot does, and
+there is no `libjsig` to preload — Substrate VM has no such shim — so the image
+would have kept dying after the first burst. Fixed at the source instead:
+`fault_handler` now hands any signal that is not on the guarded thread back to
+the handler installed before it (`chain_to_previous`), and only logs and
+re-raises when nobody else was handling it. That is the behaviour both runtimes
+need, and the one ART needs too, so it is written unconditionally rather than
+behind a port `-D`: the previous code was wrong on Android as well, just not
+visibly.
+
+With that in place `libjsig` is no longer load-bearing for `-cds`, and it stays
+anyway — it is the documented way to keep the VM's handlers in front of *any*
+JNI library, and it is what makes a future one that repeats this mistake
+harmless. `PHOTONCAMERA_JSIG=off` is the way to exercise the chaining path on
+the JVM vehicle, which is what an `-aot` run does by construction.

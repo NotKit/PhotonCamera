@@ -108,4 +108,16 @@ for pair in "dngCreator:Java_com_particlesdevs_photoncamera_processing_DngCreato
 	echo "ok: lib$name.so exports $count $prefix* entry points"
 done
 
+# The Halide aligner is arm64-only and optional: ESD4D falls back to the GL
+# pyramid path when it is absent, so a missing library is a note, not a failure.
+if [ -f "$PORT_LIB_OUT/libhalidealign.so" ]; then
+	halide_syms=$("$PORT_NM" -D --defined-only "$PORT_LIB_OUT/libhalidealign.so" |
+		grep -c " T Java_com_particlesdevs_photoncamera_processing_cpu_HalideAlignment" || true)
+	[ "$halide_syms" -ge 5 ] ||
+		{ echo "libhalidealign.so exports only $halide_syms HalideAlignment entry points" >&2; exit 1; }
+	echo "ok: libhalidealign.so exports $halide_syms HalideAlignment entry points"
+else
+	echo "note: no libhalidealign.so; ESD4D will use the GL aligner"
+fi
+
 echo "app JNI libraries in $PORT_LIB_OUT"

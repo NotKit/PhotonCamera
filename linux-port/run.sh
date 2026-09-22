@@ -90,6 +90,7 @@ export ANDROID_APP_DATA_DIR="$data_dir"
 
 # libjvm.so is deliberately not in the launcher's RUNPATH
 export LD_LIBRARY_PATH="$JAVA_HOME/lib/server:$ATLAS_OUT${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+port_preload_jsig
 
 # The camera is the whole point of this app, and atlas gates it behind an opt-in.
 export ATL_UGLY_ENABLE_CAMERA="${ATL_UGLY_ENABLE_CAMERA:-1}"

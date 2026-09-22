@@ -46,6 +46,14 @@ export LD_LIBRARY_PATH="${PKG_ROOT}/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
 if [ "${VEHICLE}" = hotspot ]; then
     export JAVA_HOME="${PKG_ROOT}/jvm"
     export LD_LIBRARY_PATH="${JAVA_HOME}/lib/server:${LD_LIBRARY_PATH}"
+    # HotSpot takes SIGSEGV for every implicit null check, so a JNI library that
+    # installs its own handler and does not chain kills the VM on the next one
+    # (libhalidealign does exactly that — BRINGUP_NOTES.md). libjsig interposes
+    # sigaction() and keeps the VM's handler in front, delegating what it does
+    # not recognise. PHOTONCAMERA_JSIG=off drops it.
+    if [ "${PHOTONCAMERA_JSIG:-on}" != off ] && [ -f "${JAVA_HOME}/lib/libjsig.so" ]; then
+        export LD_PRELOAD="${JAVA_HOME}/lib/libjsig.so${LD_PRELOAD:+:${LD_PRELOAD}}"
+    fi
 fi
 
 # Keep app data in one dedicated place. atlas appends "<apk basename>_" to this,

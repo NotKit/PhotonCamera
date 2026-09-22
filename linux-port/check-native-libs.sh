@@ -31,6 +31,7 @@ mkdir -p "$tools_out"
 "$JAVA_HOME/bin/javac" -nowarn -d "$tools_out" -cp "$class_path" "$PORT_DIR/tools/NativeLibCheck.java"
 
 export LD_LIBRARY_PATH="$JAVA_HOME/lib/server:$ATLAS_OUT${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+port_preload_jsig
 # a fresh data dir, so nothing left by an earlier run can be what made this pass
 export ANDROID_APP_DATA_DIR="$PORT_OUT/native-libs-data"
 rm -rf "$ANDROID_APP_DATA_DIR"

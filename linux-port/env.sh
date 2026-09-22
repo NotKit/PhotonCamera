@@ -163,3 +163,16 @@ for _opt in ${PORT_EXTRA_JVM_ARGS:-}; do PORT_EXTRA_JVM_ARGV+=(-X "$_opt"); done
 unset _opt
 
 mkdir -p "$PORT_OUT" "$PORT_NATIVE_OUT" "$PORT_LIB_OUT"
+
+# HotSpot takes SIGSEGV for every implicit null check, so a JNI library that
+# installs its own signal handler and does not chain it kills the VM on the next
+# one — libhalidealign does exactly that (BRINGUP_NOTES.md). libjsig interposes
+# sigaction() so the VM's handler stays in front and delegates what it does not
+# recognise. Call this from anything that starts the launcher; PHOTONCAMERA_JSIG=off
+# drops it. Not an export: $JAVA_HOME is the target JDK on a cross build, and
+# preloading an arm64 object into the host's javac breaks every build step.
+port_preload_jsig() {
+	[ "${PHOTONCAMERA_JSIG:-on}" != off ] || return 0
+	[ -f "$JAVA_HOME/lib/libjsig.so" ] || return 0
+	export LD_PRELOAD="$JAVA_HOME/lib/libjsig.so${LD_PRELOAD:+:$LD_PRELOAD}"
+}

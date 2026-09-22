@@ -152,6 +152,34 @@ add_library(mcraw SHARED ${MCRAW_SOURCES})
 target_include_directories(mcraw PRIVATE "${APP_CPP_DIR}/mediacinemaraw/include")
 target_compile_options(mcraw PRIVATE -O3)
 
+# Halide CPU burst alignment, the aligner ESD4D selects by default. The kernels
+# and the runtime are Android arm64 objects, but nothing in them is bionic: every
+# undefined symbol is plain libc/pthread/dl plus __android_log_print, which the
+# androidlog stub answers. Halide's runtime is freestanding and reserves 64 bytes
+# for each opaque pthread object, over glibc/aarch64's 48, so the struct-size
+# mismatch that usually rules this out does not apply. Without it ESD4D falls
+# back to the GL pyramid aligner.
+set(HALIDE_DIR "${APP_CPP_DIR}/halide/arm64-v8a")
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64"
+		AND EXISTS "${HALIDE_DIR}/libhalide_runtime_android.a")
+	find_package(Threads REQUIRED)
+	add_library(halidealign SHARED "${APP_CPP_DIR}/halide/align_jni.cpp")
+	target_include_directories(halidealign PRIVATE
+		"${APP_CPP_DIR}/halide/include" "${HALIDE_DIR}")
+	set_target_properties(halidealign PROPERTIES CXX_STANDARD 17
+		CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+	# The kernels first, the runtime after: each archive carries a weak copy of
+	# the runtime, and the link keeps the first definition it sees.
+	target_link_libraries(halidealign PRIVATE
+		"${HALIDE_DIR}/alignburst_base_f16.a"
+		"${HALIDE_DIR}/alignburst_f16.a"
+		"${HALIDE_DIR}/libhalide_runtime_android.a"
+		Threads::Threads)
+	list(APPEND APP_JNI_LIBS halidealign)
+else()
+	message(WARNING "no Halide kernels for ${CMAKE_SYSTEM_PROCESSOR}: ESD4D will use the GL aligner")
+endif()
+
 foreach(lib ${APP_JNI_LIBS})
 	target_include_directories(${lib} PRIVATE
 		"${APP_CPP_DIR}" "${PORT_DEPS_DIR}" "${CMAKE_BINARY_DIR}/include-deps"
