@@ -231,8 +231,8 @@ class CameraScreenHost(private val context: Context) {
 	 * What the four CameraModeState classes did: which top-bar toggles a mode
 	 * shows, and how the viewfinder box is proportioned.
 	 *
-	 * [dpWidth] and [dpHeight] are the WINDOW's, in dp.  On Android they came
-	 * off DisplayMetrics; here the window is the only thing that knows the
+	 * [dpWidth], [dpHeight] and [density] are the WINDOW's.  On Android they
+	 * came off DisplayMetrics; here the window is the only thing that knows the
 	 * panel, so it says.
 	 */
 	fun applyMode(
@@ -241,6 +241,7 @@ class CameraScreenHost(private val context: Context) {
 		displayAspectRatio: Float,
 		dpWidth: Float,
 		dpHeight: Float,
+		density: Float,
 	) {
 		val uiMode = UiCameraMode.entries[mode.ordinal]
 		val video = mode == CameraMode.VIDEO

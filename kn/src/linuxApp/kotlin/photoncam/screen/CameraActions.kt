@@ -59,9 +59,16 @@ internal class CameraActions(
 	private var activeBackId = "0"
 	private var activeFrontId = "1"
 
+	/** The mode the state was last built for; the window may change under it. */
+	private var appliedMode: CameraMode? = null
+
 	init {
 		entries.createEntries()
 		pushSettingsBarEntries()
+		// The viewfinder box and the top bar's margin are both cut from the
+		// window's dp size, and the first applyCameraMode runs against the
+		// window Main opened rather than the one the shell hands back.
+		HostWindow.onChange = { appliedMode?.let { applyCameraMode(it) } }
 	}
 
 	// -- CameraUIController.onEvent -----------------------------------------
@@ -279,10 +286,12 @@ internal class CameraActions(
 
 	/** CameraFragment.applyCameraMode. */
 	fun applyCameraMode(mode: CameraMode) {
+		appliedMode = mode
 		val w = HostWindow.widthDp
 		val h = HostWindow.heightDp
 		host.applyMode(
 			mode, host.enableQuadRes, if (w > 0f) h / w else 16f / 9f, w, h,
+			HostWindow.density,
 		)
 		pushSettingsBarEntries()
 	}

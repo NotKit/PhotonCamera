@@ -17,10 +17,18 @@ object HostWindow {
 	var density: Float = 1f
 		private set
 
+	/** Told when the surface is configured again, which on this port happens
+	 *  AFTER the app has already laid itself out: the window is created at the
+	 *  size Main asks for and the shell then resizes it to the panel. */
+	var onChange: (() -> Unit)? = null
+
 	fun set(widthPx: Int, heightPx: Int, density: Float) {
+		val changed = widthPx != this.widthPx || heightPx != this.heightPx ||
+			density != this.density
 		this.widthPx = widthPx
 		this.heightPx = heightPx
 		this.density = density
+		if (changed) onChange?.invoke()
 	}
 
 	val widthDp: Float get() = if (density > 0f) widthPx / density else widthPx.toFloat()
