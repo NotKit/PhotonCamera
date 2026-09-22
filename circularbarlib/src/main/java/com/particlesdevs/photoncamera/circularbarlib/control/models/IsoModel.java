@@ -46,7 +46,7 @@ public class IsoModel extends ManualModel<Integer> {
         int preferredIntervalCount = 4;
         while (tick < candidates.size()) {
             boolean isLastItem = tick == candidates.size() + -1;
-            String label = null;
+            String label = "";
             if (tick % preferredIntervalCount == 0 || isLastItem) {
                 label = candidates.get(tick);
                 indicatorCount++;

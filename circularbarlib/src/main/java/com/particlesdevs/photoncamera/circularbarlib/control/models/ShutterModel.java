@@ -98,7 +98,7 @@ public class ShutterModel extends ManualModel<Long> {
         while (tick < candidates.size()) {
             int prefMpy = 1;
             if(candidates.get(tick).length() > 5) prefMpy = 2;
-            String label = null;
+            String label = "";
             if ((tick-tickShift) % (preferredIntervalCount*prefMpy) == 0) {
                 label = candidates.get(tick);
                 indicatorCount++;

@@ -7,7 +7,7 @@ package com.particlesdevs.photoncamera.circularbarlib.control.knob;
 public class KnobItemInfo implements Comparable<KnobItemInfo> {
     /** Value text for the manual bar, always set. */
     public final String text;
-    /** Text drawn at this tick, or null for a bare tick. */
+    /** Text drawn at this tick, or EMPTY for a bare tick. */
     public final String label;
     public final KnobIcon icon;
     public final int tick;
@@ -23,7 +23,10 @@ public class KnobItemInfo implements Comparable<KnobItemInfo> {
 
     public KnobItemInfo(String text, String label, KnobIcon icon, int tick, double value) {
         this.text = text;
-        this.label = label;
+        // "" and not null: every bare tick passes null here, and j2k asserts on
+        // a reference field's assignment -- which throws for the whole focus and
+        // white-balance knob.  The widgets already read the two the same way.
+        this.label = label == null ? "" : label;
         this.icon = icon;
         this.tick = tick;
         this.value = value;

@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.hardware.camera2.CameraCharacteristics;
 import android.os.Vibrator;
+import android.util.Range;
 
 import com.particlesdevs.photoncamera.circularbarlib.api.ManualModeConsole;
 import com.particlesdevs.photoncamera.circularbarlib.api.ManualUi;
@@ -151,8 +152,10 @@ public class ManualModeConsoleImpl implements ManualModeConsole {
                 manualModeModel::setIsoText, v);
         expoTimeModel = new ShutterModel(cameraCharacteristics, cameraProperties.expRange, manualParamModel,
                 manualModeModel::setExposureText, v);
-        wbModel = new WbModel(cameraCharacteristics, null, manualParamModel,
-                manualModeModel::setWbText, v);
+        // The Kelvin scale is the model's own, not the camera's: no
+        // CameraCharacteristic states it, so the console names it here.
+        wbModel = new WbModel(cameraCharacteristics, new Range<>(WbModel.MIN_KELVIN, WbModel.MAX_KELVIN),
+                manualParamModel, manualModeModel::setWbText, v);
 
         // Restore manual White Balance temperature across camera lenses if enabled
         if (preservedWb != ManualParamModel.WB_AUTO) {

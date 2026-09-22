@@ -61,7 +61,7 @@ public class EvModel extends ManualModel<Float> {
         for (int tick = 0; tick < values.size(); tick++) {
             float value = values.get(tick);
             if (!isZero(value)) {
-                String label = null;
+                String label = "";
                 if (isInteger(value)) {
                     label = String.valueOf((int) value);
                     if (value > 0.0f) {

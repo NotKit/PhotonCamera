@@ -126,6 +126,27 @@ for f in pathlib.Path(sys.argv[2]).rglob("*.kt"):
 print(f"`this(...)` delegation args on nullable targets, unasserted: {n}")
 BANGEOF
 
+# `this.field = param!!` WHERE BOTH SIDES ARE NULLABLE is the same throw once
+# more, in the one position neither bang_below.py nor r996 reaches: a plain
+# setter or a constructor whose parameter Java spelled nullable.
+# scripts/bang_param.py says what the shape is and what proves it.  Found by
+# ManualModeConsoleImpl.addKnobs' closing `setSelectedParam(null)`, which took
+# the whole manual-mode console down before a single knob was drawn.
+"$PY" - "$HERE" "$GEN_NEW" <<'PARAMEOF'
+import pathlib, sys
+sys.path.insert(0, str(pathlib.Path(sys.argv[1]) / "scripts"))
+from bang_param import strip_param_assignment_bang
+
+n = 0
+for f in pathlib.Path(sys.argv[2]).rglob("*.kt"):
+    s = f.read_text()
+    r = strip_param_assignment_bang(s)
+    if r != s:
+        f.write_text(r)
+        n += sum(1 for a, b in zip(s.split("\n"), r.split("\n")) if a != b)
+print(f"`this.field = param!!` on a nullable pair, unasserted: {n}")
+PARAMEOF
+
 # A `for` LOOP'S UPDATE IS THE LAST STATEMENT OF THE `while` j2k writes, so a
 # `continue` in the body skips it and the loop spins on the same index for
 # ever -- silently, at 100% of a core, with no exception and no output.

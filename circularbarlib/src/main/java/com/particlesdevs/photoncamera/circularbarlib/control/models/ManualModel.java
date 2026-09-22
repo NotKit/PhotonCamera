@@ -42,6 +42,8 @@ public abstract class ManualModel<T extends Comparable<? super T>> implements Kn
 
     public ManualModel(CameraCharacteristics cameraCharacteristics, Range<T> range, ManualParamModel manualParamModel, ValueChangedEvent valueChangedEvent, Vibrator v) {
         this.cameraCharacteristics = cameraCharacteristics;
+        // A fixed-focus lens has no focus range; fillKnobInfoList is where each
+        // model decides what to do about that.
         this.range = range;
         this.valueChangedEvent = valueChangedEvent;
         this.manualParamModel = manualParamModel;
