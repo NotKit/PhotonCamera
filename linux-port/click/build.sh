@@ -444,9 +444,19 @@ cp "$ROOT/fastlane/metadata/android/en-US/images/icon.png" "$INSTALL_DIR/$HOOK.p
 
 # clickable fills in @CLICK_ARCH@ and @CLICK_FRAMEWORK@; the version is the app's
 # own, from version.properties, so a click is identifiable as that build.
+#
+# Both halves of it: upstream moves VERSION_BUILD on every one of its builds and
+# VERSION_NAME hardly ever, so the name alone cannot tell two catch-ups apart —
+# the pre-rebase click and the one carrying 49k lines of upstream were both
+# "0.93". Appending the build keeps that visible on the device (`click list`, the
+# install path) and keeps each click an upgrade of the last, which is what lets
+# one replace the other in place.
 app_version=$(sed -n 's/^VERSION_NAME=//p' "$ROOT/app/version.properties" | tr -d ' \r')
-sed "s|@CLICK_VERSION@|${app_version:-0.0.0}|" "$CLICK_DIR/manifest.json" \
+app_build=$(sed -n 's/^VERSION_BUILD=//p' "$ROOT/app/version.properties" | tr -d ' \r')
+click_version="${app_version:-0.0.0}${app_build:+.$app_build}"
+sed "s|@CLICK_VERSION@|$click_version|" "$CLICK_DIR/manifest.json" \
 	>"$INSTALL_DIR/manifest.json"
+echo "click version: $click_version"
 
 # --- 9. bundle what the device does not have --------------------------------
 
