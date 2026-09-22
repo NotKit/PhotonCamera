@@ -47,7 +47,6 @@ fun AuxButtons(
             Modifier
                 .clip(RoundedCornerShape(50.dp))
                 .background(PhotonColors.AuxContainer)
-                .padding(4.dp)
                 .alpha(if (enabled) 1f else 0.5f),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -55,8 +54,10 @@ fun AuxButtons(
                 val selected = lens.cameraId == activeId
                 Box(
                     Modifier
-                        .padding(2.dp)
-                        .size(36.dp)
+                        // aux_button_internal_margin around aux_button_size, and
+                        // the container itself has no padding of its own.
+                        .padding(3.dp)
+                        .size(35.dp)
                         .clip(RoundedCornerShape(50.dp))
                         .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
                         .clickableNoRipple(enabled = enabled) { onSelect(lens.cameraId) },
@@ -64,7 +65,9 @@ fun AuxButtons(
                 ) {
                     Text(
                         lens.label,
-                        color = Color.White,
+                        // black_white_selectable: the lens on the dial reads dark
+                        // on the accent, the others white on the panel.
+                        color = if (selected) Color.Black else Color.White,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.uprightIn(orientation),

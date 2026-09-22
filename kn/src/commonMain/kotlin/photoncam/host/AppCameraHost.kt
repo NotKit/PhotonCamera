@@ -260,7 +260,7 @@ class CameraScreenHost(private val context: Context) {
 		// dp figure straight into a PIXEL margin and matching the View layout
 		// means keeping that, so it is divided back out here.
 		val topInset = if (displayAspectRatio > 16f / 9f) {
-			((dpHeight - dpWidth / 9f * 16f).toInt() / maxOf(1f, dpHeight / 160f)).dp
+			((dpHeight - dpWidth / 9f * 16f).toInt() / maxOf(1f, density)).dp
 		} else 0.dp
 
 		update {
@@ -359,7 +359,9 @@ class CameraScreenHost(private val context: Context) {
 
 		/** AuxButtonsLayout.getAuxButtonName. */
 		fun auxLabel(zoomFactor: Float): String {
-			val v = ((zoomFactor - 0.049f) * 10f).toInt()
+			// %.1f ROUNDS, and the 0.049 it is fed is what turns 1.0 into "1x":
+			// truncating here labelled the main lens 0.9x and the tele 1.9x.
+			val v = ((zoomFactor - 0.049f) * 10f + 0.5f).toInt()
 			return "${v / 10}.${v % 10}x".replace(".0", "")
 		}
 	}
