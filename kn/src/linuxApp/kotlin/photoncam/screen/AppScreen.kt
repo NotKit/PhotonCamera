@@ -22,10 +22,13 @@ package photoncam.screen
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.Modifier
 import android.app.Activity
 import android.app.Application
@@ -173,7 +176,11 @@ private class HostCameraEvents(private val rig: CameraRig) : CameraEventsListene
 	}
 
 	override fun notifyImageSavedStatus(saved: Boolean, savedFilePath: java.nio.file.Path?) {
-		if (saved) logD("ImageSaved: $savedFilePath") else logE("ImageSavingError")
+		if (!saved) { logE("ImageSavingError"); return }
+		logD("ImageSaved: $savedFilePath")
+		// CameraFragment's updateGalleryThumb(imageUri).  This runs on the
+		// processing thread, which is where the decode belongs.
+		host.setGalleryThumbnail(loadGalleryThumb(savedFilePath?.toString()))
 	}
 
 	override fun onProcessingError(obj: Any?) {
@@ -351,6 +358,7 @@ internal class CameraRig(
 		PhotonCamera.setCaptureController(null)
 		controller?.mTouchFocus = null
 		touchFocus = null
+		photoncam.host.HostWindow.onChange = null
 		actions = null
 		host.setEventListener(null)
 		controller = null
@@ -409,6 +417,12 @@ private fun CameraContent(onOpenSettings: () -> Unit) {
 			)
 		}.onFailure { e -> report("applyMode", e) }
 		onDispose { runCatching { rig.stop() }.onFailure { e -> report("camera stop", e) } }
+	}
+	// CameraFragment.onResume's updateGalleryThumb(null).  Off the frame thread:
+	// the newest picture is a full-size JPEG and skia decodes all of it.
+	LaunchedEffect(Unit) {
+		val thumb = withContext(Dispatchers.Default) { loadGalleryThumb(null) }
+		if (thumb != null) host.setGalleryThumbnail(thumb)
 	}
 	// Nothing on Ubuntu Touch can press a button for us; PC_EVENTS is how a
 	// phone run reaches the shutter and the carousel at all.
