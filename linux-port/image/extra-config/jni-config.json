@@ -1,50 +1,101 @@
 [
   {
     "name": "java.nio.Buffer",
-    "methods": [
-      { "name": "isDirect", "parameterTypes": [] },
-      { "name": "array", "parameterTypes": [] },
-      { "name": "arrayOffset", "parameterTypes": [] }
+    "fields": [
+      {
+        "name": "limit"
+      }
     ]
   },
   {
     "name": "java.nio.HeapByteBuffer",
     "methods": [
-      { "name": "isDirect", "parameterTypes": [] },
-      { "name": "array", "parameterTypes": [] },
-      { "name": "arrayOffset", "parameterTypes": [] }
+      {
+        "name": "isDirect",
+        "parameterTypes": []
+      }
     ]
   },
   {
     "name": "java.nio.HeapShortBuffer",
     "methods": [
-      { "name": "isDirect", "parameterTypes": [] },
-      { "name": "array", "parameterTypes": [] },
-      { "name": "arrayOffset", "parameterTypes": [] }
+      {
+        "name": "isDirect",
+        "parameterTypes": []
+      }
     ]
   },
   {
     "name": "java.nio.HeapCharBuffer",
     "methods": [
-      { "name": "isDirect", "parameterTypes": [] },
-      { "name": "array", "parameterTypes": [] },
-      { "name": "arrayOffset", "parameterTypes": [] }
+      {
+        "name": "isDirect",
+        "parameterTypes": []
+      }
     ]
   },
   {
     "name": "java.nio.HeapIntBuffer",
     "methods": [
-      { "name": "isDirect", "parameterTypes": [] },
-      { "name": "array", "parameterTypes": [] },
-      { "name": "arrayOffset", "parameterTypes": [] }
+      {
+        "name": "isDirect",
+        "parameterTypes": []
+      }
     ]
   },
   {
     "name": "java.nio.HeapFloatBuffer",
     "methods": [
-      { "name": "isDirect", "parameterTypes": [] },
-      { "name": "array", "parameterTypes": [] },
-      { "name": "arrayOffset", "parameterTypes": [] }
+      {
+        "name": "isDirect",
+        "parameterTypes": []
+      }
     ]
+  },
+  {
+    "name": "java.nio.HeapLongBuffer",
+    "methods": [
+      {
+        "name": "isDirect",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "java.nio.HeapDoubleBuffer",
+    "methods": [
+      {
+        "name": "isDirect",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "java.nio.ByteBuffer",
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "java.nio.ShortBuffer",
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "java.nio.CharBuffer",
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "java.nio.IntBuffer",
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "java.nio.FloatBuffer",
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "java.nio.LongBuffer",
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "java.nio.DoubleBuffer",
+    "allDeclaredMethods": true
   }
 ]

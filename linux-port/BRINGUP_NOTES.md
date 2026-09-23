@@ -907,8 +907,23 @@ with the rebase a day later. Nothing is wrong with `ni-config` and re-tracing
 would not have found it either — the desktop trace would have to run the same
 compute path to see the heap arm.
 
-Fixed in `image/extra-config/jni-config.json`: `isDirect`/`array`/`arrayOffset`
-on `java.nio.Buffer` and on the five `Heap*Buffer` classes. Demanded by run
+The first attempt registered `isDirect`/`array`/`arrayOffset` on
+`java.nio.Buffer` and the `Heap*Buffer` classes, and the click from run
+[35844260116](https://github.com/NotKit/PhotonCamera/actions/runs/35844260116)
+still crashed in the same place. Only `isDirect` took. A `SIGSEGV` tracer put the
+fault in `CallObjectMethod` for `array()`, called with a null method ID. The
+build log said why: `Method java.nio.HeapByteBuffer.array() not found`. The heap
+classes inherit `array()` and `arrayOffset()` and do not declare them.
+
+The typed class (`ByteBuffer` and the rest) declares them, but a name plus
+`parameterTypes` entry registers `array()[B`. atlas asks for
+`array()Ljava/lang/Object;`, which is the bridge method. Only
+`allDeclaredMethods` reaches the bridge, and `Buffer`'s abstract `array()` does
+not satisfy the lookup. A local native-image probe confirmed all three results.
+
+Fixed in `image/extra-config/jni-config.json`: `isDirect` on the seven
+`Heap*Buffer` classes, `allDeclaredMethods` on the seven typed buffers, and the
+`limit` field `get_nio_buffer_size` reads. First demanded by run
 [35835228698](https://github.com/NotKit/PhotonCamera/actions/runs/35835228698),
 `-aot` on oneplus11.
 
