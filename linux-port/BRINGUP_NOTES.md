@@ -931,3 +931,23 @@ Fixed in `image/extra-config/jni-config.json`: `isDirect` on the seven
 class at run time and needs no metadata, so the identical native code works
 there. Any JNI lookup atlas does by name is a latent `-aot` failure that only a
 run down that exact arm can find.
+
+### Then the image segfaulted decoding the first asset bitmap
+
+With the `Buffer` fix in, the capture got through the merge, Amaze and the
+exposure curve, and died in `BitmapFactory.nativeDecodeStream` loading
+`assets/initial_lut.png`. It was the same kind of fault: atlas does
+`GetMethodID(<stream's class>, "read", "([BII)I")` and `CallIntMethod`s the
+null result. The trace never decoded a stream.
+
+A native-image probe gave the lookup rule. `GetMethodID` walks up to a
+superclass entry only when the concrete class does not declare the method
+itself. `read` on `java.io.InputStream` alone is NULL for every stream that
+overrides it, and an entry naming the subclass without the method does not help.
+A subclass that only inherits `read` (`ParcelFileDescriptor.AutoCloseInputStream`
+over `FileInputStream`) resolves through its parent's entry.
+
+Fixed in `image/extra-config/jni-config.json`: `read([BII)I` on
+`AssetManager$AssetInputStream`, `FileInputStream`, `BufferedInputStream` and
+`ByteArrayInputStream`, and the `BitmapFactory$Options.inSampleSize` field that
+the gallery's decodes read.

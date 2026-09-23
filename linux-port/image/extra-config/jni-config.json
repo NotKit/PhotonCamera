@@ -97,5 +97,65 @@
   {
     "name": "java.nio.DoubleBuffer",
     "allDeclaredMethods": true
+  },
+  {
+    "name": "android.content.res.AssetManager$AssetInputStream",
+    "methods": [
+      {
+        "name": "read",
+        "parameterTypes": [
+          "byte[]",
+          "int",
+          "int"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "java.io.FileInputStream",
+    "methods": [
+      {
+        "name": "read",
+        "parameterTypes": [
+          "byte[]",
+          "int",
+          "int"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "java.io.BufferedInputStream",
+    "methods": [
+      {
+        "name": "read",
+        "parameterTypes": [
+          "byte[]",
+          "int",
+          "int"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "java.io.ByteArrayInputStream",
+    "methods": [
+      {
+        "name": "read",
+        "parameterTypes": [
+          "byte[]",
+          "int",
+          "int"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "android.graphics.BitmapFactory$Options",
+    "fields": [
+      {
+        "name": "inSampleSize"
+      }
+    ]
   }
 ]
