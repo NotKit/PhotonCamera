@@ -877,3 +877,42 @@ calls`) to `NotKit/atl-touch`, cutting an SDK release from them and moving
 CI until it is pushed *and* an SDK release names it. A capture that works here
 and fails in CI should send you to `IMAGE.txt` / `.port-atlas-rev` and
 `git log <pin>..HEAD` in `$ATLAS_DIR` before anything else.
+
+### The image segfaulted on the first heap `Buffer` a capture hands to GL
+
+With the pin moved, the `-aot` click got past `glProgramParameteri` and died
+differently: no Java exception, no fault report, just `EXIT=139` with the log
+stopping mid-line after `AssetManager_openAsset(assets/shaders/merge/merge00.glsl)`.
+`ESD4D.java:630` — the same statement that used to throw `NoSuchMethodError`.
+
+The aligner never ran: `D/Alignment: alignment pipeline size` (`ESD4D.java:912`)
+is absent from the log, and the last ESD4D line is `exposure:` from
+`ESD4D.java:536`. So this is upstream of alignment, in `GLProg.useShader`
+building the *first compute program* of the merge.
+
+`GLProg.storeBinary` reads the linked program back with
+`ByteBuffer.wrap(bytes)` — a **heap** buffer — and atlas's
+`glGetProgramBinary` hands it to `get_nio_buffer` (`util.c`), which resolves
+`isDirect`, `array` and `arrayOffset` with `GetMethodID` **on the buffer's
+concrete class**. In a native image a JNI lookup only works for what
+`jni-config.json` registers, and the traced config registers `isDirect` on
+`DirectByteBuffer`, `DirectFloatBufferU` and `DirectIntBufferU` and on nothing
+else — `java.nio.HeapByteBuffer` is not in it at all. A null `jmethodID` into
+`CallBooleanMethod` is the segfault.
+
+This is `extra-config/README.md`'s first case, exactly as written: *a traced
+call site is only registered for the arms the trace took.* Every buffer the
+2026-09-19 trace saw was direct, because `ByteBuffer.wrap` on this path arrived
+with the rebase a day later. Nothing is wrong with `ni-config` and re-tracing
+would not have found it either — the desktop trace would have to run the same
+compute path to see the heap arm.
+
+Fixed in `image/extra-config/jni-config.json`: `isDirect`/`array`/`arrayOffset`
+on `java.nio.Buffer` and on the five `Heap*Buffer` classes. Demanded by run
+[35835228698](https://github.com/NotKit/PhotonCamera/actions/runs/35835228698),
+`-aot` on oneplus11.
+
+**Why `-cds` never saw it:** HotSpot resolves `GetMethodID` against the real
+class at run time and needs no metadata, so the identical native code works
+there. Any JNI lookup atlas does by name is a latent `-aot` failure that only a
+run down that exact arm can find.

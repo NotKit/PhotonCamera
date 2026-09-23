@@ -1,1 +1,50 @@
-[]
+[
+  {
+    "name": "java.nio.Buffer",
+    "methods": [
+      { "name": "isDirect", "parameterTypes": [] },
+      { "name": "array", "parameterTypes": [] },
+      { "name": "arrayOffset", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "java.nio.HeapByteBuffer",
+    "methods": [
+      { "name": "isDirect", "parameterTypes": [] },
+      { "name": "array", "parameterTypes": [] },
+      { "name": "arrayOffset", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "java.nio.HeapShortBuffer",
+    "methods": [
+      { "name": "isDirect", "parameterTypes": [] },
+      { "name": "array", "parameterTypes": [] },
+      { "name": "arrayOffset", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "java.nio.HeapCharBuffer",
+    "methods": [
+      { "name": "isDirect", "parameterTypes": [] },
+      { "name": "array", "parameterTypes": [] },
+      { "name": "arrayOffset", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "java.nio.HeapIntBuffer",
+    "methods": [
+      { "name": "isDirect", "parameterTypes": [] },
+      { "name": "array", "parameterTypes": [] },
+      { "name": "arrayOffset", "parameterTypes": [] }
+    ]
+  },
+  {
+    "name": "java.nio.HeapFloatBuffer",
+    "methods": [
+      { "name": "isDirect", "parameterTypes": [] },
+      { "name": "array", "parameterTypes": [] },
+      { "name": "arrayOffset", "parameterTypes": [] }
+    ]
+  }
+]
