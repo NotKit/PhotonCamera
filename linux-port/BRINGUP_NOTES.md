@@ -807,11 +807,14 @@ genuine native fault reads as a `halidealign` report with the VM in the frames:
 `JVM_handle_linux_signal` in the trace is how to tell the two apart: present
 means HotSpot saw the signal first and declined it (a real crash), absent means
 the handler stole it (the bug above). One such fault does happen on the SIGTERM
-shutdown path, in EGL teardown (`si_addr=0x421`, `ldr x11, [x11]`, right after an
-`eglCreateContext`), which is what `click/device.sh stop` sends to get the AppCDS
-dump — so that dump may not complete. It is not spontaneous: left alone after a
-capture the app ran on for 4.5 min with zero faults, so it does not affect
-shooting.
+shutdown path, which is what `click/device.sh stop` sends to get the AppCDS dump
+— so that dump may not complete. Seen twice, in the same teardown but not the
+same signal: a SIGSEGV in EGL teardown (`si_addr=0x421`, `ldr x11, [x11]`, right
+after an `eglCreateContext`) and a SIGABRT from a C++ destructor. The SIGABRT is
+correctly *not* chained — HotSpot installs no SIGABRT handler, so nobody else
+wanted it and re-raising is right. Neither is spontaneous: left alone after a
+capture the app ran on for 4.5 min with zero faults, so shooting is unaffected
+and only a clean stop is.
 
 The null check itself is real and still there: with the GL aligner the same
 moment logs a *caught* `ClassNotFoundException:
@@ -834,4 +837,43 @@ With that in place `libjsig` is no longer load-bearing for `-cds`, and it stays
 anyway — it is the documented way to keep the VM's handlers in front of *any*
 JNI library, and it is what makes a future one that repeats this mistake
 harmless. `PHOTONCAMERA_JSIG=off` is the way to exercise the chaining path on
-the JVM vehicle, which is what an `-aot` run does by construction.
+the JVM vehicle, which is what an `-aot` run does by construction. Measured that
+way on oneplus11: alignment 350 ms, JPEG saved, process alive, no fault — the
+same configuration that was fatal before the fix.
+
+### The click CI could not take a picture, and the atlas pin was why
+
+The first `-aot` capture ever attempted died well before the aligner:
+
+```
+FATAL EXCEPTION: pool-4-thread-2
+java.lang.NoSuchMethodError: android.opengl.GLES30.glProgramParameteri(int, int, int)
+	at ...GLProg.useShader(GLProg.java:267)
+	at ...ESD4D.Run(ESD4D.java:630)
+```
+
+Not a native-image metadata gap, which is what an `-aot`-only failure usually
+is. `GLProg.useShader` asks for `GL_PROGRAM_BINARY_RETRIEVABLE_HINT` on every
+compute program — new in the rebase, 0 occurrences before it and 2 after — and
+atlas only grew those entry points in `1c4953c8` ("opengl: add the GLES 3.0
+program binary calls", 2026-09-20 19:20). The pin, `sdk-c1f1a59`, is 2026-09-20
+12:21: seven hours older, and `f661ea9f` moved the pin there before the atlas
+commit existed.
+
+It was never an `-aot` problem. `stage-prebuilt.sh` leaves an existing
+`$ATLAS_DIR` checkout alone and only clones `$ATLAS_PIN_REV` when there is none,
+so a local `make-click.sh` compiled the working tree (which had the commit)
+while CI cloned the pin (which did not) — **both** CI clicks were unable to
+capture, and only the local one worked. That is the same local-vs-CI split the
+`kn` port hit with arm64 ncnn.
+
+Fixed by pushing the two atlas commits that were only ever local (`clipboard:
+copy and paste through content-hub`, `opengl: add the GLES 3.0 program binary
+calls`) to `NotKit/atl-touch`, cutting an SDK release from them and moving
+`click/atl-sdk.tag`.
+
+**The lesson is about the pin, not the calls.** `$ATLAS_PIN_REV` is derived from
+`atl-sdk.tag`, so an atlas fix a bring-up session makes locally is invisible to
+CI until it is pushed *and* an SDK release names it. A capture that works here
+and fails in CI should send you to `IMAGE.txt` / `.port-atlas-rev` and
+`git log <pin>..HEAD` in `$ATLAS_DIR` before anything else.
