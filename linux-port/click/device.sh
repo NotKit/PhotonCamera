@@ -49,8 +49,9 @@ dev_stop() {
 	# SIGTERM does not stop the launcher (the VM hangs in its exit), so this ends
 	# in SIGKILL either way; anchor the pattern so it does not match the shell
 	# ssh started it from. Lomiri starts the versioned path from the desktop file
-	# while run above goes through 'current', so match either.
-	local pat="^/opt/click.ubuntu.com/$PKG/[^/]+/lib/android-translation-layer-hotspot "
+	# while run above goes through 'current', so match either; -cds runs the
+	# hotspot launcher and -aot the image one.
+	local pat="^/opt/click.ubuntu.com/$PKG/[^/]+/lib/android-translation-layer-(hotspot|image) "
 	local jsa="\$HOME/.cache/$PKG/app.jsa"
 	"${SSH[@]}" "
 		# SIGTERM first, and not because it stops anything: HotSpot's own handler
