@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=PhotonCamera
+Icon=photoncamera
+Exec=/usr/bin/photoncamera
+X-Nemo-Application-Type=no-invoker
+
+# The camera goes through libhybris' camera2 NDK (binder, ashmem, /system,
+# /vendor); no Sailjail profile grants that yet, so it runs unsandboxed.
+[X-Sailjail]
+Sandboxing=Disabled
