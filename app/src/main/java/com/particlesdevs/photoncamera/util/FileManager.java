@@ -28,6 +28,18 @@ public class FileManager {
     public static File sDCIM_CAMERA = new File(sEXTERNAL_DIR + "//DCIM//Camera//");
     public static List<File> tempImageFiles;
 
+    // Set by the Ubuntu Touch port, which has no shared DCIM: photos go straight
+    // into this dir, raw captures into Raw/, backups and tuning stay private.
+    static {
+        String photosDir = System.getProperty("photoncamera.photos.dir");
+        if (photosDir != null) {
+            sDCIM_CAMERA = new File(photosDir);
+            sPHOTON_RAW_DIR = new File(photosDir, "Raw");
+            sPHOTON_DIR = new File(sEXTERNAL_DIR, "PhotonCamera");
+            sPHOTON_TUNING_DIR = new File(sPHOTON_DIR, "Tuning");
+        }
+    }
+
 
     public static void CreateFolders() {
         Log.d(TAG, "CreatedFolder : " + sDCIM_CAMERA + '=' + sDCIM_CAMERA.mkdirs());

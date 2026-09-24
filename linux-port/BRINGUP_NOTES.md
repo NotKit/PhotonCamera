@@ -968,3 +968,19 @@ because it instantiated them, and none of the post-pipeline nodes.
 Fixed in `image/gen-reflect-config.py`: every class whose constant pool names
 the `Tunable` annotation gets `allDeclaredFields`. That covers tunables added
 later, too.
+
+### Photos go to ~/Pictures/PhotonCamera, not the app dir
+
+atlas makes external storage the app's private data dir, so photos landed in
+`~/.local/share/photoncamera-jvm.nekit/app.apk_/DCIM/Camera`. There they were
+hidden from the gallery. Remapping the storage root cannot fix that:
+`FileManager` builds `DCIM/Camera` and `DCIM/PhotonCamera/{Raw,Tuning}` under it
+itself.
+
+This is an app change, guarded by a property as linux-port/CLAUDE.md asks:
+`FileManager` reads `-Dphotoncamera.photos.dir`. When it is set, photos go into
+that dir and raw captures into its `Raw/`. Backups and tuning go to
+`<app dir>/PhotonCamera`. On Android the property is unset and the paths do not
+change. The click's `run.sh` sets it to `~/Pictures/PhotonCamera`, like the
+stock camera's `~/Pictures/camera.ubports`. Photos taken by older builds are
+not moved.

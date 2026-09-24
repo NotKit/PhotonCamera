@@ -57,11 +57,15 @@ if [ "${VEHICLE}" = hotspot ]; then
 fi
 
 # Keep app data in one dedicated place. atlas appends "<apk basename>_" to this,
-# so the app's own dir is <this>/app.apk_ — where the DNGs and the logs land.
-# Honour a caller's value so a debug run can use a throwaway dir instead of the
-# real prefs (mirrors linux-port/run.sh).
+# so the app's own dir is <this>/app.apk_. Honour a caller's value so a debug
+# run can use a throwaway dir instead of the real prefs (mirrors linux-port/run.sh).
 export ANDROID_APP_DATA_DIR="${ANDROID_APP_DATA_DIR:-${XDG_DATA_HOME:-${HOME}/.local/share}/${PKG_NAME}}"
 mkdir -p "${ANDROID_APP_DATA_DIR}"
+
+# Photos go to ~/Pictures/PhotonCamera and raw captures to its Raw/, like
+# ~/Pictures/camera.ubports; backups and tuning stay in the app dir
+# (FileManager reads photoncamera.photos.dir).
+PHOTOS_DIR="${PHOTONCAMERA_PHOTOS_DIR:-${HOME}/Pictures/PhotonCamera}"
 
 # liblog drops anything below INFO without this, and PhotonCamera's own logging
 # is mostly Log.d; on the device the journal is the only log there is.
@@ -160,6 +164,7 @@ else
     set -- --api-impl-jar "${PKG_ROOT}/atlas/api-impl.jar" \
            --classpath "${PKG_ROOT}/classpath/shim.jar:${PKG_ROOT}/classpath/*" "$@"
 fi
+set -- -X "-Dphotoncamera.photos.dir=${PHOTOS_DIR}" "$@"
 
 exec "${LAUNCHER}" \
     --framework-res "${PKG_ROOT}/atlas/framework-res.apk" \
