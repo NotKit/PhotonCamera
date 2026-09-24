@@ -951,3 +951,20 @@ Fixed in `image/extra-config/jni-config.json`: `read([BII)I` on
 `AssetManager$AssetInputStream`, `FileInputStream`, `BufferedInputStream` and
 `ByteArrayInputStream`, and the `BitmapFactory$Options.inSampleSize` field that
 the gallery's decodes read.
+
+### Then every `-aot` JPEG came out black
+
+With the stream fix in, the capture finished on oneplus11, but every JPEG was
+black apart from the watermark. The logs showed
+`Histogram already full, coefficient:0.0` and `Exposure curve: 1023 -> NaN`,
+where `-cds` and kn read `coefficient:0.99`.
+
+`AutoExposureCurve`'s `@Tunable` fields have no initialisers.
+`TunableInjector` fills them through `getDeclaredFields()`, which in the image
+returns an empty array for an unregistered class. There is no error; the fields
+just stay 0. The trace registered `ESD4D`, `PyramidAlignment` and `Parameters`,
+because it instantiated them, and none of the post-pipeline nodes.
+
+Fixed in `image/gen-reflect-config.py`: every class whose constant pool names
+the `Tunable` annotation gets `allDeclaredFields`. That covers tunables added
+later, too.

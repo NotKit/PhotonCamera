@@ -25,7 +25,12 @@ The second family is **span array types**: `Spannable.getSpans()` does
 `Array.newInstance(type, n)`, and an array class instantiated reflectively has
 to be registered for unsafe allocation.
 
-The third is JNI only: **the class names the native libraries carry**.
+The third is the classes with **@Tunable fields**: TunableInjector writes their
+defaults and saved values through `getDeclaredFields()`, which in the image
+returns nothing for an unregistered class -- no error, the fields just stay 0.
+A trace only registers the tunable classes it happened to instantiate.
+
+The fourth is JNI only: **the class names the native libraries carry**.
 `FindClass` takes an internal name out of the binary's string table, so the
 names are all there to be read -- from atlas's own
 `libtranslation_layer_main.so`, which drives the whole framework from C, and
@@ -75,6 +80,10 @@ SPAN_ROOTS = ("android/text/style/CharacterStyle", "android/text/style/Paragraph
 # androidx navigation's generated argument classes, reached through NavArgsLazy
 # by their *methods*: fromBundle is static, so constructors alone are not enough.
 NAVARGS_ROOTS = ("androidx/navigation/NavArgs",)
+
+# A class that annotates a field with @Tunable has this descriptor in its
+# constant pool.
+TUNABLE = b"Lcom/particlesdevs/photoncamera/settings/annotations/Tunable;"
 
 # An internal class name in a binary's string table: FindClass's argument.
 # com/particlesdevs is the app's own package, which its five JNI libraries call
@@ -143,6 +152,7 @@ def native_classes(spec):
 def main():
     out, out_jni, natives, jars = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4:]
     parents = {}
+    tunable = set()
     for jar in jars:
         try:
             zf = zipfile.ZipFile(jar)
@@ -152,9 +162,12 @@ def main():
             for name in zf.namelist():
                 if not name.endswith(".class"):
                     continue
-                info = read_class(zf.read(name))
+                data = zf.read(name)
+                info = read_class(data)
                 if info:
                     parents[info[0]] = info[1]
+                    if TUNABLE in data:
+                        tunable.add(info[0])
 
     def descends_from(name, roots, seen=None):
         """Does name reach any of roots through extends or implements?"""
@@ -182,6 +195,10 @@ def main():
                  "allDeclaredConstructors": True}
                 for c in navargs]
 
+    tunables = sorted(tunable)
+    entries += [{"name": c.replace("/", "."), "allDeclaredFields": True}
+                for c in tunables]
+
     # A name the class path does not have would be registered as unresolvable;
     # java.* is not on the class path but is always there.
     named = {c for c in native_classes(natives)
@@ -202,7 +219,7 @@ def main():
             f.write("\n")
     print(f"reflection: {len(picked)} name-instantiated classes, "
           f"{len(spans)} span array types, {len(navargs)} navigation Args "
-          f"classes, {len(app)} classes and {len(jdk)} JDK names the natives "
+          f"classes, {len(tunables)} classes with @Tunable fields, {len(app)} classes and {len(jdk)} JDK names the natives "
           f"call FindClass with, out of {len(parents)} classes")
 
 
