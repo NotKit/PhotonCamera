@@ -30,6 +30,15 @@ typedef const unsigned char *(*gl_get_string_fn)(unsigned);
 
 #define MAX_TOUCH 10
 
+/* Bionic keeps its TLS slots at tp+16.., which with glibc on aarch64 is where
+ * the executable's own TLS block starts; Sailfish's libhybris then reads our
+ * variables as its DTV and faults in the first EGL call.  A 256-aligned block
+ * starts at tp+256 instead.  The constructor keeps it from being gc'd. */
+static __thread char mgwl_tls_pad __attribute__((aligned(256)));
+__attribute__((constructor)) static void mgwl_tls_pad_keep(void) {
+    __asm__ volatile("" :: "r"(&mgwl_tls_pad));
+}
+
 struct mgwl {
     struct wl_display    *display;
     struct wl_registry   *registry;
