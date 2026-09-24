@@ -295,9 +295,10 @@ public class Camera2ApiAutoFix {
 
     @SuppressLint("NewApi")
     public void BL() {
-        float[] level = result.get(SENSOR_DYNAMIC_BLACK_LEVEL);
         BlackLevelPattern ptr = CaptureController.mCameraCharacteristics.get(CameraCharacteristics.SENSOR_BLACK_LEVEL_PATTERN);
         if (ptr == null) return;
+        // Read right before its null test, or the kn port's j2k asserts it non-null.
+        float[] level = result.get(SENSOR_DYNAMIC_BLACK_LEVEL);
         if (level == null) {
             level = new float[4];
             for (int i = 0; i < 4; i++) {
