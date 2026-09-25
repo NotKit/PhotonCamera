@@ -87,7 +87,7 @@ atlas android-translation-layer-hotspot
 - Host toolchain: `cc`, `c++`, `cmake`, `ninja`, `pkg-config`, `unzip`, plus
   `meson` and `gn` + `clang` for atlas and its skia subproject.
 - An atlas checkout. `env.sh` picks up
-  `../atlas-camera2` when `linux-port/atlas` does not exist; `build-all.sh`
+  `../atl-touch` when `linux-port/atlas` does not exist; `build-all.sh`
   clones `$ATLAS_URL` at `$ATLAS_BRANCH` otherwise. atlas's own dependencies
   (`art-standalone`, GTK4, GLFW, the AOSP support libraries in
   `/usr/local/lib/art`) must already be installed.
@@ -135,7 +135,7 @@ The one long step is atlas: a fresh `out/atlas-build/` builds skia from scratch.
 When the atlas checkout already has a builddir, point at it —
 
 ```sh
-ATLAS_BUILDDIR=/home/nekit/UT/atlas-camera2/builddir linux-port/build-atlas.sh
+ATLAS_BUILDDIR=/home/nekit/UT/atl-touch/builddir linux-port/build-atlas.sh
 ```
 
 — which is how the framework install was verified. `build-atlas.sh` reuses a

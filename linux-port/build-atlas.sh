@@ -111,6 +111,22 @@ if [ "$PORT_CROSS" = 1 ]; then
 fi
 
 jdk_stamp="$ATLAS_BUILDDIR/.port-jdk"
+
+# A builddir remembers its source tree, and ninja would keep building that one
+# after $ATLAS_DIR moves. Start ours again; refuse to touch a borrowed one.
+builddir_source=""
+[ ! -f "$ATLAS_BUILDDIR/meson-info/meson-info.json" ] ||
+	builddir_source=$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["directories"]["source"])' \
+		"$ATLAS_BUILDDIR/meson-info/meson-info.json")
+if [ -n "$builddir_source" ] && [ "$(realpath "$builddir_source")" != "$(realpath "$ATLAS_DIR")" ]; then
+	if [ -f "$jdk_stamp" ]; then
+		echo "builddir was set up for $builddir_source, starting it again for $ATLAS_DIR"
+		rm -rf "$ATLAS_BUILDDIR"
+	else
+		echo "$ATLAS_BUILDDIR builds $builddir_source, not $ATLAS_DIR" >&2
+		exit 1
+	fi
+fi
 stamp_value="$JAVA_HOME $PORT_TRIPLE ${setup_args[*]}"
 if [ -f "$ATLAS_BUILDDIR/build.ninja" ] && [ -f "$jdk_stamp" ] &&
    [ "$(cat "$jdk_stamp")" != "$stamp_value" ]; then

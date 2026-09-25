@@ -8,15 +8,15 @@ PORT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export PORT_DIR
 export REPO_DIR="$(cd "$PORT_DIR/.." && pwd)"
 
-# atlas (atl-touch) sources the port builds itself: a checkout of the branch that
-# carries the camera2 bring-up, its own git repo, gitignored here. See README.md.
-# On this machine that branch is already checked out as a worktree next door, so
-# the default follows it when linux-port/atlas does not exist.
+# atlas (atl-touch) sources the port builds itself: a checkout of its master,
+# its own git repo, gitignored here. See README.md. On this machine atl-touch is
+# already checked out next door, so the default follows it when linux-port/atlas
+# does not exist.
 if [ -z "${ATLAS_DIR:-}" ]; then
 	if [ -f "$PORT_DIR/atlas/meson.build" ]; then
 		ATLAS_DIR="$PORT_DIR/atlas"
-	elif [ -f "$REPO_DIR/../atlas-camera2/meson.build" ]; then
-		ATLAS_DIR="$(cd "$REPO_DIR/../atlas-camera2" && pwd)"
+	elif [ -f "$REPO_DIR/../atl-touch/meson.build" ]; then
+		ATLAS_DIR="$(cd "$REPO_DIR/../atl-touch" && pwd)"
 	else
 		ATLAS_DIR="$PORT_DIR/atlas"
 	fi
