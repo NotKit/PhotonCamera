@@ -210,15 +210,8 @@ internal class SettingsHost(
 		return names.sorted().joinToString(", ")
 	}
 
-	/** SettingsFragment.checkEszdTheme, the one runtime enable rule. */
-	private fun enabledOf(node: RPreferenceNode): Boolean {
-		if (!node.enabled) return false
-		if (node.key == string(R.string.pref_show_gradient_key, "")) {
-			val accent = settings?.getString(SCOPE, string(R.string.pref_theme_accent_key, ""), "")
-			return !"eszdman".equals(accent, ignoreCase = true)
-		}
-		return true
-	}
+	/** The XML's own flag: the fragment has no runtime enable rule any more. */
+	private fun enabledOf(node: RPreferenceNode): Boolean = node.enabled
 
 	// -- what a row holds ----------------------------------------------------
 

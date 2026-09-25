@@ -98,6 +98,20 @@ class HostFocusIndicator(
 		overlay.focusAt = null
 	}
 
+	/* The hit area is the square each indicator is drawn in, as on Android,
+	 * where it is the indicator View's bounds. */
+	override fun isOnFocusCircle(x: Float, y: Float): Boolean =
+		isInside(overlay.focusAt, FOCUS_RADIUS_FRACTION, x, y)
+
+	override fun isOnSpotWb(x: Float, y: Float): Boolean =
+		isInside(overlay.spotWbAt, SPOT_WB_RADIUS_FRACTION, x, y)
+
+	private fun isInside(at: Offset?, fraction: Float, x: Float, y: Float): Boolean {
+		if (at == null) return false
+		val r = minOf(surface.width, surface.height) * fraction
+		return x >= at.x - r && x <= at.x + r && y >= at.y - r && y <= at.y + r
+	}
+
 	override fun setAfState(afState: Int) {
 		overlay.afState = afState
 	}

@@ -127,6 +127,9 @@ internal class ManualUiKn(private val host: CameraScreenHost) : ManualUi, KnobHo
 				KnobModel.KnobModelFields.VISIBILITY ->
 					host.setManualKnobVisible(o.isKnobVisible())
 				KnobModel.KnobModelFields.MANUAL_MODEL -> setModelToKnob(o.getManualModel())
+				// The remembered control's inner ruler: this port's knob draws
+				// one wheel, so the previous control is simply not shown.
+				KnobModel.KnobModelFields.SECONDARY_MODEL -> {}
 			}
 		}
 		if (o is ManualModeModel) {

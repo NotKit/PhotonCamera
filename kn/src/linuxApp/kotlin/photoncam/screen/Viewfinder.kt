@@ -154,6 +154,11 @@ class ComposePreviewSurface : PreviewSurface {
 
 	override fun getDisplaySize(): Point = Point(HostWindow.widthPx, HostWindow.heightPx)
 
+	/* The Android renderer holds the last frame across a same-sensor lens
+	 * switch until the new stream settles.  This viewfinder draws whatever
+	 * frame arrives, so there is nothing to hold and the switch shows as is. */
+	override fun beginPreviewSettleTracking() {}
+
 	fun release() {
 		val l = listener
 		listener = null
@@ -384,8 +389,8 @@ private fun DrawScope.drawSpotWb(at: Offset, failed: Boolean) {
 }
 
 /** Both indicators are sized off the box, as the layout's dp figures were. */
-private const val FOCUS_RADIUS_FRACTION = 0.09f
-private const val SPOT_WB_RADIUS_FRACTION = 0.05f
+internal const val FOCUS_RADIUS_FRACTION = 0.09f
+internal const val SPOT_WB_RADIUS_FRACTION = 0.05f
 
 /**
  * The frame, rotated upright and scaled to cover.
