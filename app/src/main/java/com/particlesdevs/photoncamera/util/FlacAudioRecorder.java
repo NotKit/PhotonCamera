@@ -102,15 +102,14 @@ public class FlacAudioRecorder {
         }
 
         final AudioRecord record = createAudioRecord();
-        audioRecord = record;
         if (record == null || record.getState() != AudioRecord.STATE_INITIALIZED) {
             Log.e(TAG, "AudioRecord init failed");
             if (record != null) {
                 record.release();
-                audioRecord = null;
             }
             return false;
         }
+        audioRecord = record;
 
         // Open the output file from Java so it bypasses FUSE file-type restrictions
         // on Android 11+ (which block native fopen() for audio files in DCIM directories).

@@ -88,7 +88,8 @@ public class UnlimitedProcessor extends ProcessorBase {
         if (averageRaw == null) {
             averageRaw = new AverageRaw(parameters.rawSize, "UnlimitedAvr");
         }
-        averageRaw.additionalParams = new AverageParams(null, image.getPlanes()[0].getBuffer(), parameters);
+        ByteBuffer rawBuffer = image.getPlanes()[0].getBuffer();
+        averageRaw.additionalParams = new AverageParams(rawBuffer, rawBuffer, parameters);
         averageRaw.Run();
         unlimitedCounter++;
         /*

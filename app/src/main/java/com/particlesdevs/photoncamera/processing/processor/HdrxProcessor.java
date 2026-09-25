@@ -289,8 +289,8 @@ public class HdrxProcessor extends ProcessorBase {
                         normalFrames--;
                     }
                     Log.d(TAG, "Removing unlucky:" + curunlucky + " number:" + images.get(images.size() - 1).number);
-                    images.get(images.size() - 1).close();
-                    images.remove(images.size() - 1);
+                    images.remove(cur);
+                    cur.close();
                 }
             }
             Log.d(TAG, "Size after removal:" + images.size());
