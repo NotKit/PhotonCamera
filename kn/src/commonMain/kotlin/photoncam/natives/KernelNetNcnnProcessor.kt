@@ -14,8 +14,7 @@ import photoncam.natives.abi.pc_kernelnet_nativeRun
  * native methods (app/src/main/cpp/ncnnMl.cpp).  See [FlowNetNcnnProcessor] for
  * why `assetManager` is ignored in favour of [NcnnMl.assetRoot].
  *
- * `out` is a ByteBuffer here and a FloatBuffer in FlowNet, which is the Java's
- * own inconsistency; both are direct buffers of floats to the C.
+ * `out` receives the kernel parameters as RGBA-interleaved fp16 halves.
  */
 object KernelNetNcnnProcessor {
 
@@ -25,7 +24,7 @@ object KernelNetNcnnProcessor {
         handle: Long, gray: FloatBuffer?, width: Int, height: Int, sigma: Float,
         out: ByteBuffer?
     ): Boolean = pc_kernelnet_nativeRun(
-        handle, gray.nativeFloats(), width, height, sigma, out.nativeFloats()
+        handle, gray.nativeFloats(), width, height, sigma, out.nativeBase()
     ) != 0
 
     fun nativeDestroy(handle: Long) = pc_kernelnet_nativeDestroy(handle)

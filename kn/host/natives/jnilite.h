@@ -5,7 +5,7 @@
  * must not be edited.  Outside native-engine.cpp (the ART hidden-
  * API bypass, which is stubbed off) those entry points touch exactly fourteen
  * JNI functions, and every one of them is data-plane: direct buffers, primitive
- * array pinning, UTF strings.  None of it needs a VM.
+ * array pinning and copying, UTF strings.  None of it needs a VM.
  *
  * So instead of duplicating the bodies, this supplies a JNIEnv of our own whose
  * jobject/jarray/jstring are pointers we choose:
@@ -49,6 +49,9 @@ JNIEnv *jnilite_env(void);
  * descriptor (not the memory it describes).  Returns the address.
  */
 void *jnilite_take_buffer(jobject buffer, int64_t *out_capacity);
+
+/* Free an array that came out of New<Type>Array, descriptor and elements. */
+void jnilite_free_array(jarray array);
 
 #ifdef __cplusplus
 }

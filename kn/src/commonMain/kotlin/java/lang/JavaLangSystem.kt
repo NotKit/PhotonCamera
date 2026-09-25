@@ -52,7 +52,11 @@ object System {
     fun exit(status: Int): Nothing { platform.posix.exit(status); throw Error("unreachable") }
     fun identityHashCode(o: Any?): Int = o?.hashCode() ?: 0
     fun gc() {}
-    fun loadLibrary(name: String) {}
+    /** Everything is linked into this binary; see NativeLibraries for the exception. */
+    fun loadLibrary(name: String) {
+        if (!photoncam.natives.NativeLibraries.isLinked(name))
+            throw UnsatisfiedLinkError("no $name in this build")
+    }
 
     val out: java.io.PrintStream = java.io.PrintStream(false)
     val err: java.io.PrintStream = java.io.PrintStream(true)

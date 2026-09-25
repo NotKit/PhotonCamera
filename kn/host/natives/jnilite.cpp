@@ -22,6 +22,51 @@ static jsize jl_GetArrayLength(JNIEnv *, jarray a)
 	return a ? AS_ARRAY(a)->length : 0;
 }
 
+/* The Region calls copy, as JNI's do; the bounds are the caller's to get right. */
+static void jl_get_region(jarray a, jsize start, jsize len, void *buf, size_t elem)
+{
+	if (a && len > 0)
+		memcpy(buf, (char *) AS_ARRAY(a)->data + (size_t) start * elem, (size_t) len * elem);
+}
+
+static void jl_set_region(jarray a, jsize start, jsize len, const void *buf, size_t elem)
+{
+	if (a && len > 0)
+		memcpy((char *) AS_ARRAY(a)->data + (size_t) start * elem, buf, (size_t) len * elem);
+}
+
+static void jl_GetShortArrayRegion(JNIEnv *, jshortArray a, jsize s, jsize l, jshort *buf)
+{
+	jl_get_region(a, s, l, buf, sizeof(jshort));
+}
+
+static void jl_GetLongArrayRegion(JNIEnv *, jlongArray a, jsize s, jsize l, jlong *buf)
+{
+	jl_get_region(a, s, l, buf, sizeof(jlong));
+}
+
+static void jl_GetFloatArrayRegion(JNIEnv *, jfloatArray a, jsize s, jsize l, jfloat *buf)
+{
+	jl_get_region(a, s, l, buf, sizeof(jfloat));
+}
+
+static void jl_SetFloatArrayRegion(JNIEnv *, jfloatArray a, jsize s, jsize l, const jfloat *buf)
+{
+	jl_set_region(a, s, l, buf, sizeof(jfloat));
+}
+
+/* A new array is one malloc: the descriptor with its elements behind it, so
+ * jnilite_free_array releases both. */
+static jfloatArray jl_NewFloatArray(JNIEnv *, jsize len)
+{
+	jl_array *a = (jl_array *) calloc(1, sizeof(jl_array) + (size_t) len * sizeof(jfloat));
+	if (!a)
+		return NULL;
+	a->data = a + 1;
+	a->length = len;
+	return (jfloatArray) (void *) a;
+}
+
 static void *jl_GetDirectBufferAddress(JNIEnv *, jobject b)
 {
 	return b ? AS_BUF(b)->address : NULL;
@@ -107,6 +152,12 @@ static const struct JNINativeInterface_ *jl_interface(void)
 	iface.ReleaseDoubleArrayElements = (void (JNICALL *)(JNIEnv *, jdoubleArray, jdouble *, jint)) jl_release;
 	iface.ReleasePrimitiveArrayCritical = (void (JNICALL *)(JNIEnv *, jarray, void *, jint)) jl_release;
 
+	iface.GetShortArrayRegion = jl_GetShortArrayRegion;
+	iface.GetLongArrayRegion = jl_GetLongArrayRegion;
+	iface.GetFloatArrayRegion = jl_GetFloatArrayRegion;
+	iface.SetFloatArrayRegion = jl_SetFloatArrayRegion;
+	iface.NewFloatArray = jl_NewFloatArray;
+
 	iface.GetDirectBufferAddress = jl_GetDirectBufferAddress;
 	iface.GetDirectBufferCapacity = jl_GetDirectBufferCapacity;
 	iface.NewDirectByteBuffer = jl_NewDirectByteBuffer;
@@ -152,4 +203,9 @@ extern "C" void *jnilite_take_buffer(jobject buffer, int64_t *out_capacity)
 		*out_capacity = (int64_t) b->capacity;
 	free(b);
 	return address;
+}
+
+extern "C" void jnilite_free_array(jarray array)
+{
+	free(array);
 }

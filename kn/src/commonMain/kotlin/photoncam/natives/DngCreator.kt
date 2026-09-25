@@ -40,6 +40,12 @@ object DngCreator {
         wrapNative(dng, size.value.toInt())
     }
 
+    /** createDNG's block is malloc'd per call; this is its only release. */
+    fun freeDNG(dngData: ByteBuffer?) {
+        if (dngData == null) return
+        pc_dng_freeDNG(dngData.nativeBase(), dngData.nativeCapacity())
+    }
+
     fun setOrientation(nativePtr: Long, orientation: Int) =
         pc_dng_setOrientation(nativePtr, orientation)
 

@@ -102,7 +102,28 @@ echo "photoncam_native ($ARCH)"
 cxx "$APP/dngCreator.cpp" "$OBJ/dngCreator.o" \
 	-DVERSION_BUILD="\"$VERSION_BUILD\"" -DVERSION_NAME="\"$VERSION_NAME\""
 cxx "$APP/allocator.cpp" "$OBJ/allocator.o"
+cxx "$APP/rawF16.cpp" "$OBJ/rawF16.o"
 cxx "$APP/flacRecorder.cpp" "$OBJ/flacRecorder.o"
+
+# MediaCinemaRAW, the .mcraw raw-video encoder: plain C++ with a log call.
+# -O3 as in the app's CMakeLists, which keeps it optimised in debug builds too.
+for src in "$APP"/mediacinemaraw/*.cpp "$APP"/mediacinemaraw/src/*.cpp; do
+	cxx "$src" "$OBJ/mcraw_$(basename "${src%.cpp}").o" -std=c++17 -O3 \
+		-I"$APP/mediacinemaraw/include"
+done
+
+# The Halide aligner: prebuilt arm64 kernels and runtime.  They are Android
+# objects, but nothing in them is bionic, so they link against glibc (the JVM
+# port does the same).  Everywhere else ESD4D falls back to the GL pyramid.
+WITH_HALIDE=0
+HALIDE_DIR="$APP/halide/arm64-v8a"
+if [ "$ARCH" = arm64 ] && [ -f "$HALIDE_DIR/libhalide_runtime_android.a" ]; then
+	WITH_HALIDE=1
+	cxx "$APP/halide/align_jni.cpp" "$OBJ/align_jni.o" -std=c++17 \
+		-I"$APP/halide/include" -I"$HALIDE_DIR"
+else
+	echo "  note: no Halide kernels for $ARCH; ESD4D will use the GL aligner"
+fi
 
 # ncnnMl: the real thing when an ncnn prefix is there, and otherwise nothing at
 # all - photoncam_native.cpp then compiles its "not available" half, exactly as
@@ -159,8 +180,10 @@ cc "$HERE/image_codec.c" "$OBJ/image_codec.o" -DPHOTONCAM_CODEC_SYSTEM=$CODEC_SY
 
 # --- ours --------------------------------------------------------------------
 cxx "$HERE/jnilite.cpp" "$OBJ/jnilite.o"
-cxx "$HERE/photoncam_native.cpp" "$OBJ/photoncam_native.o" -DPHOTONCAM_WITH_NCNN=$WITH_NCNN
+cxx "$HERE/photoncam_native.cpp" "$OBJ/photoncam_native.o" -DPHOTONCAM_WITH_NCNN=$WITH_NCNN \
+	-DPHOTONCAM_WITH_HALIDE=$WITH_HALIDE
 cc "$HERE/stubs/android_log.c" "$OBJ/android_log.o"
+cc "$HERE/stubs/android_bitmap.c" "$OBJ/android_bitmap.o"
 cc "$HERE/stubs/asset_dir.c" "$OBJ/asset_dir.o"
 
 rm -f "$OUT/libphotoncam_native.a"
@@ -183,9 +206,12 @@ fi
 {
 	echo "-L$OUT -lphotoncam_native"
 	[ "$WITH_NCNN" = 1 ] && echo "$NCNN_DIR/lib/libncnn.a"
+	# The kernels first, the runtime after: each archive carries a weak copy
+	# of the runtime, and the link keeps the first definition it sees.
+	[ "$WITH_HALIDE" = 1 ] && echo "$HALIDE_DIR/alignburst_base_f16.a $HALIDE_DIR/alignburst_f16.a $HALIDE_DIR/libhalide_runtime_android.a"
 	[ -z "$CODEC_LINK" ] || echo "$CODEC_LINK"
 	echo "-lstdc++ -lm -ldl -lpthread"
 } >"$OUT/link-flags.txt"
 
-echo "ok: $OUT/libphotoncam_native.a ($(du -h "$OUT/libphotoncam_native.a" | cut -f1), ncnn=$WITH_NCNN, codec=$([ "$CODEC_SYSTEM" = 1 ] && echo "libpng+skia-libjpeg" || echo stb))"
+echo "ok: $OUT/libphotoncam_native.a ($(du -h "$OUT/libphotoncam_native.a" | cut -f1), ncnn=$WITH_NCNN, halide=$WITH_HALIDE, codec=$([ "$CODEC_SYSTEM" = 1 ] && echo "libpng+skia-libjpeg" || echo stb))"
 echo "    link flags in $OUT/link-flags.txt"
