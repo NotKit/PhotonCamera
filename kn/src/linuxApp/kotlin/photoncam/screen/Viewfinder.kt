@@ -170,6 +170,12 @@ class ComposePreviewSurface : PreviewSurface {
 	}
 }
 
+private data class PreviewTransform(val degrees: Int, val mirror: Boolean)
+private data class PreviewFrame(val image: ImageBitmap, val size: IntSize, val transform: PreviewTransform)
+
+private fun ComposePreviewSurface.currentTransform() =
+	PreviewTransform(orientationDegrees - 90, mirror)
+
 /**
  * The preview.  Aspect-FILL, because that is what a viewfinder does: the box
  * CameraScreen pins is the frame the picture is composed in, and a letterboxed
@@ -178,8 +184,7 @@ class ComposePreviewSurface : PreviewSurface {
 @Composable
 fun BoxScope.CameraViewfinder(surface: ComposePreviewSurface, overlay: ViewfinderOverlay) {
 	val texture = surface.getSurfaceTexture()
-	var image by remember { mutableStateOf<ImageBitmap?>(null) }
-	var lastSize by remember { mutableStateOf(IntSize.Zero) }
+	var rasterFrame by remember { mutableStateOf<PreviewFrame?>(null) }
 	// Skia holds the pixels; an image that is not closed leaks a frame's worth
 	// of native memory every frame.
 	val open = remember { arrayOfNulls<Image>(1) }
@@ -188,7 +193,7 @@ fun BoxScope.CameraViewfinder(surface: ComposePreviewSurface, overlay: Viewfinde
 	val converter = remember { PreviewConverter() }
 	DisposableEffect(converter) { onDispose { converter.close() } }
 
-	val gpu = remember(texture) { GpuPreviewRenderer(texture) }
+	val gpu = remember(texture) { GpuPreviewRenderer(texture, surface) }
 	DisposableEffect(gpu) {
 		val update: (DirectContext) -> Unit = { gpu.update(it) }
 		HostGpuFrame.update = update
@@ -213,8 +218,8 @@ fun BoxScope.CameraViewfinder(surface: ComposePreviewSurface, overlay: Viewfinde
 					val img = raster.toSkiaImage()
 					open[0]?.close()
 					open[0] = img
-					image = img.toComposeImageBitmap()
-					lastSize = IntSize(img.width, img.height)
+					rasterFrame = PreviewFrame(
+						img.toComposeImageBitmap(), IntSize(img.width, img.height), raster.transform)
 					// One line per 60 drawn frames: proof the stream is live
 					// without a log that is only the preview.
 					if (drawn - reported >= 60L || reported == 0L) {
@@ -230,7 +235,7 @@ fun BoxScope.CameraViewfinder(surface: ComposePreviewSurface, overlay: Viewfinde
 				}
 				// Taking it is what lets the producer copy the next one, so it
 				// is taken only when the converter can start on it at once.
-				if (!converter.busy()) texture.takeFrame()?.let { converter.submit(it) }
+				if (!converter.busy()) texture.takeFrame()?.let { converter.submit(it, surface.currentTransform()) }
 			}
 		}
 	}
@@ -245,10 +250,9 @@ fun BoxScope.CameraViewfinder(surface: ComposePreviewSurface, overlay: Viewfinde
 			.onSizeChanged { surface.markAvailable(it.width, it.height) },
 	) {
 		Canvas(Modifier.fillMaxSize()) {
-			val shown = gpu.image ?: image
-			val shownSize = if (gpu.image != null) gpu.size else lastSize
+			val shown = gpu.frame ?: rasterFrame
 			if (shown != null)
-				drawPreview(shown, shownSize, surface.orientationDegrees - 90, surface.mirror)
+				drawPreview(shown.image, shown.size, shown.transform.degrees, shown.transform.mirror)
 		}
 		// The indicators go on top of the frame and INSIDE the box, which is
 		// where viewfinder_stack.xml had their Views; the coordinates
@@ -266,7 +270,10 @@ fun BoxScope.CameraViewfinder(surface: ComposePreviewSurface, overlay: Viewfinde
 
 /** Imports the HAL buffer, converts it on the GPU and gives Skia a 2D texture. */
 @OptIn(ExperimentalForeignApi::class)
-private class GpuPreviewRenderer(private val texture: SurfaceTexture) {
+private class GpuPreviewRenderer(
+	private val texture: SurfaceTexture,
+	private val surface: ComposePreviewSurface,
+) {
 	private var native = atl_preview_texture_new()
 	private var skia: Image? = null
 	private var held: photoncam.camera.CameraBuffer? = null
@@ -277,16 +284,15 @@ private class GpuPreviewRenderer(private val texture: SurfaceTexture) {
 	// just before scene.render, and a plain field would leave the Canvas with
 	// no reason to draw again -- the frame would only appear when something
 	// else (a tap) happened to invalidate the scene.
-	private val imageState = mutableStateOf<ImageBitmap?>(null)
-	private val sizeState = mutableStateOf(IntSize.Zero)
+	private val frameState = mutableStateOf<PreviewFrame?>(null)
 
-	val image: ImageBitmap? get() = imageState.value
-	val size: IntSize get() = sizeState.value
+	val frame: PreviewFrame? get() = frameState.value
 
 	fun update(context: DirectContext) {
 		if (failed)
 			return
 		val frame = texture.takeNativeBuffer() ?: return
+		val transform = surface.currentTransform()
 		val state = native
 		if (state == null) {
 			frame.release()
@@ -321,8 +327,8 @@ private class GpuPreviewRenderer(private val texture: SurfaceTexture) {
 			val previousBuffer = held
 			skia = next
 			held = frame
-			imageState.value = next.toComposeImageBitmap()
-			sizeState.value = IntSize(width.value, height.value)
+			frameState.value = PreviewFrame(
+				next.toComposeImageBitmap(), IntSize(width.value, height.value), transform)
 			previousImage?.close()
 			previousBuffer?.release()
 			frames++
@@ -340,7 +346,7 @@ private class GpuPreviewRenderer(private val texture: SurfaceTexture) {
 		native = null
 		skia?.close()
 		skia = null
-		imageState.value = null
+		frameState.value = null
 		held?.release()
 		held = null
 		println("[pc] preview GPU import unavailable; using CPU conversion")
@@ -351,7 +357,7 @@ private class GpuPreviewRenderer(private val texture: SurfaceTexture) {
 		native = null
 		skia?.close()
 		skia = null
-		imageState.value = null
+		frameState.value = null
 		held?.release()
 		held = null
 	}
@@ -412,8 +418,9 @@ private fun DrawScope.drawPreview(image: ImageBitmap, srcSize: IntSize, degrees:
 	val w = srcSize.width * cover
 	val h = srcSize.height * cover
 
-	rotate(rot.toFloat()) {
-		scale(if (mirror) -1f else 1f, 1f) {
+	// Mirror across the displayed frame after rotating the sensor buffer.
+	scale(if (mirror) -1f else 1f, 1f) {
+		rotate(rot.toFloat()) {
 			drawImage(
 				image,
 				dstOffset = IntOffset(
@@ -445,7 +452,10 @@ private val rotateOverride: Int? =
  * with it.  ONE frame in flight, so a slow one drops rather than queues.
  */
 private class PreviewConverter {
-	class Raster(val bytes: ByteArray, val width: Int, val height: Int, val nanos: Long) {
+	class Raster(
+		val bytes: ByteArray, val width: Int, val height: Int, val nanos: Long,
+		val transform: PreviewTransform,
+	) {
 		fun toSkiaImage(): Image = Image.makeRaster(
 			ImageInfo(width, height, ColorType.RGBA_8888, ColorAlphaType.OPAQUE), bytes, width * 4)
 	}
@@ -459,10 +469,12 @@ private class PreviewConverter {
 
 	fun busy(): Boolean = pending != null
 
-	fun submit(frame: SurfaceTexture.Frame) {
+	fun submit(frame: SurfaceTexture.Frame, transform: PreviewTransform) {
 		source = "${frame.width}x${frame.height} format=0x${frame.format.toString(16)}" +
 			" planes=${frame.planes.size}"
-		pending = worker.execute(TransferMode.SAFE, { frame }) { it.toRaster() }
+		pending = worker.execute(TransferMode.SAFE, { Pair(frame, transform) }) {
+			it.first.toRaster(it.second)
+		}
 	}
 
 	/** The finished raster, once; null while one is still in flight.  A frame
@@ -489,7 +501,7 @@ private class PreviewConverter {
  * from its luma alone -- grey, and visibly so, rather than a wrong colour that
  * reads as a camera fault.
  */
-private fun SurfaceTexture.Frame.toRaster(): PreviewConverter.Raster? {
+private fun SurfaceTexture.Frame.toRaster(transform: PreviewTransform): PreviewConverter.Raster? {
 	val t0 = nanoTime()
 	if (width <= 0 || height <= 0 || planes.isEmpty()) return null
 	// EVERY PIXEL IS CONVERTED BY THE CPU, so the raster is built at the size
@@ -583,7 +595,7 @@ private fun SurfaceTexture.Frame.toRaster(): PreviewConverter.Raster? {
 			}
 		}
 	}
-	return PreviewConverter.Raster(out, w, h, nanoTime() - t0)
+	return PreviewConverter.Raster(out, w, h, nanoTime() - t0, transform)
 }
 
 /** The long side the preview raster is built at; see [toRaster]. */

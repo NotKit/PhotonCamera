@@ -4334,7 +4334,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                     //unlockFocus();
                     //Surface texture related
                     //activity.runOnUiThread(() -> UpdateCameraCharacteristics(PhotonCamera.getSettings().mCameraID));
-                    if (PhotonCamera.getSettings().selectedMode != CameraMode.UNLIMITED && PhotonCamera.getSettings().selectedMode != CameraMode.RAWVIDEO) {
+                    if (frameCount != -1) {
                         if (!isDualSession) {
                             mBackgroundHandler.post(() -> unlockFocus());
                         }
