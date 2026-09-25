@@ -61,9 +61,13 @@ cp -a "$BIN_DIR/resources" "$STAGE/app/resources"
 cp -a "$ROOT/app/src/main/assets" "$STAGE/app/assets"
 install -m 0755 "$HERE/run.sh" "$STAGE/run.sh"
 install -m 0644 "$HERE/photoncamera.desktop" "$STAGE/"
+# Sailfish launcher icons use a transparent base shape with a slight edge inset.
 for s in 86 108 128 172; do
 	convert "$ROOT/fastlane/metadata/android/en-US/images/icon.png" \
-		-resize "${s}x${s}" "$STAGE/icons/$s.png"
+		-resize "${s}x${s}!" \
+		\( -size 1024x1024 xc:black -fill white \
+			-draw 'circle 512,512 512,4' -resize "${s}x${s}!" \) \
+		-alpha off -compose CopyOpacity -composite "$STAGE/icons/$s.png"
 done
 
 # Bundle every DT_NEEDED the phone does not have, transitively.  Today that is

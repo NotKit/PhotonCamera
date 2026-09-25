@@ -6,6 +6,11 @@ Tested on the Jolla Phone (2026), Sailfish OS 5.3, Android 16 vendor.
     ARCH=arm64 kn/scripts/build-kn.sh -PwithApp   # the binary, as for the click
     kn/sailfish/build.sh                          # -> kn/out/sailfish/RPMS/aarch64/
 
+After changes under `app/src/main/java`, run `kn/convert.sh` before building.
+`build-kn.sh` uses the generated `kn/gen` tree but does not refresh it.
+Set `PC_ARM_SYSROOT` for both build commands if the default arm64 sysroot lacks a
+development library such as `libpng.so`.
+
     scp kn/out/sailfish/RPMS/aarch64/photoncamera-*.rpm defaultuser@<phone>:
     ssh defaultuser@<phone> 'devel-su pkcon install-local photoncamera-*.rpm'
 
