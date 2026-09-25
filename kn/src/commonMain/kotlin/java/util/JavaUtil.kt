@@ -7,6 +7,76 @@ package java.util
 typealias ArrayList<E> = kotlin.collections.ArrayList<E>
 typealias HashMap<K, V> = kotlin.collections.HashMap<K, V>
 typealias LinkedHashMap<K, V> = kotlin.collections.LinkedHashMap<K, V>
+
+/** Keys are held strongly: Kotlin/Native has no reference queue to evict by.
+ *  The app's one WeakHashMap (GLTexture's live-VRAM registry) removes every key
+ *  in close(), and a texture never closed is still allocated on the GPU here,
+ *  so counting it is the truth rather than a leak in the tally. */
+class WeakHashMap<K, V> : MutableMap<K, V> by kotlin.collections.HashMap()
+
+/** A sorted map: keys kept in order beside a hash map.  Insert and remove
+ *  are linear, which suits the one user (RawVideoProcessor's last 128 capture
+ *  results); iteration and the first/last queries are in key order. */
+class TreeMap<K : Comparable<K>, V> : AbstractMutableMap<K, V>() {
+    private val sortedKeys = ArrayList<K>()
+    private val map = HashMap<K, V>()
+
+    private fun slot(key: K): Int = sortedKeys.binarySearch(key)
+
+    override fun put(key: K, value: V): V? {
+        val i = slot(key)
+        if (i < 0) sortedKeys.add(-i - 1, key)
+        return map.put(key, value)
+    }
+
+    override fun remove(key: K): V? {
+        val i = slot(key)
+        if (i < 0) return null
+        sortedKeys.removeAt(i)
+        return map.remove(key)
+    }
+
+    override fun get(key: K): V? = map[key]
+    override fun containsKey(key: K): Boolean = map.containsKey(key)
+    override fun clear() { sortedKeys.clear(); map.clear() }
+    override val size: Int get() = sortedKeys.size
+    fun size(): Int = sortedKeys.size
+
+    fun firstKey(): K = sortedKeys.firstOrNull() ?: throw NoSuchElementException()
+    fun lastKey(): K = sortedKeys.lastOrNull() ?: throw NoSuchElementException()
+
+    fun pollFirstEntry(): MutableMap.MutableEntry<K, V>? {
+        val k = sortedKeys.firstOrNull() ?: return null
+        @Suppress("UNCHECKED_CAST")
+        val v = map[k] as V
+        remove(k)
+        return SimpleEntry(k, v)
+    }
+
+    fun floorKey(key: K): K? {
+        val i = slot(key)
+        return if (i >= 0) sortedKeys[i] else sortedKeys.getOrNull(-i - 2)
+    }
+
+    fun ceilingKey(key: K): K? {
+        val i = slot(key)
+        return if (i >= 0) sortedKeys[i] else sortedKeys.getOrNull(-i - 1)
+    }
+
+    private class SimpleEntry<K, V>(override val key: K, override var value: V) :
+        MutableMap.MutableEntry<K, V> {
+        override fun setValue(newValue: V): V { val old = value; value = newValue; return old }
+    }
+
+    override val entries: MutableSet<MutableMap.MutableEntry<K, V>>
+        get() {
+            // A snapshot in key order; writing through it is not supported.
+            val out = LinkedHashSet<MutableMap.MutableEntry<K, V>>()
+            @Suppress("UNCHECKED_CAST")
+            for (k in sortedKeys) out.add(SimpleEntry(k, map[k] as V))
+            return out
+        }
+}
 typealias HashSet<E> = kotlin.collections.HashSet<E>
 typealias LinkedHashSet<E> = kotlin.collections.LinkedHashSet<E>
 // Read-only, deliberately: j2k maps Java's List/Map/Set onto Kotlin's
@@ -70,6 +140,7 @@ object Arrays {
     fun copyOf(a: FloatArray, n: Int): FloatArray = a.copyOf(n)
     fun copyOf(a: ByteArray, n: Int): ByteArray = a.copyOf(n)
     fun copyOf(a: DoubleArray, n: Int): DoubleArray = a.copyOf(n)
+    fun copyOf(a: ShortArray, n: Int): ShortArray = a.copyOf(n)
     fun <T> copyOf(a: Array<T>, n: Int): Array<T?> = a.copyOf(n)
 
     fun copyOfRange(a: IntArray, from: Int, to: Int): IntArray = a.copyOfRange(from, to)

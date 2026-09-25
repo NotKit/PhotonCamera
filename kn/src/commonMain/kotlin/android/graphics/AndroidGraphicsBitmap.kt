@@ -40,6 +40,10 @@ class Bitmap private constructor(
 
     fun recycle() { pixels = null; isRecycled = true }
 
+    /** Every bitmap here is a writable IntArray; none is backed by a decoder's
+     *  read-only buffer or by hardware. */
+    fun isMutable(): Boolean = true
+
     private fun buf(): IntArray = pixels ?: throw IllegalStateException("bitmap is recycled")
 
     fun getPixel(x: Int, y: Int): Int {

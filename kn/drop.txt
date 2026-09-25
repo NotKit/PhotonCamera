@@ -76,3 +76,22 @@ com/particlesdevs/photoncamera/ui/camera/CameraUIEventsListener.java
 # hand beside TunableInjectorKn.kt as an empty registry: there is no preference
 # screen here and the injection is already a seam.
 com/particlesdevs/photoncamera/settings/TunableRegistry.java
+# --- upstream catch-up, 2026-09-25 -----------------------------------------
+# M3E View widgets (morphing shutter, record button, FAB spring), the edge-to-edge
+# inset helper and the dialog blur: View layer only, Compose draws all of it here.
+com/particlesdevs/photoncamera/ui/widget/
+com/particlesdevs/photoncamera/util/SystemBarsHelper.java
+com/particlesdevs/photoncamera/util/BlurSupport.java
+# Keyguard (lock screen) camera: KeyguardManager and Activity window flags,
+# reached only from CameraActivity, CameraFragment and SettingsActivity.
+com/particlesdevs/photoncamera/util/SecureCameraHelper.java
+# The gallery viewer's HDR tiling (BitmapRegionDecoder, ImageDecoder, window
+# colour mode) and its window helper; only the dropped gallery views use them.
+com/particlesdevs/photoncamera/gallery/helper/HdrTiledRegionDecoder.java
+com/particlesdevs/photoncamera/gallery/helper/UltraHdrGalleryUtil.java
+# androidx.preference generator for the video tunables screen, like the two above.
+com/particlesdevs/photoncamera/settings/VideoTunablePreferenceGenerator.java
+# Material MotionUtils against theme attributes. Ported by hand in
+# src/commonMain/kotlin/com/particlesdevs/photoncamera/circularbarlib/util/Motion.kt
+# for CaptureController's logical-zoom animator.
+com/particlesdevs/photoncamera/circularbarlib/util/Motion.java

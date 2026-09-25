@@ -55,6 +55,7 @@ fun Boolean.Companion.compare(a: Boolean, b: Boolean): Int = a.compareTo(b)
 fun Float.Companion.isNaN(v: Float): Boolean = v.isNaN()
 fun Float.Companion.isInfinite(v: Float): Boolean = v.isInfinite()
 fun Float.Companion.isFinite(v: Float): Boolean = v.isFinite()
+fun Double.Companion.isFinite(v: Double): Boolean = v.isFinite()
 fun Float.Companion.floatToIntBits(v: Float): Int = v.toRawBits()
 fun Float.Companion.floatToRawIntBits(v: Float): Int = v.toRawBits()
 fun Float.Companion.intBitsToFloat(bits: Int): Float = Float.fromBits(bits)
@@ -123,3 +124,8 @@ fun Throwable.printStackTrace(out: Any?) {
 fun String(bytes: ByteArray, charset: java.nio.charset.Charset): String = charset.decode(bytes)
 fun String(bytes: ByteArray, charsetName: String): String =
     java.nio.charset.Charset.forName(charsetName).decode(bytes)
+
+/* Queue.poll with its element type: j2k's own is on List<*> and answers Any?.
+ * ConcurrentLinkedQueue is an ArrayDeque here, so this receiver is the closer
+ * match and wins. */
+fun <E> ArrayDeque<E>.poll(): E? = removeFirstOrNull()

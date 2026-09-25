@@ -42,6 +42,21 @@ class ParcelFileDescriptor private constructor(private var fd: Int) : kotlin.Aut
             return ParcelFileDescriptor(fd)
         }
 
+        /** Android's MODE_* bits. */
+        fun open(file: java.io.File, mode: Int): ParcelFileDescriptor {
+            var flags = when (mode and MODE_READ_WRITE) {
+                MODE_READ_WRITE -> platform.posix.O_RDWR
+                MODE_WRITE_ONLY -> platform.posix.O_WRONLY
+                else -> platform.posix.O_RDONLY
+            }
+            if (mode and MODE_CREATE != 0) flags = flags or platform.posix.O_CREAT
+            if (mode and MODE_TRUNCATE != 0) flags = flags or platform.posix.O_TRUNC
+            if (mode and MODE_APPEND != 0) flags = flags or platform.posix.O_APPEND
+            val fd = platform.posix.open(file.getPath(), flags, 438u) // 0666
+            if (fd < 0) throw java.io.FileNotFoundException(file.getPath())
+            return ParcelFileDescriptor(fd)
+        }
+
         fun adoptFd(fd: Int): ParcelFileDescriptor = ParcelFileDescriptor(fd)
         fun dup(fd: java.io.FileDescriptor): ParcelFileDescriptor =
             ParcelFileDescriptor(platform.posix.dup(fd.getFd()))

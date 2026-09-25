@@ -242,6 +242,9 @@ object Character {
     fun toString(c: Char): String = c.toString()
     fun valueOf(c: Char): Char = c
     fun digit(c: Char, radix: Int): Int = c.digitToIntOrNull(radix) ?: -1
+    /** '\u0000' outside the radix, as Java does. */
+    fun forDigit(digit: Int, radix: Int): Char =
+        if (radix !in 2..36 || digit !in 0 until radix) '\u0000' else digit.digitToChar(radix)
 }
 
 typealias Void = Unit

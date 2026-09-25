@@ -145,3 +145,43 @@ class DisplayMetrics {
 
 open class AndroidException(message: String? = null) : Exception(message)
 open class AndroidRuntimeException(message: String? = null) : RuntimeException(message)
+
+/** android.util.Half's static conversions: IEEE 754 binary16 in a Short. */
+object Half {
+    fun toFloat(h: Short): Float {
+        val bits = h.toInt() and 0xFFFF
+        val sign = (bits and 0x8000) shl 16
+        val exp = (bits ushr 10) and 0x1F
+        val mant = bits and 0x3FF
+        val f = when {
+            exp == 0 && mant == 0 -> sign
+            exp == 0 -> {
+                // Subnormal: normalise the mantissa into a float exponent.
+                var m = mant
+                var e = -1
+                while (m and 0x400 == 0) { m = m shl 1; e-- }
+                sign or ((e + 127 - 14) shl 23) or ((m and 0x3FF) shl 13)
+            }
+            exp == 0x1F -> sign or 0x7F800000 or (mant shl 13)
+            else -> sign or ((exp - 15 + 127) shl 23) or (mant shl 13)
+        }
+        return Float.fromBits(f)
+    }
+
+    fun toHalf(f: Float): Short {
+        val bits = f.toRawBits()
+        val sign = (bits ushr 16) and 0x8000
+        val exp = ((bits ushr 23) and 0xFF) - 127 + 15
+        val mant = bits and 0x7FFFFF
+        val h = when {
+            (bits and 0x7FFFFFFF) > 0x7F800000 -> sign or 0x7E00
+            exp >= 0x1F -> sign or 0x7C00
+            exp <= 0 -> if (exp < -10) sign else {
+                val m = (mant or 0x800000) ushr (1 - exp)
+                sign or ((m + 0x1000) ushr 13)
+            }
+            else -> sign or (exp shl 10) or ((mant + 0x1000) ushr 13)
+        }
+        return h.toShort()
+    }
+}

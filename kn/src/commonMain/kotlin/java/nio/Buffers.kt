@@ -255,6 +255,7 @@ class ByteBuffer internal constructor(mem: NioMem, byteOffset: Int, cap: Int, di
     fun putInt(index: Int, v: Int): ByteBuffer { mem.putIntAt(at(index), v, !isBig); return this }
 
     fun getLong(): Long = mem.getLongAt(at(nextIndex(8)), !isBig)
+    fun getLong(index: Int): Long = mem.getLongAt(at(index), !isBig)
     fun putLong(v: Long): ByteBuffer { mem.putLongAt(at(nextIndex(8)), v, !isBig); return this }
 
     fun getFloat(): Float = Float.fromBits(getInt())

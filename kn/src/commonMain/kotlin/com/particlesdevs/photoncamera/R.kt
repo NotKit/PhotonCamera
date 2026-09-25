@@ -7,13 +7,12 @@ package com.particlesdevs.photoncamera
 
 object R {
     object anim {
-        const val animate_slide_right_exit: Int = 0x7f010000
-        const val fade_in: Int = 0x7f010001
-        const val fade_out: Int = 0x7f010002
-        const val slide_down_enter: Int = 0x7f010003
-        const val slide_down_exit: Int = 0x7f010004
-        const val slide_up_enter: Int = 0x7f010005
-        const val slide_up_exit: Int = 0x7f010006
+        const val fade_in: Int = 0x7f010000
+        const val fade_out: Int = 0x7f010001
+        const val slide_down_enter: Int = 0x7f010002
+        const val slide_down_exit: Int = 0x7f010003
+        const val slide_up_enter: Int = 0x7f010004
+        const val slide_up_exit: Int = 0x7f010005
     }
     object array {
         const val af_mode_entries: Int = 0x7f020000
@@ -22,426 +21,438 @@ object R {
         const val afdata_entryValues: Int = 0x7f020003
         const val alignset_entries: Int = 0x7f020004
         const val alignset_entryValues: Int = 0x7f020005
-        const val cfapat_entries: Int = 0x7f020006
-        const val cfapat_entryValues: Int = 0x7f020007
-        const val colorset_entries: Int = 0x7f020008
-        const val colorset_entryValues: Int = 0x7f020009
-        const val countdowntimer_entryvalues: Int = 0x7f02000a
-        const val focuspeakset_entries: Int = 0x7f02000b
-        const val focuspeakset_entryValues: Int = 0x7f02000c
-        const val location_geotag_entryValues: Int = 0x7f02000d
-        const val preview_format_entries: Int = 0x7f02000e
-        const val preview_format_entryValues: Int = 0x7f02000f
-        const val raw_mode_entries: Int = 0x7f020010
-        const val raw_mode_entryvalues: Int = 0x7f020011
-        const val theme_accent_entries: Int = 0x7f020012
-        const val theme_accent_entryValues: Int = 0x7f020013
-        const val theme_entries: Int = 0x7f020014
-        const val theme_entryValues: Int = 0x7f020015
-        const val vf_grid_entries: Int = 0x7f020016
-        const val vf_grid_entryvalues: Int = 0x7f020017
-        const val video_resolution_entries: Int = 0x7f020018
-        const val video_resolution_entryvalues: Int = 0x7f020019
+        const val audio_source_entries: Int = 0x7f020006
+        const val audio_source_entryvalues: Int = 0x7f020007
+        const val cfapat_entries: Int = 0x7f020008
+        const val cfapat_entryValues: Int = 0x7f020009
+        const val colorset_entries: Int = 0x7f02000a
+        const val colorset_entryValues: Int = 0x7f02000b
+        const val countdowntimer_entryvalues: Int = 0x7f02000c
+        const val focuspeakset_entries: Int = 0x7f02000d
+        const val focuspeakset_entryValues: Int = 0x7f02000e
+        const val lens_bar_position_entries: Int = 0x7f02000f
+        const val lens_bar_position_entryvalues: Int = 0x7f020010
+        const val location_geotag_entryValues: Int = 0x7f020011
+        const val preview_format_entries: Int = 0x7f020012
+        const val preview_format_entryValues: Int = 0x7f020013
+        const val raw_mode_entries: Int = 0x7f020014
+        const val raw_mode_entries_heic: Int = 0x7f020015
+        const val raw_mode_entryvalues: Int = 0x7f020016
+        const val rawvideo_container_entries: Int = 0x7f020017
+        const val rawvideo_container_entryvalues: Int = 0x7f020018
+        const val theme_accent_entries: Int = 0x7f020019
+        const val theme_accent_entryValues: Int = 0x7f02001a
+        const val theme_entries: Int = 0x7f02001b
+        const val theme_entryValues: Int = 0x7f02001c
+        const val vf_grid_entries: Int = 0x7f02001d
+        const val vf_grid_entryvalues: Int = 0x7f02001e
+        const val video_color_range_entries: Int = 0x7f02001f
+        const val video_color_range_entryvalues: Int = 0x7f020020
+        const val video_hdr_transfer_entries: Int = 0x7f020021
+        const val video_hdr_transfer_entryvalues: Int = 0x7f020022
+        const val video_resolution_entries: Int = 0x7f020023
+        const val video_resolution_entryvalues: Int = 0x7f020024
+        const val viewfinder_background_entries: Int = 0x7f020025
+        const val viewfinder_background_entryValues: Int = 0x7f020026
     }
     object attr {
         const val cameraFragmentBackground: Int = 0x7f030000
         const val horizontalPickerStyle: Int = 0x7f030001
-        const val modeSelectedTextColor: Int = 0x7f030002
-        const val processingProgressColor: Int = 0x7f030003
     }
     object bool {
-        const val pref_binning_default: Int = 0x7f040000
-        const val pref_camera_sounds_default: Int = 0x7f040001
-        const val pref_disable_align_default: Int = 0x7f040002
-        const val pref_eis_photo_default: Int = 0x7f040003
-        const val pref_energy_safe_default: Int = 0x7f040004
-        const val pref_enhanced_processing_default: Int = 0x7f040005
-        const val pref_fps_preview_default: Int = 0x7f040006
-        const val pref_hdrx_mode_default: Int = 0x7f040007
-        const val pref_hdrx_nr_default: Int = 0x7f040008
-        const val pref_hide_gallery_icon_default: Int = 0x7f040009
-        const val pref_quad_bayer_default: Int = 0x7f04000a
-        const val pref_remosaic_default: Int = 0x7f04000b
-        const val pref_save_raw_default: Int = 0x7f04000c
-        const val pref_show_afdata_default: Int = 0x7f04000d
-        const val pref_show_gradient_def_value: Int = 0x7f04000e
-        const val pref_show_roundedge_default: Int = 0x7f04000f
-        const val pref_show_watermark_default: Int = 0x7f040010
-        const val pref_system_nr_default: Int = 0x7f040011
-        const val pref_ultrahdr_default: Int = 0x7f040012
-        const val pref_wide169_default: Int = 0x7f040013
+        const val pref_auto_zoom_switch_default: Int = 0x7f040000
+        const val pref_binning_default: Int = 0x7f040001
+        const val pref_camera_sounds_default: Int = 0x7f040002
+        const val pref_disable_align_default: Int = 0x7f040003
+        const val pref_eis_photo_default: Int = 0x7f040004
+        const val pref_energy_safe_default: Int = 0x7f040005
+        const val pref_enhanced_processing_default: Int = 0x7f040006
+        const val pref_fps_preview_default: Int = 0x7f040007
+        const val pref_hdrx_mode_default: Int = 0x7f040008
+        const val pref_hdrx_nr_default: Int = 0x7f040009
+        const val pref_hide_gallery_icon_default: Int = 0x7f04000a
+        const val pref_quad_bayer_default: Int = 0x7f04000b
+        const val pref_remosaic_default: Int = 0x7f04000c
+        const val pref_save_heic_default: Int = 0x7f04000d
+        const val pref_save_raw_default: Int = 0x7f04000e
+        const val pref_show_afdata_default: Int = 0x7f04000f
+        const val pref_show_roundedge_default: Int = 0x7f040010
+        const val pref_show_watermark_default: Int = 0x7f040011
+        const val pref_system_nr_default: Int = 0x7f040012
+        const val pref_ultrahdr_default: Int = 0x7f040013
+        const val pref_video_ois_default: Int = 0x7f040014
+        const val pref_wide169_default: Int = 0x7f040015
+        const val pref_zoom_lock_default: Int = 0x7f040016
     }
     object color {
-        const val Blue: Int = 0x7f050000
-        const val BlueDis: Int = 0x7f050001
-        const val GreyDis: Int = 0x7f050002
-        const val LauncherBackground: Int = 0x7f050003
-        const val Light: Int = 0x7f050004
-        const val LightDis: Int = 0x7f050005
-        const val ToolBar: Int = 0x7f050006
-        const val White: Int = 0x7f050007
-        const val aux_container_color: Int = 0x7f050008
-        const val black_white_selectable: Int = 0x7f050009
-        const val colorAccent: Int = 0x7f05000a
-        const val colorPrimary: Int = 0x7f05000b
-        const val colorPrimaryColored: Int = 0x7f05000c
-        const val colorPrimaryContainer: Int = 0x7f05000d
-        const val colorPrimaryDark: Int = 0x7f05000e
-        const val colorSeparator: Int = 0x7f05000f
-        const val colorText: Int = 0x7f050010
-        const val controlCol: Int = 0x7f050011
-        const val focus_circle_color: Int = 0x7f050012
-        const val gradient_bottom_shadow_color: Int = 0x7f050013
-        const val gradient_color: Int = 0x7f050014
-        const val gradient_color_video: Int = 0x7f050015
-        const val gradient_shadow_thumb_tag: Int = 0x7f050016
-        const val gradient_top_shadow_color: Int = 0x7f050017
-        const val grid_thumbnail_background: Int = 0x7f050018
-        const val ic_gradient_setting_color: Int = 0x7f050019
-        const val manual_text_color: Int = 0x7f05001a
-        const val md_amber_100: Int = 0x7f05001b
-        const val md_amber_200: Int = 0x7f05001c
-        const val md_amber_300: Int = 0x7f05001d
-        const val md_amber_400: Int = 0x7f05001e
-        const val md_amber_50: Int = 0x7f05001f
-        const val md_amber_500: Int = 0x7f050020
-        const val md_amber_600: Int = 0x7f050021
-        const val md_amber_700: Int = 0x7f050022
-        const val md_amber_800: Int = 0x7f050023
-        const val md_amber_900: Int = 0x7f050024
-        const val md_amber_A100: Int = 0x7f050025
-        const val md_amber_A200: Int = 0x7f050026
-        const val md_amber_A400: Int = 0x7f050027
-        const val md_amber_A700: Int = 0x7f050028
-        const val md_black_1000: Int = 0x7f050029
-        const val md_blue_100: Int = 0x7f05002a
-        const val md_blue_200: Int = 0x7f05002b
-        const val md_blue_300: Int = 0x7f05002c
-        const val md_blue_400: Int = 0x7f05002d
-        const val md_blue_400_dark: Int = 0x7f05002e
-        const val md_blue_50: Int = 0x7f05002f
-        const val md_blue_500: Int = 0x7f050030
-        const val md_blue_600: Int = 0x7f050031
-        const val md_blue_700: Int = 0x7f050032
-        const val md_blue_800: Int = 0x7f050033
-        const val md_blue_900: Int = 0x7f050034
-        const val md_blue_A100: Int = 0x7f050035
-        const val md_blue_A200: Int = 0x7f050036
-        const val md_blue_A400: Int = 0x7f050037
-        const val md_blue_A700: Int = 0x7f050038
-        const val md_blue_grey_100: Int = 0x7f050039
-        const val md_blue_grey_200: Int = 0x7f05003a
-        const val md_blue_grey_300: Int = 0x7f05003b
-        const val md_blue_grey_400: Int = 0x7f05003c
-        const val md_blue_grey_50: Int = 0x7f05003d
-        const val md_blue_grey_500: Int = 0x7f05003e
-        const val md_blue_grey_600: Int = 0x7f05003f
-        const val md_blue_grey_700: Int = 0x7f050040
-        const val md_blue_grey_800: Int = 0x7f050041
-        const val md_blue_grey_900: Int = 0x7f050042
-        const val md_brown_100: Int = 0x7f050043
-        const val md_brown_200: Int = 0x7f050044
-        const val md_brown_300: Int = 0x7f050045
-        const val md_brown_400: Int = 0x7f050046
-        const val md_brown_50: Int = 0x7f050047
-        const val md_brown_500: Int = 0x7f050048
-        const val md_brown_600: Int = 0x7f050049
-        const val md_brown_700: Int = 0x7f05004a
-        const val md_brown_800: Int = 0x7f05004b
-        const val md_brown_900: Int = 0x7f05004c
-        const val md_cyan_100: Int = 0x7f05004d
-        const val md_cyan_200: Int = 0x7f05004e
-        const val md_cyan_300: Int = 0x7f05004f
-        const val md_cyan_400: Int = 0x7f050050
-        const val md_cyan_400_dark: Int = 0x7f050051
-        const val md_cyan_50: Int = 0x7f050052
-        const val md_cyan_500: Int = 0x7f050053
-        const val md_cyan_600: Int = 0x7f050054
-        const val md_cyan_700: Int = 0x7f050055
-        const val md_cyan_800: Int = 0x7f050056
-        const val md_cyan_900: Int = 0x7f050057
-        const val md_cyan_A100: Int = 0x7f050058
-        const val md_cyan_A200: Int = 0x7f050059
-        const val md_cyan_A400: Int = 0x7f05005a
-        const val md_cyan_A700: Int = 0x7f05005b
-        const val md_deep_orange_100: Int = 0x7f05005c
-        const val md_deep_orange_200: Int = 0x7f05005d
-        const val md_deep_orange_300: Int = 0x7f05005e
-        const val md_deep_orange_400: Int = 0x7f05005f
-        const val md_deep_orange_50: Int = 0x7f050060
-        const val md_deep_orange_500: Int = 0x7f050061
-        const val md_deep_orange_600: Int = 0x7f050062
-        const val md_deep_orange_700: Int = 0x7f050063
-        const val md_deep_orange_800: Int = 0x7f050064
-        const val md_deep_orange_900: Int = 0x7f050065
-        const val md_deep_orange_A100: Int = 0x7f050066
-        const val md_deep_orange_A200: Int = 0x7f050067
-        const val md_deep_orange_A400: Int = 0x7f050068
-        const val md_deep_orange_A700: Int = 0x7f050069
-        const val md_deep_purple_100: Int = 0x7f05006a
-        const val md_deep_purple_200: Int = 0x7f05006b
-        const val md_deep_purple_300: Int = 0x7f05006c
-        const val md_deep_purple_400: Int = 0x7f05006d
-        const val md_deep_purple_400_dark: Int = 0x7f05006e
-        const val md_deep_purple_50: Int = 0x7f05006f
-        const val md_deep_purple_500: Int = 0x7f050070
-        const val md_deep_purple_600: Int = 0x7f050071
-        const val md_deep_purple_700: Int = 0x7f050072
-        const val md_deep_purple_800: Int = 0x7f050073
-        const val md_deep_purple_900: Int = 0x7f050074
-        const val md_deep_purple_A100: Int = 0x7f050075
-        const val md_deep_purple_A200: Int = 0x7f050076
-        const val md_deep_purple_A400: Int = 0x7f050077
-        const val md_deep_purple_A700: Int = 0x7f050078
-        const val md_green_100: Int = 0x7f050079
-        const val md_green_200: Int = 0x7f05007a
-        const val md_green_300: Int = 0x7f05007b
-        const val md_green_400: Int = 0x7f05007c
-        const val md_green_50: Int = 0x7f05007d
-        const val md_green_500: Int = 0x7f05007e
-        const val md_green_600: Int = 0x7f05007f
-        const val md_green_700: Int = 0x7f050080
-        const val md_green_800: Int = 0x7f050081
-        const val md_green_900: Int = 0x7f050082
-        const val md_green_A100: Int = 0x7f050083
-        const val md_green_A200: Int = 0x7f050084
-        const val md_green_A400: Int = 0x7f050085
-        const val md_green_A700: Int = 0x7f050086
-        const val md_grey_100: Int = 0x7f050087
-        const val md_grey_200: Int = 0x7f050088
-        const val md_grey_300: Int = 0x7f050089
-        const val md_grey_400: Int = 0x7f05008a
-        const val md_grey_50: Int = 0x7f05008b
-        const val md_grey_500: Int = 0x7f05008c
-        const val md_grey_600: Int = 0x7f05008d
-        const val md_grey_700: Int = 0x7f05008e
-        const val md_grey_800: Int = 0x7f05008f
-        const val md_grey_900: Int = 0x7f050090
-        const val md_indigo_100: Int = 0x7f050091
-        const val md_indigo_200: Int = 0x7f050092
-        const val md_indigo_300: Int = 0x7f050093
-        const val md_indigo_400: Int = 0x7f050094
-        const val md_indigo_50: Int = 0x7f050095
-        const val md_indigo_500: Int = 0x7f050096
-        const val md_indigo_600: Int = 0x7f050097
-        const val md_indigo_700: Int = 0x7f050098
-        const val md_indigo_800: Int = 0x7f050099
-        const val md_indigo_900: Int = 0x7f05009a
-        const val md_indigo_A100: Int = 0x7f05009b
-        const val md_indigo_A200: Int = 0x7f05009c
-        const val md_indigo_A400: Int = 0x7f05009d
-        const val md_indigo_A700: Int = 0x7f05009e
-        const val md_light_blue_100: Int = 0x7f05009f
-        const val md_light_blue_200: Int = 0x7f0500a0
-        const val md_light_blue_300: Int = 0x7f0500a1
-        const val md_light_blue_400: Int = 0x7f0500a2
-        const val md_light_blue_50: Int = 0x7f0500a3
-        const val md_light_blue_500: Int = 0x7f0500a4
-        const val md_light_blue_600: Int = 0x7f0500a5
-        const val md_light_blue_700: Int = 0x7f0500a6
-        const val md_light_blue_800: Int = 0x7f0500a7
-        const val md_light_blue_900: Int = 0x7f0500a8
-        const val md_light_blue_A100: Int = 0x7f0500a9
-        const val md_light_blue_A200: Int = 0x7f0500aa
-        const val md_light_blue_A400: Int = 0x7f0500ab
-        const val md_light_blue_A700: Int = 0x7f0500ac
-        const val md_light_green_100: Int = 0x7f0500ad
-        const val md_light_green_200: Int = 0x7f0500ae
-        const val md_light_green_300: Int = 0x7f0500af
-        const val md_light_green_400: Int = 0x7f0500b0
-        const val md_light_green_50: Int = 0x7f0500b1
-        const val md_light_green_500: Int = 0x7f0500b2
-        const val md_light_green_500_dark: Int = 0x7f0500b3
-        const val md_light_green_600: Int = 0x7f0500b4
-        const val md_light_green_700: Int = 0x7f0500b5
-        const val md_light_green_800: Int = 0x7f0500b6
-        const val md_light_green_900: Int = 0x7f0500b7
-        const val md_light_green_A100: Int = 0x7f0500b8
-        const val md_light_green_A200: Int = 0x7f0500b9
-        const val md_light_green_A400: Int = 0x7f0500ba
-        const val md_light_green_A700: Int = 0x7f0500bb
-        const val md_lime_100: Int = 0x7f0500bc
-        const val md_lime_200: Int = 0x7f0500bd
-        const val md_lime_300: Int = 0x7f0500be
-        const val md_lime_400: Int = 0x7f0500bf
-        const val md_lime_50: Int = 0x7f0500c0
-        const val md_lime_500: Int = 0x7f0500c1
-        const val md_lime_600: Int = 0x7f0500c2
-        const val md_lime_700: Int = 0x7f0500c3
-        const val md_lime_800: Int = 0x7f0500c4
-        const val md_lime_900: Int = 0x7f0500c5
-        const val md_lime_A100: Int = 0x7f0500c6
-        const val md_lime_A200: Int = 0x7f0500c7
-        const val md_lime_A400: Int = 0x7f0500c8
-        const val md_lime_A700: Int = 0x7f0500c9
-        const val md_orange_100: Int = 0x7f0500ca
-        const val md_orange_200: Int = 0x7f0500cb
-        const val md_orange_300: Int = 0x7f0500cc
-        const val md_orange_400: Int = 0x7f0500cd
-        const val md_orange_400_dark: Int = 0x7f0500ce
-        const val md_orange_50: Int = 0x7f0500cf
-        const val md_orange_500: Int = 0x7f0500d0
-        const val md_orange_600: Int = 0x7f0500d1
-        const val md_orange_700: Int = 0x7f0500d2
-        const val md_orange_800: Int = 0x7f0500d3
-        const val md_orange_900: Int = 0x7f0500d4
-        const val md_orange_A100: Int = 0x7f0500d5
-        const val md_orange_A200: Int = 0x7f0500d6
-        const val md_orange_A400: Int = 0x7f0500d7
-        const val md_orange_A700: Int = 0x7f0500d8
-        const val md_pink_100: Int = 0x7f0500d9
-        const val md_pink_200: Int = 0x7f0500da
-        const val md_pink_300: Int = 0x7f0500db
-        const val md_pink_400: Int = 0x7f0500dc
-        const val md_pink_400_dark: Int = 0x7f0500dd
-        const val md_pink_50: Int = 0x7f0500de
-        const val md_pink_500: Int = 0x7f0500df
-        const val md_pink_600: Int = 0x7f0500e0
-        const val md_pink_700: Int = 0x7f0500e1
-        const val md_pink_800: Int = 0x7f0500e2
-        const val md_pink_900: Int = 0x7f0500e3
-        const val md_pink_A100: Int = 0x7f0500e4
-        const val md_pink_A200: Int = 0x7f0500e5
-        const val md_pink_A400: Int = 0x7f0500e6
-        const val md_pink_A700: Int = 0x7f0500e7
-        const val md_purple_100: Int = 0x7f0500e8
-        const val md_purple_200: Int = 0x7f0500e9
-        const val md_purple_300: Int = 0x7f0500ea
-        const val md_purple_400: Int = 0x7f0500eb
-        const val md_purple_50: Int = 0x7f0500ec
-        const val md_purple_500: Int = 0x7f0500ed
-        const val md_purple_600: Int = 0x7f0500ee
-        const val md_purple_700: Int = 0x7f0500ef
-        const val md_purple_800: Int = 0x7f0500f0
-        const val md_purple_900: Int = 0x7f0500f1
-        const val md_purple_A100: Int = 0x7f0500f2
-        const val md_purple_A200: Int = 0x7f0500f3
-        const val md_purple_A400: Int = 0x7f0500f4
-        const val md_purple_A700: Int = 0x7f0500f5
-        const val md_red_100: Int = 0x7f0500f6
-        const val md_red_200: Int = 0x7f0500f7
-        const val md_red_300: Int = 0x7f0500f8
-        const val md_red_400: Int = 0x7f0500f9
-        const val md_red_400_dark: Int = 0x7f0500fa
-        const val md_red_50: Int = 0x7f0500fb
-        const val md_red_500: Int = 0x7f0500fc
-        const val md_red_600: Int = 0x7f0500fd
-        const val md_red_700: Int = 0x7f0500fe
-        const val md_red_800: Int = 0x7f0500ff
-        const val md_red_900: Int = 0x7f050100
-        const val md_red_A100: Int = 0x7f050101
-        const val md_red_A200: Int = 0x7f050102
-        const val md_red_A400: Int = 0x7f050103
-        const val md_red_A700: Int = 0x7f050104
-        const val md_teal_100: Int = 0x7f050105
-        const val md_teal_200: Int = 0x7f050106
-        const val md_teal_300: Int = 0x7f050107
-        const val md_teal_400: Int = 0x7f050108
-        const val md_teal_400_dark: Int = 0x7f050109
-        const val md_teal_50: Int = 0x7f05010a
-        const val md_teal_500: Int = 0x7f05010b
-        const val md_teal_600: Int = 0x7f05010c
-        const val md_teal_700: Int = 0x7f05010d
-        const val md_teal_800: Int = 0x7f05010e
-        const val md_teal_900: Int = 0x7f05010f
-        const val md_teal_A100: Int = 0x7f050110
-        const val md_teal_A200: Int = 0x7f050111
-        const val md_teal_A400: Int = 0x7f050112
-        const val md_teal_A700: Int = 0x7f050113
-        const val md_white_1000: Int = 0x7f050114
-        const val md_yellow_100: Int = 0x7f050115
-        const val md_yellow_200: Int = 0x7f050116
-        const val md_yellow_300: Int = 0x7f050117
-        const val md_yellow_400: Int = 0x7f050118
-        const val md_yellow_50: Int = 0x7f050119
-        const val md_yellow_500: Int = 0x7f05011a
-        const val md_yellow_600: Int = 0x7f05011b
-        const val md_yellow_700: Int = 0x7f05011c
-        const val md_yellow_800: Int = 0x7f05011d
-        const val md_yellow_900: Int = 0x7f05011e
-        const val md_yellow_A100: Int = 0x7f05011f
-        const val md_yellow_A200: Int = 0x7f050120
-        const val md_yellow_A400: Int = 0x7f050121
-        const val md_yellow_A700: Int = 0x7f050122
-        const val panel_transparency: Int = 0x7f050123
-        const val thumbnail_background_color: Int = 0x7f050124
-        const val transparent_focus_circle: Int = 0x7f050125
-        const val white: Int = 0x7f050126
-        const val white_theme_background: Int = 0x7f050127
+        const val White: Int = 0x7f050000
+        const val cam_chip_text: Int = 0x7f050001
+        const val cam_error: Int = 0x7f050002
+        const val cam_icon_tint: Int = 0x7f050003
+        const val cam_on_primary: Int = 0x7f050004
+        const val cam_on_primary_container: Int = 0x7f050005
+        const val cam_on_surface: Int = 0x7f050006
+        const val cam_on_surface_variant: Int = 0x7f050007
+        const val cam_outline: Int = 0x7f050008
+        const val cam_panel_scrim: Int = 0x7f050009
+        const val cam_primary: Int = 0x7f05000a
+        const val cam_primary_container: Int = 0x7f05000b
+        const val cam_surface: Int = 0x7f05000c
+        const val cam_surface_container: Int = 0x7f05000d
+        const val cam_surface_container_high: Int = 0x7f05000e
+        const val colorAccent: Int = 0x7f05000f
+        const val colorPrimaryDark: Int = 0x7f050010
+        const val focus_circle_color: Int = 0x7f050011
+        const val gradient_bottom_shadow_color: Int = 0x7f050012
+        const val gradient_color: Int = 0x7f050013
+        const val gradient_color_video: Int = 0x7f050014
+        const val gradient_shadow_thumb_tag: Int = 0x7f050015
+        const val gradient_top_shadow_color: Int = 0x7f050016
+        const val ic_gradient_setting_color: Int = 0x7f050017
+        const val md_amber_100: Int = 0x7f050018
+        const val md_amber_200: Int = 0x7f050019
+        const val md_amber_300: Int = 0x7f05001a
+        const val md_amber_400: Int = 0x7f05001b
+        const val md_amber_50: Int = 0x7f05001c
+        const val md_amber_500: Int = 0x7f05001d
+        const val md_amber_600: Int = 0x7f05001e
+        const val md_amber_700: Int = 0x7f05001f
+        const val md_amber_800: Int = 0x7f050020
+        const val md_amber_900: Int = 0x7f050021
+        const val md_amber_A100: Int = 0x7f050022
+        const val md_amber_A200: Int = 0x7f050023
+        const val md_amber_A400: Int = 0x7f050024
+        const val md_amber_A700: Int = 0x7f050025
+        const val md_black_1000: Int = 0x7f050026
+        const val md_blue_100: Int = 0x7f050027
+        const val md_blue_200: Int = 0x7f050028
+        const val md_blue_300: Int = 0x7f050029
+        const val md_blue_400: Int = 0x7f05002a
+        const val md_blue_400_dark: Int = 0x7f05002b
+        const val md_blue_50: Int = 0x7f05002c
+        const val md_blue_500: Int = 0x7f05002d
+        const val md_blue_600: Int = 0x7f05002e
+        const val md_blue_700: Int = 0x7f05002f
+        const val md_blue_800: Int = 0x7f050030
+        const val md_blue_900: Int = 0x7f050031
+        const val md_blue_A100: Int = 0x7f050032
+        const val md_blue_A200: Int = 0x7f050033
+        const val md_blue_A400: Int = 0x7f050034
+        const val md_blue_A700: Int = 0x7f050035
+        const val md_blue_grey_100: Int = 0x7f050036
+        const val md_blue_grey_200: Int = 0x7f050037
+        const val md_blue_grey_300: Int = 0x7f050038
+        const val md_blue_grey_400: Int = 0x7f050039
+        const val md_blue_grey_50: Int = 0x7f05003a
+        const val md_blue_grey_500: Int = 0x7f05003b
+        const val md_blue_grey_600: Int = 0x7f05003c
+        const val md_blue_grey_700: Int = 0x7f05003d
+        const val md_blue_grey_800: Int = 0x7f05003e
+        const val md_blue_grey_900: Int = 0x7f05003f
+        const val md_brown_100: Int = 0x7f050040
+        const val md_brown_200: Int = 0x7f050041
+        const val md_brown_300: Int = 0x7f050042
+        const val md_brown_400: Int = 0x7f050043
+        const val md_brown_50: Int = 0x7f050044
+        const val md_brown_500: Int = 0x7f050045
+        const val md_brown_600: Int = 0x7f050046
+        const val md_brown_700: Int = 0x7f050047
+        const val md_brown_800: Int = 0x7f050048
+        const val md_brown_900: Int = 0x7f050049
+        const val md_cyan_100: Int = 0x7f05004a
+        const val md_cyan_200: Int = 0x7f05004b
+        const val md_cyan_300: Int = 0x7f05004c
+        const val md_cyan_400: Int = 0x7f05004d
+        const val md_cyan_400_dark: Int = 0x7f05004e
+        const val md_cyan_50: Int = 0x7f05004f
+        const val md_cyan_500: Int = 0x7f050050
+        const val md_cyan_600: Int = 0x7f050051
+        const val md_cyan_700: Int = 0x7f050052
+        const val md_cyan_800: Int = 0x7f050053
+        const val md_cyan_900: Int = 0x7f050054
+        const val md_cyan_A100: Int = 0x7f050055
+        const val md_cyan_A200: Int = 0x7f050056
+        const val md_cyan_A400: Int = 0x7f050057
+        const val md_cyan_A700: Int = 0x7f050058
+        const val md_deep_orange_100: Int = 0x7f050059
+        const val md_deep_orange_200: Int = 0x7f05005a
+        const val md_deep_orange_300: Int = 0x7f05005b
+        const val md_deep_orange_400: Int = 0x7f05005c
+        const val md_deep_orange_50: Int = 0x7f05005d
+        const val md_deep_orange_500: Int = 0x7f05005e
+        const val md_deep_orange_600: Int = 0x7f05005f
+        const val md_deep_orange_700: Int = 0x7f050060
+        const val md_deep_orange_800: Int = 0x7f050061
+        const val md_deep_orange_900: Int = 0x7f050062
+        const val md_deep_orange_A100: Int = 0x7f050063
+        const val md_deep_orange_A200: Int = 0x7f050064
+        const val md_deep_orange_A400: Int = 0x7f050065
+        const val md_deep_orange_A700: Int = 0x7f050066
+        const val md_deep_purple_100: Int = 0x7f050067
+        const val md_deep_purple_200: Int = 0x7f050068
+        const val md_deep_purple_300: Int = 0x7f050069
+        const val md_deep_purple_400: Int = 0x7f05006a
+        const val md_deep_purple_400_dark: Int = 0x7f05006b
+        const val md_deep_purple_50: Int = 0x7f05006c
+        const val md_deep_purple_500: Int = 0x7f05006d
+        const val md_deep_purple_600: Int = 0x7f05006e
+        const val md_deep_purple_700: Int = 0x7f05006f
+        const val md_deep_purple_800: Int = 0x7f050070
+        const val md_deep_purple_900: Int = 0x7f050071
+        const val md_deep_purple_A100: Int = 0x7f050072
+        const val md_deep_purple_A200: Int = 0x7f050073
+        const val md_deep_purple_A400: Int = 0x7f050074
+        const val md_deep_purple_A700: Int = 0x7f050075
+        const val md_green_100: Int = 0x7f050076
+        const val md_green_200: Int = 0x7f050077
+        const val md_green_300: Int = 0x7f050078
+        const val md_green_400: Int = 0x7f050079
+        const val md_green_50: Int = 0x7f05007a
+        const val md_green_500: Int = 0x7f05007b
+        const val md_green_600: Int = 0x7f05007c
+        const val md_green_700: Int = 0x7f05007d
+        const val md_green_800: Int = 0x7f05007e
+        const val md_green_900: Int = 0x7f05007f
+        const val md_green_A100: Int = 0x7f050080
+        const val md_green_A200: Int = 0x7f050081
+        const val md_green_A400: Int = 0x7f050082
+        const val md_green_A700: Int = 0x7f050083
+        const val md_grey_100: Int = 0x7f050084
+        const val md_grey_200: Int = 0x7f050085
+        const val md_grey_300: Int = 0x7f050086
+        const val md_grey_400: Int = 0x7f050087
+        const val md_grey_50: Int = 0x7f050088
+        const val md_grey_500: Int = 0x7f050089
+        const val md_grey_600: Int = 0x7f05008a
+        const val md_grey_700: Int = 0x7f05008b
+        const val md_grey_800: Int = 0x7f05008c
+        const val md_grey_900: Int = 0x7f05008d
+        const val md_indigo_100: Int = 0x7f05008e
+        const val md_indigo_200: Int = 0x7f05008f
+        const val md_indigo_300: Int = 0x7f050090
+        const val md_indigo_400: Int = 0x7f050091
+        const val md_indigo_50: Int = 0x7f050092
+        const val md_indigo_500: Int = 0x7f050093
+        const val md_indigo_600: Int = 0x7f050094
+        const val md_indigo_700: Int = 0x7f050095
+        const val md_indigo_800: Int = 0x7f050096
+        const val md_indigo_900: Int = 0x7f050097
+        const val md_indigo_A100: Int = 0x7f050098
+        const val md_indigo_A200: Int = 0x7f050099
+        const val md_indigo_A400: Int = 0x7f05009a
+        const val md_indigo_A700: Int = 0x7f05009b
+        const val md_light_blue_100: Int = 0x7f05009c
+        const val md_light_blue_200: Int = 0x7f05009d
+        const val md_light_blue_300: Int = 0x7f05009e
+        const val md_light_blue_400: Int = 0x7f05009f
+        const val md_light_blue_50: Int = 0x7f0500a0
+        const val md_light_blue_500: Int = 0x7f0500a1
+        const val md_light_blue_600: Int = 0x7f0500a2
+        const val md_light_blue_700: Int = 0x7f0500a3
+        const val md_light_blue_800: Int = 0x7f0500a4
+        const val md_light_blue_900: Int = 0x7f0500a5
+        const val md_light_blue_A100: Int = 0x7f0500a6
+        const val md_light_blue_A200: Int = 0x7f0500a7
+        const val md_light_blue_A400: Int = 0x7f0500a8
+        const val md_light_blue_A700: Int = 0x7f0500a9
+        const val md_light_green_100: Int = 0x7f0500aa
+        const val md_light_green_200: Int = 0x7f0500ab
+        const val md_light_green_300: Int = 0x7f0500ac
+        const val md_light_green_400: Int = 0x7f0500ad
+        const val md_light_green_50: Int = 0x7f0500ae
+        const val md_light_green_500: Int = 0x7f0500af
+        const val md_light_green_500_dark: Int = 0x7f0500b0
+        const val md_light_green_600: Int = 0x7f0500b1
+        const val md_light_green_700: Int = 0x7f0500b2
+        const val md_light_green_800: Int = 0x7f0500b3
+        const val md_light_green_900: Int = 0x7f0500b4
+        const val md_light_green_A100: Int = 0x7f0500b5
+        const val md_light_green_A200: Int = 0x7f0500b6
+        const val md_light_green_A400: Int = 0x7f0500b7
+        const val md_light_green_A700: Int = 0x7f0500b8
+        const val md_lime_100: Int = 0x7f0500b9
+        const val md_lime_200: Int = 0x7f0500ba
+        const val md_lime_300: Int = 0x7f0500bb
+        const val md_lime_400: Int = 0x7f0500bc
+        const val md_lime_50: Int = 0x7f0500bd
+        const val md_lime_500: Int = 0x7f0500be
+        const val md_lime_600: Int = 0x7f0500bf
+        const val md_lime_700: Int = 0x7f0500c0
+        const val md_lime_800: Int = 0x7f0500c1
+        const val md_lime_900: Int = 0x7f0500c2
+        const val md_lime_A100: Int = 0x7f0500c3
+        const val md_lime_A200: Int = 0x7f0500c4
+        const val md_lime_A400: Int = 0x7f0500c5
+        const val md_lime_A700: Int = 0x7f0500c6
+        const val md_orange_100: Int = 0x7f0500c7
+        const val md_orange_200: Int = 0x7f0500c8
+        const val md_orange_300: Int = 0x7f0500c9
+        const val md_orange_400: Int = 0x7f0500ca
+        const val md_orange_400_dark: Int = 0x7f0500cb
+        const val md_orange_50: Int = 0x7f0500cc
+        const val md_orange_500: Int = 0x7f0500cd
+        const val md_orange_600: Int = 0x7f0500ce
+        const val md_orange_700: Int = 0x7f0500cf
+        const val md_orange_800: Int = 0x7f0500d0
+        const val md_orange_900: Int = 0x7f0500d1
+        const val md_orange_A100: Int = 0x7f0500d2
+        const val md_orange_A200: Int = 0x7f0500d3
+        const val md_orange_A400: Int = 0x7f0500d4
+        const val md_orange_A700: Int = 0x7f0500d5
+        const val md_pink_100: Int = 0x7f0500d6
+        const val md_pink_200: Int = 0x7f0500d7
+        const val md_pink_300: Int = 0x7f0500d8
+        const val md_pink_400: Int = 0x7f0500d9
+        const val md_pink_400_dark: Int = 0x7f0500da
+        const val md_pink_50: Int = 0x7f0500db
+        const val md_pink_500: Int = 0x7f0500dc
+        const val md_pink_600: Int = 0x7f0500dd
+        const val md_pink_700: Int = 0x7f0500de
+        const val md_pink_800: Int = 0x7f0500df
+        const val md_pink_900: Int = 0x7f0500e0
+        const val md_pink_A100: Int = 0x7f0500e1
+        const val md_pink_A200: Int = 0x7f0500e2
+        const val md_pink_A400: Int = 0x7f0500e3
+        const val md_pink_A700: Int = 0x7f0500e4
+        const val md_purple_100: Int = 0x7f0500e5
+        const val md_purple_200: Int = 0x7f0500e6
+        const val md_purple_300: Int = 0x7f0500e7
+        const val md_purple_400: Int = 0x7f0500e8
+        const val md_purple_50: Int = 0x7f0500e9
+        const val md_purple_500: Int = 0x7f0500ea
+        const val md_purple_600: Int = 0x7f0500eb
+        const val md_purple_700: Int = 0x7f0500ec
+        const val md_purple_800: Int = 0x7f0500ed
+        const val md_purple_900: Int = 0x7f0500ee
+        const val md_purple_A100: Int = 0x7f0500ef
+        const val md_purple_A200: Int = 0x7f0500f0
+        const val md_purple_A400: Int = 0x7f0500f1
+        const val md_purple_A700: Int = 0x7f0500f2
+        const val md_red_100: Int = 0x7f0500f3
+        const val md_red_200: Int = 0x7f0500f4
+        const val md_red_300: Int = 0x7f0500f5
+        const val md_red_400: Int = 0x7f0500f6
+        const val md_red_400_dark: Int = 0x7f0500f7
+        const val md_red_50: Int = 0x7f0500f8
+        const val md_red_500: Int = 0x7f0500f9
+        const val md_red_600: Int = 0x7f0500fa
+        const val md_red_700: Int = 0x7f0500fb
+        const val md_red_800: Int = 0x7f0500fc
+        const val md_red_900: Int = 0x7f0500fd
+        const val md_red_A100: Int = 0x7f0500fe
+        const val md_red_A200: Int = 0x7f0500ff
+        const val md_red_A400: Int = 0x7f050100
+        const val md_red_A700: Int = 0x7f050101
+        const val md_teal_100: Int = 0x7f050102
+        const val md_teal_200: Int = 0x7f050103
+        const val md_teal_300: Int = 0x7f050104
+        const val md_teal_400: Int = 0x7f050105
+        const val md_teal_400_dark: Int = 0x7f050106
+        const val md_teal_50: Int = 0x7f050107
+        const val md_teal_500: Int = 0x7f050108
+        const val md_teal_600: Int = 0x7f050109
+        const val md_teal_700: Int = 0x7f05010a
+        const val md_teal_800: Int = 0x7f05010b
+        const val md_teal_900: Int = 0x7f05010c
+        const val md_teal_A100: Int = 0x7f05010d
+        const val md_teal_A200: Int = 0x7f05010e
+        const val md_teal_A400: Int = 0x7f05010f
+        const val md_teal_A700: Int = 0x7f050110
+        const val md_white_1000: Int = 0x7f050111
+        const val md_yellow_100: Int = 0x7f050112
+        const val md_yellow_200: Int = 0x7f050113
+        const val md_yellow_300: Int = 0x7f050114
+        const val md_yellow_400: Int = 0x7f050115
+        const val md_yellow_50: Int = 0x7f050116
+        const val md_yellow_500: Int = 0x7f050117
+        const val md_yellow_600: Int = 0x7f050118
+        const val md_yellow_700: Int = 0x7f050119
+        const val md_yellow_800: Int = 0x7f05011a
+        const val md_yellow_900: Int = 0x7f05011b
+        const val md_yellow_A100: Int = 0x7f05011c
+        const val md_yellow_A200: Int = 0x7f05011d
+        const val md_yellow_A400: Int = 0x7f05011e
+        const val md_yellow_A700: Int = 0x7f05011f
+        const val panel_transparency: Int = 0x7f050120
+        const val shutter_morph_fill: Int = 0x7f050121
+        const val shutter_morph_stroke: Int = 0x7f050122
+        const val thumbnail_background_color: Int = 0x7f050123
+        const val white: Int = 0x7f050124
+        const val white_theme_background: Int = 0x7f050125
     }
     object dimen {
-        const val SettingSize1: Int = 0x7f060000
-        const val SettingSize2: Int = 0x7f060001
-        const val arrow_size: Int = 0x7f060002
-        const val aux_button_internal_margin: Int = 0x7f060003
-        const val aux_button_size: Int = 0x7f060004
-        const val aux_container_margin: Int = 0x7f060005
-        const val bottombar_padding: Int = 0x7f060006
-        const val bottombar_to_modeswitcher_margin: Int = 0x7f060007
-        const val camera_preference_about_padding: Int = 0x7f060008
-        const val camera_settings_entry_left_margin: Int = 0x7f060009
-        const val camera_settings_entry_margin: Int = 0x7f06000a
-        const val camera_settings_icon_size: Int = 0x7f06000b
-        const val camera_settings_preference_font_size: Int = 0x7f06000c
-        const val camera_switch_button_size: Int = 0x7f06000d
-        const val capture_progress_circle_size: Int = 0x7f06000e
-        const val exif_dialog_width: Int = 0x7f06000f
-        const val flip_camera_size: Int = 0x7f060010
-        const val focus_circle_size: Int = 0x7f060011
-        const val gallery_button_size: Int = 0x7f060012
-        const val gallery_viewer_button_conainer_size: Int = 0x7f060013
-        const val gallery_viewer_button_size: Int = 0x7f060014
-        const val mode_chip_height: Int = 0x7f060015
-        const val mode_chip_radius: Int = 0x7f060016
-        const val mode_chip_side_margin: Int = 0x7f060017
-        const val mode_chip_text_size: Int = 0x7f060018
-        const val mode_switcher_padding: Int = 0x7f060019
-        const val mode_switcher_pading: Int = 0x7f06001a
-        const val preference_category_text_height: Int = 0x7f06001b
-        const val preference_seekbar_padding: Int = 0x7f06001c
+        const val arrow_size: Int = 0x7f060000
+        const val aux_button_internal_margin: Int = 0x7f060001
+        const val aux_button_size: Int = 0x7f060002
+        const val aux_container_margin: Int = 0x7f060003
+        const val bottombar_padding: Int = 0x7f060004
+        const val cam_panel_blur_radius: Int = 0x7f060005
+        const val cam_panel_corner_radius: Int = 0x7f060006
+        const val camera_settings_entry_margin: Int = 0x7f060007
+        const val camera_settings_icon_size: Int = 0x7f060008
+        const val camera_settings_preference_font_size: Int = 0x7f060009
+        const val camera_switch_button_size: Int = 0x7f06000a
+        const val capture_progress_circle_size: Int = 0x7f06000b
+        const val exif_dialog_width: Int = 0x7f06000c
+        const val focus_circle_size: Int = 0x7f06000d
+        const val gallery_button_size: Int = 0x7f06000e
+        const val gallery_viewer_button_conainer_size: Int = 0x7f06000f
+        const val gallery_viewer_button_size: Int = 0x7f060010
+        const val lens_zoom_slider_thickness: Int = 0x7f060011
+        const val lens_zoom_slider_width: Int = 0x7f060012
+        const val lens_zoom_stack_gap: Int = 0x7f060013
+        const val manual_dome_min_height: Int = 0x7f060014
+        const val mode_chip_text_size: Int = 0x7f060015
+        const val mode_switcher_padding: Int = 0x7f060016
+        const val preference_category_text_height: Int = 0x7f060017
+        const val preference_icon_margin: Int = 0x7f060018
+        const val preference_icon_size: Int = 0x7f060019
+        const val preference_row_horizontal_padding: Int = 0x7f06001a
+        const val preference_row_min_height: Int = 0x7f06001b
+        const val preference_row_vertical_padding: Int = 0x7f06001c
         const val preference_seekbar_value_padding: Int = 0x7f06001d
         const val preference_seekbar_value_text_width: Int = 0x7f06001e
         const val shutter_button_size: Int = 0x7f06001f
-        const val shutter_progress_bar_size: Int = 0x7f060020
-        const val standard_0: Int = 0x7f060021
+        const val standard_0: Int = 0x7f060020
+        const val standard_12: Int = 0x7f060021
         const val standard_125: Int = 0x7f060022
         const val standard_20: Int = 0x7f060023
         const val standard_65: Int = 0x7f060024
         const val topbar_button_inset: Int = 0x7f060025
-        const val topbar_icon_size: Int = 0x7f060026
-        const val topbar_padding: Int = 0x7f060027
+        const val topbar_padding: Int = 0x7f060026
+        const val viewfinder_round_corner_radius: Int = 0x7f060027
         const val viewfinder_top_padding: Int = 0x7f060028
     }
     object drawable {
-        const val analyze_lut: Int = 0x7f070000
-        const val autofps_select_24px: Int = 0x7f070001
-        const val aux_button_background: Int = 0x7f070002
-        const val aux_container_background: Int = 0x7f070003
-        const val bg_ultra_hdr_toggle: Int = 0x7f070004
-        const val camera_launch: Int = 0x7f070005
-        const val camera_launch_bg: Int = 0x7f070006
-        const val camera_launch_fg: Int = 0x7f070007
-        const val camera_launch_mono: Int = 0x7f070008
-        const val chevron_up: Int = 0x7f070009
-        const val circular_progress_bar: Int = 0x7f07000a
-        const val circular_progress_bar2: Int = 0x7f07000b
-        const val eis_button: Int = 0x7f07000c
-        const val exif_background: Int = 0x7f07000d
-        const val fps24_select_24px: Int = 0x7f07000e
-        const val fps30_select_24px: Int = 0x7f07000f
-        const val fps60_select_24px: Int = 0x7f070010
-        const val fps_button: Int = 0x7f070011
-        const val gallery_launch_bg: Int = 0x7f070012
-        const val gallery_launch_fg: Int = 0x7f070013
-        const val gallery_launch_mono: Int = 0x7f070014
-        const val gradient_shadow_vector: Int = 0x7f070015
-        const val gradient_shadow_vector_bottom: Int = 0x7f070016
-        const val gradient_shadow_vector_top: Int = 0x7f070017
-        const val gradient_vector: Int = 0x7f070018
-        const val gradient_vector_video: Int = 0x7f070019
-        const val ic_add: Int = 0x7f07001a
-        const val ic_baseline_arrow_back_24: Int = 0x7f07001b
-        const val ic_baseline_build: Int = 0x7f07001c
+        const val autofps_select_24px: Int = 0x7f070000
+        const val aux_button_background: Int = 0x7f070001
+        const val aux_container_background: Int = 0x7f070002
+        const val cam_badge_background: Int = 0x7f070003
+        const val cam_bar_blur_overlay: Int = 0x7f070004
+        const val cam_chip_background: Int = 0x7f070005
+        const val camera_launch: Int = 0x7f070006
+        const val camera_launch_bg: Int = 0x7f070007
+        const val camera_launch_fg: Int = 0x7f070008
+        const val camera_launch_mono: Int = 0x7f070009
+        const val chevron_up: Int = 0x7f07000a
+        const val eis_button: Int = 0x7f07000b
+        const val exif_background: Int = 0x7f07000c
+        const val exif_background_scrim: Int = 0x7f07000d
+        const val exif_background_transparent: Int = 0x7f07000e
+        const val fps24_select_24px: Int = 0x7f07000f
+        const val fps30_select_24px: Int = 0x7f070010
+        const val fps60_select_24px: Int = 0x7f070011
+        const val fps_button: Int = 0x7f070012
+        const val gallery_launch_bg: Int = 0x7f070013
+        const val gallery_launch_fg: Int = 0x7f070014
+        const val gallery_launch_mono: Int = 0x7f070015
+        const val gradient_shadow_vector: Int = 0x7f070016
+        const val gradient_shadow_vector_bottom: Int = 0x7f070017
+        const val gradient_shadow_vector_top: Int = 0x7f070018
+        const val gradient_vector: Int = 0x7f070019
+        const val gradient_vector_video: Int = 0x7f07001a
+        const val ic_add: Int = 0x7f07001b
+        const val ic_baseline_arrow_back_24: Int = 0x7f07001c
         const val ic_baseline_info_24: Int = 0x7f07001d
         const val ic_bayer: Int = 0x7f07001e
         const val ic_burst_mode_black_24dp: Int = 0x7f07001f
@@ -476,15 +487,15 @@ object R {
         const val ic_info: Int = 0x7f07003c
         const val ic_iso: Int = 0x7f07003d
         const val ic_multi_lens: Int = 0x7f07003e
-        const val ic_photo_library: Int = 0x7f07003f
-        const val ic_quad_off: Int = 0x7f070040
-        const val ic_quad_on: Int = 0x7f070041
-        const val ic_raw: Int = 0x7f070042
-        const val ic_raw_off: Int = 0x7f070043
-        const val ic_refresh: Int = 0x7f070044
-        const val ic_restore: Int = 0x7f070045
-        const val ic_round_battery_alert_24: Int = 0x7f070046
-        const val ic_round_battery_std_24: Int = 0x7f070047
+        const val ic_ois: Int = 0x7f07003f
+        const val ic_photo_library: Int = 0x7f070040
+        const val ic_quad_off: Int = 0x7f070041
+        const val ic_quad_on: Int = 0x7f070042
+        const val ic_raw: Int = 0x7f070043
+        const val ic_raw_off: Int = 0x7f070044
+        const val ic_refresh: Int = 0x7f070045
+        const val ic_restore: Int = 0x7f070046
+        const val ic_round_battery_alert_24: Int = 0x7f070047
         const val ic_round_photo_camera_24: Int = 0x7f070048
         const val ic_rounded_corner: Int = 0x7f070049
         const val ic_saturation: Int = 0x7f07004a
@@ -506,79 +517,82 @@ object R {
         const val ic_ultra_hdr: Int = 0x7f07005a
         const val ic_ultra_hdr_off: Int = 0x7f07005b
         const val ic_watermark: Int = 0x7f07005c
-        const val initial_lut: Int = 0x7f07005d
-        const val leaf_icon_15: Int = 0x7f07005e
-        const val lut: Int = 0x7f07005f
-        const val lut2: Int = 0x7f070060
-        const val neutral_lut: Int = 0x7f070061
-        const val photoncamera_watermark: Int = 0x7f070062
+        const val ic_zoom_lock: Int = 0x7f07005d
+        const val ic_zoom_lock_open: Int = 0x7f07005e
+        const val leaf_icon_15: Int = 0x7f07005f
+        const val lut: Int = 0x7f070060
+        const val lut2: Int = 0x7f070061
+        const val neutral_lut: Int = 0x7f070062
         const val quad_button: Int = 0x7f070063
         const val raw_button: Int = 0x7f070064
-        const val rectangle: Int = 0x7f070065
-        const val round: Int = 0x7f070066
-        const val roundbutton: Int = 0x7f070067
-        const val shadowtex: Int = 0x7f070068
-        const val splash_background: Int = 0x7f070069
-        const val unlimitedbutton: Int = 0x7f07006a
-        const val updatetheme: Int = 0x7f07006b
-    }
-    object font {
-        const val open_sans: Int = 0x7f080000
+        const val round: Int = 0x7f070065
+        const val shadowtex: Int = 0x7f070066
+        const val splash_background: Int = 0x7f070067
+        const val updatetheme: Int = 0x7f070068
     }
     object id {
-        const val ae_metering_std_average_button: Int = 0x7f090000
-        const val ae_metering_std_center_button: Int = 0x7f090001
-        const val ae_metering_std_entry_layout: Int = 0x7f090002
-        const val ae_metering_std_off_button: Int = 0x7f090003
-        const val ae_metering_std_spot_button: Int = 0x7f090004
-        const val batterysaver_entry_layout: Int = 0x7f090005
-        const val bracketing_entry_layout: Int = 0x7f090006
-        const val bracketing_high_button: Int = 0x7f090007
-        const val bracketing_normal_button: Int = 0x7f090008
-        const val bracketing_off_button: Int = 0x7f090009
-        const val btsvr_off_button: Int = 0x7f09000a
-        const val btsvr_on_button: Int = 0x7f09000b
-        const val eis_entry_layout: Int = 0x7f09000c
-        const val eis_off_button: Int = 0x7f09000d
-        const val eis_on_button: Int = 0x7f09000e
-        const val flash_auto_button: Int = 0x7f09000f
-        const val flash_entry_layout: Int = 0x7f090010
-        const val flash_odd_button: Int = 0x7f090011
-        const val flash_on_button: Int = 0x7f090012
-        const val fps24_button: Int = 0x7f090013
-        const val fps30_button: Int = 0x7f090014
-        const val fps60_button: Int = 0x7f090015
-        const val fps_auto_button: Int = 0x7f090016
-        const val fps_entry_layout: Int = 0x7f090017
-        const val grid_33_button: Int = 0x7f090018
-        const val grid_44_button: Int = 0x7f090019
-        const val grid_dt_button: Int = 0x7f09001a
-        const val grid_entry_layout: Int = 0x7f09001b
-        const val grid_gr_button: Int = 0x7f09001c
-        const val grid_off_button: Int = 0x7f09001d
-        const val hdrx_entry_layout: Int = 0x7f09001e
-        const val hdrx_off_button: Int = 0x7f09001f
-        const val hdrx_on_button: Int = 0x7f090020
-        const val manual_palette: Int = 0x7f090021
-        const val manualimpl: Int = 0x7f090022
-        const val quad_entry_layout: Int = 0x7f090023
-        const val quad_off_button: Int = 0x7f090024
-        const val quad_on_button: Int = 0x7f090025
-        const val raw_off_button: Int = 0x7f090026
-        const val raw_on_button: Int = 0x7f090027
-        const val raw_only_button: Int = 0x7f090028
-        const val saveraw_entry_layout: Int = 0x7f090029
-        const val settings_bar_scroll_view: Int = 0x7f09002a
-        const val settings_bar_settings_button_container: Int = 0x7f09002b
-        const val timer10s_button: Int = 0x7f09002c
-        const val timer3s_button: Int = 0x7f09002d
-        const val timer_entry_layout: Int = 0x7f09002e
-        const val timer_off_button: Int = 0x7f09002f
-        const val torch_button: Int = 0x7f090030
+        const val ae_metering_std_average_button: Int = 0x7f080000
+        const val ae_metering_std_center_button: Int = 0x7f080001
+        const val ae_metering_std_entry_layout: Int = 0x7f080002
+        const val ae_metering_std_off_button: Int = 0x7f080003
+        const val ae_metering_std_spot_button: Int = 0x7f080004
+        const val batterysaver_entry_layout: Int = 0x7f080005
+        const val bracketing_entry_layout: Int = 0x7f080006
+        const val bracketing_high_button: Int = 0x7f080007
+        const val bracketing_normal_button: Int = 0x7f080008
+        const val bracketing_off_button: Int = 0x7f080009
+        const val btsvr_off_button: Int = 0x7f08000a
+        const val btsvr_on_button: Int = 0x7f08000b
+        const val eis_entry_layout: Int = 0x7f08000c
+        const val eis_off_button: Int = 0x7f08000d
+        const val eis_on_button: Int = 0x7f08000e
+        const val flash_auto_button: Int = 0x7f08000f
+        const val flash_entry_layout: Int = 0x7f080010
+        const val flash_odd_button: Int = 0x7f080011
+        const val flash_on_button: Int = 0x7f080012
+        const val fps24_button: Int = 0x7f080013
+        const val fps30_button: Int = 0x7f080014
+        const val fps60_button: Int = 0x7f080015
+        const val fps_auto_button: Int = 0x7f080016
+        const val fps_entry_layout: Int = 0x7f080017
+        const val grid_33_button: Int = 0x7f080018
+        const val grid_44_button: Int = 0x7f080019
+        const val grid_dt_button: Int = 0x7f08001a
+        const val grid_entry_layout: Int = 0x7f08001b
+        const val grid_gr_button: Int = 0x7f08001c
+        const val grid_off_button: Int = 0x7f08001d
+        const val hdrx_entry_layout: Int = 0x7f08001e
+        const val hdrx_off_button: Int = 0x7f08001f
+        const val hdrx_on_button: Int = 0x7f080020
+        const val manual_palette: Int = 0x7f080021
+        const val manualimpl: Int = 0x7f080022
+        const val quad_entry_layout: Int = 0x7f080023
+        const val quad_off_button: Int = 0x7f080024
+        const val quad_on_button: Int = 0x7f080025
+        const val raw_off_button: Int = 0x7f080026
+        const val raw_on_button: Int = 0x7f080027
+        const val raw_only_button: Int = 0x7f080028
+        const val saveraw_entry_layout: Int = 0x7f080029
+        const val settings_bar_scroll_view: Int = 0x7f08002a
+        const val settings_bar_settings_button_container: Int = 0x7f08002b
+        const val timer10s_button: Int = 0x7f08002c
+        const val timer3s_button: Int = 0x7f08002d
+        const val timer_entry_layout: Int = 0x7f08002e
+        const val timer_off_button: Int = 0x7f08002f
+        const val torch_button: Int = 0x7f080030
+        const val zoom_alpha_anim_tag: Int = 0x7f080031
+        const val zoom_hidden_tag: Int = 0x7f080032
+        const val zoom_offnative_tag: Int = 0x7f080033
+        const val zoom_ratio_tag: Int = 0x7f080034
     }
     object integer {
-        const val config_settingsFadeAnimationDuration: Int = 0x7f0a0000
-        const val grid_columns: Int = 0x7f0a0001
+        const val config_settingsFadeAnimationDuration: Int = 0x7f090000
+        const val grid_columns: Int = 0x7f090001
+    }
+    object interpolator {
+        const val m3_emphasized: Int = 0x7f0a0000
+        const val m3_emphasized_accelerate: Int = 0x7f0a0001
+        const val m3_emphasized_decelerate: Int = 0x7f0a0002
     }
     object layout {
         const val activity_camera: Int = 0x7f0b0000
@@ -590,8 +604,8 @@ object R {
         const val preference_seekbar: Int = 0x7f0b0006
         const val preference_tunable_checkbox: Int = 0x7f0b0007
         const val preference_tunable_seekbar: Int = 0x7f0b0008
-        const val preference_with_margin: Int = 0x7f0b0009
-        const val preference_with_margin_centered: Int = 0x7f0b000a
+        const val preference_widget_material_switch: Int = 0x7f0b0009
+        const val preference_with_margin: Int = 0x7f0b000a
         const val viewer_pager: Int = 0x7f0b000b
         const val viewfinder_stack: Int = 0x7f0b000c
     }
@@ -631,310 +645,415 @@ object R {
         const val aperture: Int = 0x7f0f0014
         const val app_name: Int = 0x7f0f0015
         const val app_will_restart: Int = 0x7f0f0016
-        const val auto: Int = 0x7f0f0017
-        const val back_camera_ids: Int = 0x7f0f0018
-        const val backup: Int = 0x7f0f0019
-        const val backup_file_name: Int = 0x7f0f001a
-        const val backup_restore: Int = 0x7f0f001b
-        const val backup_summary_json: Int = 0x7f0f001c
-        const val binning: Int = 0x7f0f001d
-        const val bracketing_high: Int = 0x7f0f001e
-        const val bracketing_normal: Int = 0x7f0f001f
-        const val bracketing_off: Int = 0x7f0f0020
-        const val camera_error: Int = 0x7f0f0021
-        const val camera_id: Int = 0x7f0f0022
-        const val camera_id_default: Int = 0x7f0f0023
-        const val camera_sounds: Int = 0x7f0f0024
-        const val cancel: Int = 0x7f0f0025
-        const val cfa: Int = 0x7f0f0026
-        const val chroma_nr_count: Int = 0x7f0f0027
-        const val close: Int = 0x7f0f0028
-        const val color_method: Int = 0x7f0f0029
-        const val comp: Int = 0x7f0f002a
-        const val compressor: Int = 0x7f0f002b
-        const val contrast: Int = 0x7f0f002c
-        const val contrconst: Int = 0x7f0f002d
-        const val contributors_title: Int = 0x7f0f002e
-        const val contrmul: Int = 0x7f0f002f
-        const val countdown_timer: Int = 0x7f0f0030
-        const val date: Int = 0x7f0f0031
-        const val device: Int = 0x7f0f0032
-        const val device_support: Int = 0x7f0f0033
-        const val device_unsupport: Int = 0x7f0f0034
-        const val diag_triangle: Int = 0x7f0f0035
-        const val disable_aligning: Int = 0x7f0f0036
-        const val eis_toggle_text: Int = 0x7f0f0037
-        const val empty_file_name_error: Int = 0x7f0f0038
-        const val enable_remosaic: Int = 0x7f0f0039
-        const val energy_saving: Int = 0x7f0f003a
-        const val enhanced_processing: Int = 0x7f0f003b
-        const val expocompensation: Int = 0x7f0f003c
-        const val export_settings: Int = 0x7f0f003d
-        const val exposure_bracketing: Int = 0x7f0f003e
-        const val exposure_time: Int = 0x7f0f003f
-        const val fetch_configurations: Int = 0x7f0f0040
-        const val fetch_configurations_summary: Int = 0x7f0f0041
-        const val filename: Int = 0x7f0f0042
-        const val flash: Int = 0x7f0f0043
-        const val flength: Int = 0x7f0f0044
-        const val focus_peaking: Int = 0x7f0f0045
-        const val focus_peaking_auto: Int = 0x7f0f0046
-        const val four_x4: Int = 0x7f0f0047
-        const val fps_24: Int = 0x7f0f0048
-        const val fps_30: Int = 0x7f0f0049
-        const val fps_60: Int = 0x7f0f004a
-        const val fps_60_toggle_text: Int = 0x7f0f004b
-        const val fps_auto: Int = 0x7f0f004c
-        const val frame_count: Int = 0x7f0f004d
-        const val frame_count_summary: Int = 0x7f0f004e
-        const val front_camera_ids: Int = 0x7f0f004f
-        const val gain: Int = 0x7f0f0050
-        const val gallery_folders: Int = 0x7f0f0051
-        const val gallery_name: Int = 0x7f0f0052
-        const val gamma_default: Int = 0x7f0f0053
-        const val gamma_key: Int = 0x7f0f0054
-        const val general: Int = 0x7f0f0055
-        const val golden_ratio: Int = 0x7f0f0056
-        const val hdrx: Int = 0x7f0f0057
-        const val hdrxNR: Int = 0x7f0f0058
-        const val hide_gallery_icon: Int = 0x7f0f0059
-        const val histogram: Int = 0x7f0f005a
-        const val icon_string: Int = 0x7f0f005b
-        const val image_deleted: Int = 0x7f0f005c
-        const val import_settings: Int = 0x7f0f005d
-        const val info: Int = 0x7f0f005e
-        const val iso: Int = 0x7f0f005f
-        const val jpg: Int = 0x7f0f0060
-        const val jpg_only: Int = 0x7f0f0061
-        const val list_not_loaded: Int = 0x7f0f0062
-        const val long_press_to_deselect: Int = 0x7f0f0063
-        const val luma_nr_count: Int = 0x7f0f0064
-        const val mode_motion: Int = 0x7f0f0065
-        const val mode_night: Int = 0x7f0f0066
-        const val mode_photo: Int = 0x7f0f0067
-        const val mode_rawvideo: Int = 0x7f0f0068
-        const val mode_unlimited: Int = 0x7f0f0069
-        const val mode_video: Int = 0x7f0f006a
-        const val multiple_deleted_success: Int = 0x7f0f006b
-        const val noise_merge_str: Int = 0x7f0f006c
-        const val noise_reduction_str: Int = 0x7f0f006d
-        const val off: Int = 0x7f0f006e
-        const val ok: Int = 0x7f0f006f
-        const val on: Int = 0x7f0f0070
-        const val options: Int = 0x7f0f0071
-        const val perm_open_settings: Int = 0x7f0f0072
-        const val perm_rationale_audio_message: Int = 0x7f0f0073
-        const val perm_rationale_audio_title: Int = 0x7f0f0074
-        const val perm_rationale_camera_message: Int = 0x7f0f0075
-        const val perm_rationale_camera_title: Int = 0x7f0f0076
-        const val perm_rationale_dcim_message: Int = 0x7f0f0077
-        const val perm_rationale_dcim_title: Int = 0x7f0f0078
-        const val perm_rationale_media_message: Int = 0x7f0f0079
-        const val perm_rationale_media_settings: Int = 0x7f0f007a
-        const val perm_rationale_media_title: Int = 0x7f0f007b
-        const val perm_rationale_storage_message: Int = 0x7f0f007c
-        const val perm_rationale_storage_title: Int = 0x7f0f007d
-        const val photo_settings: Int = 0x7f0f007e
-        const val photon_camera_summary: Int = 0x7f0f007f
-        const val pref_about_key: Int = 0x7f0f0080
-        const val pref_ae_metering_std_key: Int = 0x7f0f0081
-        const val pref_ae_mode_default: Int = 0x7f0f0082
-        const val pref_ae_mode_key: Int = 0x7f0f0083
-        const val pref_af_mode_default_value: Int = 0x7f0f0084
-        const val pref_af_mode_key: Int = 0x7f0f0085
-        const val pref_align_method_default: Int = 0x7f0f0086
-        const val pref_align_method_key: Int = 0x7f0f0087
-        const val pref_backup_preferences_key: Int = 0x7f0f0088
-        const val pref_binning_key: Int = 0x7f0f0089
-        const val pref_bracketing_key: Int = 0x7f0f008a
-        const val pref_camera_mode_default: Int = 0x7f0f008b
-        const val pref_camera_mode_key: Int = 0x7f0f008c
-        const val pref_camera_sounds_key: Int = 0x7f0f008d
-        const val pref_category_about_key: Int = 0x7f0f008e
-        const val pref_category_advanced_key: Int = 0x7f0f008f
-        const val pref_category_backup_restore: Int = 0x7f0f0090
-        const val pref_category_device_key: Int = 0x7f0f0091
-        const val pref_category_device_key_title: Int = 0x7f0f0092
-        const val pref_category_general_key: Int = 0x7f0f0093
-        const val pref_category_hdrx_key: Int = 0x7f0f0094
-        const val pref_category_jpg_key: Int = 0x7f0f0095
-        const val pref_category_photo_key: Int = 0x7f0f0096
-        const val pref_category_rawvideo_key: Int = 0x7f0f0097
-        const val pref_category_video_key: Int = 0x7f0f0098
-        const val pref_cfa_default_value: Int = 0x7f0f0099
-        const val pref_cfa_key: Int = 0x7f0f009a
-        const val pref_chroma_nr_seekbar_key: Int = 0x7f0f009b
-        const val pref_chroma_seekbar_default: Int = 0x7f0f009c
-        const val pref_color_method_default: Int = 0x7f0f009d
-        const val pref_color_method_key: Int = 0x7f0f009e
-        const val pref_compressor_seekbar_default: Int = 0x7f0f009f
-        const val pref_compressor_seekbar_key: Int = 0x7f0f00a0
-        const val pref_contrast_seekbar_default: Int = 0x7f0f00a1
-        const val pref_contrast_seekbar_key: Int = 0x7f0f00a2
-        const val pref_contributors_key: Int = 0x7f0f00a3
-        const val pref_countdown_timer_key: Int = 0x7f0f00a4
-        const val pref_disable_aligning_key: Int = 0x7f0f00a5
-        const val pref_eis_photo_key: Int = 0x7f0f00a6
-        const val pref_enable_system_nr_key: Int = 0x7f0f00a7
-        const val pref_energy_safe_key: Int = 0x7f0f00a8
-        const val pref_enhanced_processing_key: Int = 0x7f0f00a9
-        const val pref_expocompensation_seekbar_default: Int = 0x7f0f00aa
-        const val pref_expocompensation_seekbar_key: Int = 0x7f0f00ab
-        const val pref_fetch_configurations_key: Int = 0x7f0f00ac
-        const val pref_focus_peak_default: Int = 0x7f0f00ad
-        const val pref_folders_list: Int = 0x7f0f00ae
-        const val pref_fps_preview_key: Int = 0x7f0f00af
-        const val pref_frame_count_key: Int = 0x7f0f00b0
-        const val pref_framecount_default: Int = 0x7f0f00b1
-        const val pref_gain_seekbar_default: Int = 0x7f0f00b2
-        const val pref_gain_seekbar_key: Int = 0x7f0f00b3
-        const val pref_hdrx_key: Int = 0x7f0f00b4
-        const val pref_hdrx_nr_key: Int = 0x7f0f00b5
-        const val pref_hide_gallery_icon_key: Int = 0x7f0f00b6
-        const val pref_horizon: Int = 0x7f0f00b7
-        const val pref_luma_nr_seekbar_key: Int = 0x7f0f00b8
-        const val pref_luma_seekbar_default: Int = 0x7f0f00b9
-        const val pref_merge_seekbar_key: Int = 0x7f0f00ba
-        const val pref_noise_merge_seekbar_default: Int = 0x7f0f00bb
-        const val pref_noise_seekbar_default: Int = 0x7f0f00bc
-        const val pref_noise_seekbar_key: Int = 0x7f0f00bd
-        const val pref_peak_method_key: Int = 0x7f0f00be
-        const val pref_photoncamera: Int = 0x7f0f00bf
-        const val pref_preserve_manual_wb_key: Int = 0x7f0f00c0
-        const val pref_preview_format_default: Int = 0x7f0f00c1
-        const val pref_preview_format_key: Int = 0x7f0f00c2
-        const val pref_preview_resolution_key: Int = 0x7f0f00c3
-        const val pref_quad_bayer_key: Int = 0x7f0f00c4
-        const val pref_raw_mode_default_value: Int = 0x7f0f00c5
-        const val pref_rawvideo_crop_169_key: Int = 0x7f0f00c6
-        const val pref_rawvideo_downscale_4x_key: Int = 0x7f0f00c7
-        const val pref_rawvideo_write_zip_key: Int = 0x7f0f00c8
-        const val pref_remosaic_key: Int = 0x7f0f00c9
-        const val pref_reset_preferences_key: Int = 0x7f0f00ca
-        const val pref_restore_preferences_key: Int = 0x7f0f00cb
-        const val pref_saturation_seekbar_default: Int = 0x7f0f00cc
-        const val pref_saturation_seekbar_key: Int = 0x7f0f00cd
-        const val pref_save_per_lens_settings: Int = 0x7f0f00ce
-        const val pref_save_per_lens_string: Int = 0x7f0f00cf
-        const val pref_save_raw_key: Int = 0x7f0f00d0
-        const val pref_shadows_seekbar_key: Int = 0x7f0f00d1
-        const val pref_sharpness_seekbar_default: Int = 0x7f0f00d2
-        const val pref_sharpness_seekbar_key: Int = 0x7f0f00d3
-        const val pref_show_afdata_key: Int = 0x7f0f00d4
-        const val pref_show_gradient_key: Int = 0x7f0f00d5
-        const val pref_show_grid_default: Int = 0x7f0f00d6
-        const val pref_show_grid_key: Int = 0x7f0f00d7
-        const val pref_show_grid_title: Int = 0x7f0f00d8
-        const val pref_show_roundedge_key: Int = 0x7f0f00d9
-        const val pref_show_watermark_key: Int = 0x7f0f00da
-        const val pref_telegram_channel_key: Int = 0x7f0f00db
-        const val pref_theme_accent_default_value: Int = 0x7f0f00dc
-        const val pref_theme_accent_key: Int = 0x7f0f00dd
-        const val pref_theme_category_key: Int = 0x7f0f00de
-        const val pref_theme_default_value: Int = 0x7f0f00df
-        const val pref_theme_key: Int = 0x7f0f00e0
-        const val pref_this_device_key: Int = 0x7f0f00e1
-        const val pref_ultrahdr_key: Int = 0x7f0f00e2
-        const val pref_version_key: Int = 0x7f0f00e3
-        const val pref_video_resolution_default: Int = 0x7f0f00e4
-        const val pref_video_resolution_key: Int = 0x7f0f00e5
-        const val pref_wide169_key: Int = 0x7f0f00e6
-        const val preserve_manual_wb: Int = 0x7f0f00e7
-        const val preserve_manual_wb_summary: Int = 0x7f0f00e8
-        const val preview_format: Int = 0x7f0f00e9
-        const val processing_processname: Int = 0x7f0f00ea
-        const val quad_bayer_toggle_text: Int = 0x7f0f00eb
-        const val raw: Int = 0x7f0f00ec
-        const val raw_plus_jpg: Int = 0x7f0f00ed
-        const val raw_string: Int = 0x7f0f00ee
-        const val raw_video_settings: Int = 0x7f0f00ef
-        const val rawvideo_crop_169: Int = 0x7f0f00f0
-        const val rawvideo_downscale_4x: Int = 0x7f0f00f1
-        const val rawvideo_write_zip: Int = 0x7f0f00f2
-        const val request_permission: Int = 0x7f0f00f3
-        const val reset: Int = 0x7f0f00f4
-        const val reset_preferences_warning: Int = 0x7f0f00f5
-        const val resolution: Int = 0x7f0f00f6
-        const val restore: Int = 0x7f0f00f7
-        const val restore_summary_json: Int = 0x7f0f00f8
-        const val saturation: Int = 0x7f0f00f9
-        const val select_dcim_folder_hint: Int = 0x7f0f00fa
-        const val sensor_configurations: Int = 0x7f0f00fb
-        const val sensor_configurations_summary: Int = 0x7f0f00fc
-        const val session_on_configure_failed: Int = 0x7f0f00fd
-        const val settings: Int = 0x7f0f00fe
-        const val shadows: Int = 0x7f0f00ff
-        const val sharpness: Int = 0x7f0f0100
-        const val show_gradient: Int = 0x7f0f0101
-        const val show_horizon_on_preview: Int = 0x7f0f0102
-        const val size: Int = 0x7f0f0103
-        const val supported_devices: Int = 0x7f0f0104
-        const val sure_delete: Int = 0x7f0f0105
-        const val sure_delete_multiple: Int = 0x7f0f0106
-        const val sync_off: Int = 0x7f0f0107
-        const val sync_on: Int = 0x7f0f0108
-        const val t_10s: Int = 0x7f0f0109
-        const val t_3s: Int = 0x7f0f010a
-        const val telegram: Int = 0x7f0f010b
-        const val theme: Int = 0x7f0f010c
-        const val theme_accent: Int = 0x7f0f010d
-        const val theme_accent_blue: Int = 0x7f0f010e
-        const val theme_accent_cyan: Int = 0x7f0f010f
-        const val theme_accent_green: Int = 0x7f0f0110
-        const val theme_accent_orange: Int = 0x7f0f0111
-        const val theme_accent_pink: Int = 0x7f0f0112
-        const val theme_accent_red: Int = 0x7f0f0113
-        const val theme_accent_teal: Int = 0x7f0f0114
-        const val theme_accent_white: Int = 0x7f0f0115
-        const val theme_dark: Int = 0x7f0f0116
-        const val theme_follow_system: Int = 0x7f0f0117
-        const val theme_light: Int = 0x7f0f0118
-        const val this_device: Int = 0x7f0f0119
-        const val three_x3: Int = 0x7f0f011a
-        const val tonemap_default: Int = 0x7f0f011b
-        const val tonemap_key: Int = 0x7f0f011c
-        const val torch: Int = 0x7f0f011d
-        const val turn_on_afdata: Int = 0x7f0f011e
-        const val turn_on_grid: Int = 0x7f0f011f
-        const val turn_on_round_edges: Int = 0x7f0f0120
-        const val turn_on_system_nr: Int = 0x7f0f0121
-        const val turn_on_watermark: Int = 0x7f0f0122
-        const val ultrahdr: Int = 0x7f0f0123
-        const val ultrahdr_summary: Int = 0x7f0f0124
-        const val unknown: Int = 0x7f0f0125
-        const val unprocessed_raw: Int = 0x7f0f0126
-        const val version_summary: Int = 0x7f0f0127
-        const val version_title: Int = 0x7f0f0128
-        const val video_res_4k: Int = 0x7f0f0129
-        const val video_res_fhd: Int = 0x7f0f012a
-        const val video_res_hd: Int = 0x7f0f012b
-        const val video_resolution: Int = 0x7f0f012c
-        const val video_settings: Int = 0x7f0f012d
-        const val wide169: Int = 0x7f0f012e
-        const val yes: Int = 0x7f0f012f
+        const val audio_bitrate: Int = 0x7f0f0017
+        const val audio_bitrate_default: Int = 0x7f0f0018
+        const val audio_settings: Int = 0x7f0f0019
+        const val audio_source: Int = 0x7f0f001a
+        const val audio_source_default: Int = 0x7f0f001b
+        const val audio_stereo: Int = 0x7f0f001c
+        const val audio_stereo_summary: Int = 0x7f0f001d
+        const val auto: Int = 0x7f0f001e
+        const val auto_zoom_lens_switch: Int = 0x7f0f001f
+        const val auto_zoom_lens_switch_summary: Int = 0x7f0f0020
+        const val back_camera_ids: Int = 0x7f0f0021
+        const val backup: Int = 0x7f0f0022
+        const val backup_file_name: Int = 0x7f0f0023
+        const val backup_restore: Int = 0x7f0f0024
+        const val backup_summary_json: Int = 0x7f0f0025
+        const val binning: Int = 0x7f0f0026
+        const val bracketing_high: Int = 0x7f0f0027
+        const val bracketing_normal: Int = 0x7f0f0028
+        const val bracketing_off: Int = 0x7f0f0029
+        const val camera_error: Int = 0x7f0f002a
+        const val camera_id: Int = 0x7f0f002b
+        const val camera_id_default: Int = 0x7f0f002c
+        const val camera_sounds: Int = 0x7f0f002d
+        const val cancel: Int = 0x7f0f002e
+        const val cfa: Int = 0x7f0f002f
+        const val chroma_nr_count: Int = 0x7f0f0030
+        const val close: Int = 0x7f0f0031
+        const val color_method: Int = 0x7f0f0032
+        const val comp: Int = 0x7f0f0033
+        const val compressor: Int = 0x7f0f0034
+        const val contrast: Int = 0x7f0f0035
+        const val contrconst: Int = 0x7f0f0036
+        const val contributors_title: Int = 0x7f0f0037
+        const val contrmul: Int = 0x7f0f0038
+        const val countdown_timer: Int = 0x7f0f0039
+        const val date: Int = 0x7f0f003a
+        const val device: Int = 0x7f0f003b
+        const val device_support: Int = 0x7f0f003c
+        const val device_unsupport: Int = 0x7f0f003d
+        const val diag_triangle: Int = 0x7f0f003e
+        const val disable_aligning: Int = 0x7f0f003f
+        const val eis_toggle_text: Int = 0x7f0f0040
+        const val empty_file_name_error: Int = 0x7f0f0041
+        const val enable_remosaic: Int = 0x7f0f0042
+        const val energy_saving: Int = 0x7f0f0043
+        const val enhanced_processing: Int = 0x7f0f0044
+        const val expocompensation: Int = 0x7f0f0045
+        const val export_settings: Int = 0x7f0f0046
+        const val exposure_bracketing: Int = 0x7f0f0047
+        const val exposure_time: Int = 0x7f0f0048
+        const val fetch_configurations: Int = 0x7f0f0049
+        const val fetch_configurations_summary: Int = 0x7f0f004a
+        const val filename: Int = 0x7f0f004b
+        const val flash: Int = 0x7f0f004c
+        const val flength: Int = 0x7f0f004d
+        const val focus_peaking: Int = 0x7f0f004e
+        const val focus_peaking_auto: Int = 0x7f0f004f
+        const val four_x4: Int = 0x7f0f0050
+        const val fps_24: Int = 0x7f0f0051
+        const val fps_30: Int = 0x7f0f0052
+        const val fps_60: Int = 0x7f0f0053
+        const val fps_60_toggle_text: Int = 0x7f0f0054
+        const val fps_auto: Int = 0x7f0f0055
+        const val frame_count: Int = 0x7f0f0056
+        const val frame_count_summary: Int = 0x7f0f0057
+        const val front_camera_ids: Int = 0x7f0f0058
+        const val gain: Int = 0x7f0f0059
+        const val gallery_folders: Int = 0x7f0f005a
+        const val gallery_name: Int = 0x7f0f005b
+        const val gamma_default: Int = 0x7f0f005c
+        const val gamma_key: Int = 0x7f0f005d
+        const val general: Int = 0x7f0f005e
+        const val golden_ratio: Int = 0x7f0f005f
+        const val hdrx: Int = 0x7f0f0060
+        const val hdrxNR: Int = 0x7f0f0061
+        const val heic_failed_saved_jpeg: Int = 0x7f0f0062
+        const val heic_only: Int = 0x7f0f0063
+        const val hide_gallery_icon: Int = 0x7f0f0064
+        const val histogram: Int = 0x7f0f0065
+        const val icon_string: Int = 0x7f0f0066
+        const val image_deleted: Int = 0x7f0f0067
+        const val import_settings: Int = 0x7f0f0068
+        const val info: Int = 0x7f0f0069
+        const val iso: Int = 0x7f0f006a
+        const val jpg: Int = 0x7f0f006b
+        const val jpg_only: Int = 0x7f0f006c
+        const val lens_bar_position: Int = 0x7f0f006d
+        const val lens_bar_position_center: Int = 0x7f0f006e
+        const val lens_bar_position_left: Int = 0x7f0f006f
+        const val lens_bar_position_right: Int = 0x7f0f0070
+        const val list_not_loaded: Int = 0x7f0f0071
+        const val long_press_to_deselect: Int = 0x7f0f0072
+        const val luma_nr_count: Int = 0x7f0f0073
+        const val mode_motion: Int = 0x7f0f0074
+        const val mode_night: Int = 0x7f0f0075
+        const val mode_photo: Int = 0x7f0f0076
+        const val mode_rawvideo: Int = 0x7f0f0077
+        const val mode_unlimited: Int = 0x7f0f0078
+        const val mode_video: Int = 0x7f0f0079
+        const val multiple_deleted_success: Int = 0x7f0f007a
+        const val noise_merge_str: Int = 0x7f0f007b
+        const val noise_reduction_str: Int = 0x7f0f007c
+        const val off: Int = 0x7f0f007d
+        const val ok: Int = 0x7f0f007e
+        const val on: Int = 0x7f0f007f
+        const val options: Int = 0x7f0f0080
+        const val perm_open_settings: Int = 0x7f0f0081
+        const val perm_rationale_audio_message: Int = 0x7f0f0082
+        const val perm_rationale_audio_title: Int = 0x7f0f0083
+        const val perm_rationale_camera_message: Int = 0x7f0f0084
+        const val perm_rationale_camera_title: Int = 0x7f0f0085
+        const val perm_rationale_dcim_message: Int = 0x7f0f0086
+        const val perm_rationale_dcim_title: Int = 0x7f0f0087
+        const val perm_rationale_media_message: Int = 0x7f0f0088
+        const val perm_rationale_media_settings: Int = 0x7f0f0089
+        const val perm_rationale_media_title: Int = 0x7f0f008a
+        const val perm_rationale_storage_message: Int = 0x7f0f008b
+        const val perm_rationale_storage_title: Int = 0x7f0f008c
+        const val photo_settings: Int = 0x7f0f008d
+        const val photon_camera_summary: Int = 0x7f0f008e
+        const val pref_about_key: Int = 0x7f0f008f
+        const val pref_ae_metering_std_key: Int = 0x7f0f0090
+        const val pref_ae_mode_default: Int = 0x7f0f0091
+        const val pref_ae_mode_key: Int = 0x7f0f0092
+        const val pref_af_mode_default_value: Int = 0x7f0f0093
+        const val pref_af_mode_key: Int = 0x7f0f0094
+        const val pref_align_method_default: Int = 0x7f0f0095
+        const val pref_align_method_key: Int = 0x7f0f0096
+        const val pref_audio_bitrate_key: Int = 0x7f0f0097
+        const val pref_audio_source_key: Int = 0x7f0f0098
+        const val pref_audio_stereo_key: Int = 0x7f0f0099
+        const val pref_auto_zoom_switch_key: Int = 0x7f0f009a
+        const val pref_backup_preferences_key: Int = 0x7f0f009b
+        const val pref_binning_key: Int = 0x7f0f009c
+        const val pref_bracketing_key: Int = 0x7f0f009d
+        const val pref_camera_mode_default: Int = 0x7f0f009e
+        const val pref_camera_mode_key: Int = 0x7f0f009f
+        const val pref_camera_sounds_key: Int = 0x7f0f00a0
+        const val pref_category_about_key: Int = 0x7f0f00a1
+        const val pref_category_advanced_key: Int = 0x7f0f00a2
+        const val pref_category_audio_key: Int = 0x7f0f00a3
+        const val pref_category_backup_restore: Int = 0x7f0f00a4
+        const val pref_category_device_key: Int = 0x7f0f00a5
+        const val pref_category_device_key_title: Int = 0x7f0f00a6
+        const val pref_category_general_key: Int = 0x7f0f00a7
+        const val pref_category_hdrx_key: Int = 0x7f0f00a8
+        const val pref_category_jpg_key: Int = 0x7f0f00a9
+        const val pref_category_photo_key: Int = 0x7f0f00aa
+        const val pref_category_rawvideo_key: Int = 0x7f0f00ab
+        const val pref_category_video_key: Int = 0x7f0f00ac
+        const val pref_category_video_shortcut_key: Int = 0x7f0f00ad
+        const val pref_cfa_default_value: Int = 0x7f0f00ae
+        const val pref_cfa_key: Int = 0x7f0f00af
+        const val pref_chroma_nr_seekbar_key: Int = 0x7f0f00b0
+        const val pref_chroma_seekbar_default: Int = 0x7f0f00b1
+        const val pref_color_method_default: Int = 0x7f0f00b2
+        const val pref_color_method_key: Int = 0x7f0f00b3
+        const val pref_compressor_seekbar_default: Int = 0x7f0f00b4
+        const val pref_compressor_seekbar_key: Int = 0x7f0f00b5
+        const val pref_contrast_seekbar_default: Int = 0x7f0f00b6
+        const val pref_contrast_seekbar_key: Int = 0x7f0f00b7
+        const val pref_contributors_key: Int = 0x7f0f00b8
+        const val pref_countdown_timer_key: Int = 0x7f0f00b9
+        const val pref_disable_aligning_key: Int = 0x7f0f00ba
+        const val pref_eis_photo_key: Int = 0x7f0f00bb
+        const val pref_enable_system_nr_key: Int = 0x7f0f00bc
+        const val pref_energy_safe_key: Int = 0x7f0f00bd
+        const val pref_enhanced_processing_key: Int = 0x7f0f00be
+        const val pref_expocompensation_seekbar_default: Int = 0x7f0f00bf
+        const val pref_expocompensation_seekbar_key: Int = 0x7f0f00c0
+        const val pref_fetch_configurations_key: Int = 0x7f0f00c1
+        const val pref_focus_peak_default: Int = 0x7f0f00c2
+        const val pref_folders_list: Int = 0x7f0f00c3
+        const val pref_fps_preview_key: Int = 0x7f0f00c4
+        const val pref_frame_count_key: Int = 0x7f0f00c5
+        const val pref_framecount_default: Int = 0x7f0f00c6
+        const val pref_gain_seekbar_default: Int = 0x7f0f00c7
+        const val pref_gain_seekbar_key: Int = 0x7f0f00c8
+        const val pref_hdrx_key: Int = 0x7f0f00c9
+        const val pref_hdrx_nr_key: Int = 0x7f0f00ca
+        const val pref_hide_gallery_icon_key: Int = 0x7f0f00cb
+        const val pref_horizon: Int = 0x7f0f00cc
+        const val pref_lens_bar_position_default: Int = 0x7f0f00cd
+        const val pref_lens_bar_position_key: Int = 0x7f0f00ce
+        const val pref_luma_nr_seekbar_key: Int = 0x7f0f00cf
+        const val pref_luma_seekbar_default: Int = 0x7f0f00d0
+        const val pref_merge_seekbar_key: Int = 0x7f0f00d1
+        const val pref_noise_merge_seekbar_default: Int = 0x7f0f00d2
+        const val pref_noise_seekbar_default: Int = 0x7f0f00d3
+        const val pref_noise_seekbar_key: Int = 0x7f0f00d4
+        const val pref_peak_method_key: Int = 0x7f0f00d5
+        const val pref_photoncamera: Int = 0x7f0f00d6
+        const val pref_preserve_manual_wb_key: Int = 0x7f0f00d7
+        const val pref_preview_format_default: Int = 0x7f0f00d8
+        const val pref_preview_format_key: Int = 0x7f0f00d9
+        const val pref_preview_resolution_key: Int = 0x7f0f00da
+        const val pref_quad_bayer_key: Int = 0x7f0f00db
+        const val pref_raw_mode_default_value: Int = 0x7f0f00dc
+        const val pref_rawvideo_container_default: Int = 0x7f0f00dd
+        const val pref_rawvideo_container_key: Int = 0x7f0f00de
+        const val pref_rawvideo_crop_169_key: Int = 0x7f0f00df
+        const val pref_rawvideo_downscale_4x_key: Int = 0x7f0f00e0
+        const val pref_rawvideo_write_zip_key: Int = 0x7f0f00e1
+        const val pref_remosaic_key: Int = 0x7f0f00e2
+        const val pref_reset_preferences_key: Int = 0x7f0f00e3
+        const val pref_restore_preferences_key: Int = 0x7f0f00e4
+        const val pref_saturation_seekbar_default: Int = 0x7f0f00e5
+        const val pref_saturation_seekbar_key: Int = 0x7f0f00e6
+        const val pref_save_heic_key: Int = 0x7f0f00e7
+        const val pref_save_per_lens_settings: Int = 0x7f0f00e8
+        const val pref_save_per_lens_string: Int = 0x7f0f00e9
+        const val pref_save_raw_key: Int = 0x7f0f00ea
+        const val pref_shadows_seekbar_key: Int = 0x7f0f00eb
+        const val pref_sharpness_seekbar_default: Int = 0x7f0f00ec
+        const val pref_sharpness_seekbar_key: Int = 0x7f0f00ed
+        const val pref_show_afdata_key: Int = 0x7f0f00ee
+        const val pref_show_grid_default: Int = 0x7f0f00ef
+        const val pref_show_grid_key: Int = 0x7f0f00f0
+        const val pref_show_grid_title: Int = 0x7f0f00f1
+        const val pref_show_roundedge_key: Int = 0x7f0f00f2
+        const val pref_show_watermark_key: Int = 0x7f0f00f3
+        const val pref_telegram_channel_key: Int = 0x7f0f00f4
+        const val pref_theme_accent_default_value: Int = 0x7f0f00f5
+        const val pref_theme_accent_key: Int = 0x7f0f00f6
+        const val pref_theme_category_key: Int = 0x7f0f00f7
+        const val pref_theme_default_value: Int = 0x7f0f00f8
+        const val pref_theme_key: Int = 0x7f0f00f9
+        const val pref_this_device_key: Int = 0x7f0f00fa
+        const val pref_ultrahdr_key: Int = 0x7f0f00fb
+        const val pref_version_key: Int = 0x7f0f00fc
+        const val pref_video_bitrate_key: Int = 0x7f0f00fd
+        const val pref_video_color_range_key: Int = 0x7f0f00fe
+        const val pref_video_hdr_key: Int = 0x7f0f00ff
+        const val pref_video_hdr_session_type_key: Int = 0x7f0f0100
+        const val pref_video_hdr_transfer_key: Int = 0x7f0f0101
+        const val pref_video_hevc_key: Int = 0x7f0f0102
+        const val pref_video_logical_id_key: Int = 0x7f0f0103
+        const val pref_video_logical_lenses_key: Int = 0x7f0f0104
+        const val pref_video_ois_key: Int = 0x7f0f0105
+        const val pref_video_resolution_default: Int = 0x7f0f0106
+        const val pref_video_resolution_key: Int = 0x7f0f0107
+        const val pref_video_sdr_session_type_key: Int = 0x7f0f0108
+        const val pref_video_use_logical_id_key: Int = 0x7f0f0109
+        const val pref_viewfinder_background_default_value: Int = 0x7f0f010a
+        const val pref_viewfinder_background_key: Int = 0x7f0f010b
+        const val pref_wide169_key: Int = 0x7f0f010c
+        const val pref_zoom_lock_key: Int = 0x7f0f010d
+        const val preserve_manual_wb: Int = 0x7f0f010e
+        const val preserve_manual_wb_summary: Int = 0x7f0f010f
+        const val preview_format: Int = 0x7f0f0110
+        const val processing_processname: Int = 0x7f0f0111
+        const val quad_bayer_toggle_text: Int = 0x7f0f0112
+        const val raw: Int = 0x7f0f0113
+        const val raw_plus_heic: Int = 0x7f0f0114
+        const val raw_plus_jpg: Int = 0x7f0f0115
+        const val raw_string: Int = 0x7f0f0116
+        const val raw_video_settings: Int = 0x7f0f0117
+        const val rawvideo_container: Int = 0x7f0f0118
+        const val rawvideo_container_dng: Int = 0x7f0f0119
+        const val rawvideo_container_mcraw: Int = 0x7f0f011a
+        const val rawvideo_container_zip: Int = 0x7f0f011b
+        const val rawvideo_crop_169: Int = 0x7f0f011c
+        const val rawvideo_downscale_4x: Int = 0x7f0f011d
+        const val rawvideo_write_zip: Int = 0x7f0f011e
+        const val record_video_desc: Int = 0x7f0f011f
+        const val request_permission: Int = 0x7f0f0120
+        const val reset: Int = 0x7f0f0121
+        const val reset_preferences_warning: Int = 0x7f0f0122
+        const val resolution: Int = 0x7f0f0123
+        const val restore: Int = 0x7f0f0124
+        const val restore_summary_json: Int = 0x7f0f0125
+        const val saturation: Int = 0x7f0f0126
+        const val save_heic: Int = 0x7f0f0127
+        const val save_heic_summary: Int = 0x7f0f0128
+        const val secure_camera_gallery_locked: Int = 0x7f0f0129
+        const val secure_camera_settings_locked: Int = 0x7f0f012a
+        const val secure_camera_unlock_gallery_message: Int = 0x7f0f012b
+        const val secure_camera_unlock_title: Int = 0x7f0f012c
+        const val seekbar_reset_desc: Int = 0x7f0f012d
+        const val select_dcim_folder_hint: Int = 0x7f0f012e
+        const val sensor_configurations: Int = 0x7f0f012f
+        const val sensor_configurations_summary: Int = 0x7f0f0130
+        const val session_on_configure_failed: Int = 0x7f0f0131
+        const val settings: Int = 0x7f0f0132
+        const val shadows: Int = 0x7f0f0133
+        const val sharpness: Int = 0x7f0f0134
+        const val show_horizon_on_preview: Int = 0x7f0f0135
+        const val size: Int = 0x7f0f0136
+        const val stop_recording_desc: Int = 0x7f0f0137
+        const val supported_devices: Int = 0x7f0f0138
+        const val sure_delete: Int = 0x7f0f0139
+        const val sure_delete_multiple: Int = 0x7f0f013a
+        const val sync_off: Int = 0x7f0f013b
+        const val sync_on: Int = 0x7f0f013c
+        const val t_10s: Int = 0x7f0f013d
+        const val t_3s: Int = 0x7f0f013e
+        const val telegram: Int = 0x7f0f013f
+        const val theme: Int = 0x7f0f0140
+        const val theme_accent: Int = 0x7f0f0141
+        const val theme_accent_blue: Int = 0x7f0f0142
+        const val theme_accent_cyan: Int = 0x7f0f0143
+        const val theme_accent_default: Int = 0x7f0f0144
+        const val theme_accent_green: Int = 0x7f0f0145
+        const val theme_accent_orange: Int = 0x7f0f0146
+        const val theme_accent_pink: Int = 0x7f0f0147
+        const val theme_accent_red: Int = 0x7f0f0148
+        const val theme_accent_teal: Int = 0x7f0f0149
+        const val theme_accent_white: Int = 0x7f0f014a
+        const val theme_dark: Int = 0x7f0f014b
+        const val theme_follow_system: Int = 0x7f0f014c
+        const val theme_light: Int = 0x7f0f014d
+        const val this_device: Int = 0x7f0f014e
+        const val three_x3: Int = 0x7f0f014f
+        const val tonemap_default: Int = 0x7f0f0150
+        const val tonemap_key: Int = 0x7f0f0151
+        const val torch: Int = 0x7f0f0152
+        const val turn_on_afdata: Int = 0x7f0f0153
+        const val turn_on_grid: Int = 0x7f0f0154
+        const val turn_on_round_edges: Int = 0x7f0f0155
+        const val turn_on_system_nr: Int = 0x7f0f0156
+        const val turn_on_watermark: Int = 0x7f0f0157
+        const val ultrahdr: Int = 0x7f0f0158
+        const val ultrahdr_summary: Int = 0x7f0f0159
+        const val unknown: Int = 0x7f0f015a
+        const val unprocessed_raw: Int = 0x7f0f015b
+        const val version_summary: Int = 0x7f0f015c
+        const val version_title: Int = 0x7f0f015d
+        const val video_bitrate: Int = 0x7f0f015e
+        const val video_bitrate_default: Int = 0x7f0f015f
+        const val video_color_range: Int = 0x7f0f0160
+        const val video_color_range_default: Int = 0x7f0f0161
+        const val video_hdr: Int = 0x7f0f0162
+        const val video_hdr_session_type: Int = 0x7f0f0163
+        const val video_hdr_summary: Int = 0x7f0f0164
+        const val video_hdr_transfer: Int = 0x7f0f0165
+        const val video_hdr_transfer_default: Int = 0x7f0f0166
+        const val video_hdr_unsupported: Int = 0x7f0f0167
+        const val video_hevc_unsupported: Int = 0x7f0f0168
+        const val video_logical_id: Int = 0x7f0f0169
+        const val video_logical_id_default: Int = 0x7f0f016a
+        const val video_logical_id_summary: Int = 0x7f0f016b
+        const val video_logical_id_unsupported: Int = 0x7f0f016c
+        const val video_logical_lenses: Int = 0x7f0f016d
+        const val video_logical_lenses_default: Int = 0x7f0f016e
+        const val video_logical_lenses_summary: Int = 0x7f0f016f
+        const val video_ois: Int = 0x7f0f0170
+        const val video_ois_summary: Int = 0x7f0f0171
+        const val video_res_4k: Int = 0x7f0f0172
+        const val video_res_fhd: Int = 0x7f0f0173
+        const val video_res_hd: Int = 0x7f0f0174
+        const val video_resolution: Int = 0x7f0f0175
+        const val video_save_storage: Int = 0x7f0f0176
+        const val video_save_storage_summary: Int = 0x7f0f0177
+        const val video_sdr_session_type: Int = 0x7f0f0178
+        const val video_session_type_default: Int = 0x7f0f0179
+        const val video_session_type_summary: Int = 0x7f0f017a
+        const val video_settings: Int = 0x7f0f017b
+        const val video_settings_summary: Int = 0x7f0f017c
+        const val video_tunable_add_summary_hdr: Int = 0x7f0f017d
+        const val video_tunable_add_summary_sdr: Int = 0x7f0f017e
+        const val video_tunable_keys_hdr: Int = 0x7f0f017f
+        const val video_tunable_keys_sdr: Int = 0x7f0f0180
+        const val video_tunable_summary_hdr: Int = 0x7f0f0181
+        const val video_tunable_summary_sdr: Int = 0x7f0f0182
+        const val video_use_logical_id: Int = 0x7f0f0183
+        const val video_use_logical_id_summary: Int = 0x7f0f0184
+        const val viewfinder_background: Int = 0x7f0f0185
+        const val viewfinder_background_blur: Int = 0x7f0f0186
+        const val viewfinder_background_gradient: Int = 0x7f0f0187
+        const val viewfinder_background_none: Int = 0x7f0f0188
+        const val wide169: Int = 0x7f0f0189
+        const val yes: Int = 0x7f0f018a
+        const val zoom_lock_desc: Int = 0x7f0f018b
+        const val zoom_slider_desc: Int = 0x7f0f018c
+        const val zoom_unlock_desc: Int = 0x7f0f018d
     }
     object style {
         const val AlertDialogTheme: Int = 0x7f100000
         const val AuxButtonText: Int = 0x7f100001
-        const val BlueTheme: Int = 0x7f100002
-        const val BoldTextWithShadow: Int = 0x7f100003
-        const val CyanTheme: Int = 0x7f100004
-        const val EszdmanTheme: Int = 0x7f100005
-        const val GradientBackgroundTheme: Int = 0x7f100006
-        const val GreenTheme: Int = 0x7f100007
-        const val NegativeButtonStyle: Int = 0x7f100008
-        const val OrangeTheme: Int = 0x7f100009
-        const val PinkTheme: Int = 0x7f10000a
-        const val PositiveButtonStyle: Int = 0x7f10000b
-        const val PreferenceActionBarStyle: Int = 0x7f10000c
-        const val RedTheme: Int = 0x7f10000d
-        const val SettingsTitleTextAppearance: Int = 0x7f10000e
-        const val TealTheme: Int = 0x7f10000f
-        const val TextWithShadow: Int = 0x7f100010
-        const val Theme_Photon_BaseApp: Int = 0x7f100011
-        const val Theme_Photon_SettingsActivity: Int = 0x7f100012
-        const val Theme_Photon_Splash: Int = 0x7f100013
-        const val WhiteTheme: Int = 0x7f100014
+        const val BoldTextWithShadow: Int = 0x7f100002
+        const val ManualModeKnobTextSelected: Int = 0x7f100003
+        const val MaterialAlertDialogTheme: Int = 0x7f100004
+        const val NegativeButtonStyle: Int = 0x7f100005
+        const val PositiveButtonStyle: Int = 0x7f100006
+        const val PreferenceThemeOverlay_Photon: Int = 0x7f100007
+        const val Preference_Photon: Int = 0x7f100008
+        const val Preference_Photon_Category: Int = 0x7f100009
+        const val Preference_Photon_Dialog: Int = 0x7f10000a
+        const val Preference_Photon_EditText: Int = 0x7f10000b
+        const val Preference_Photon_Switch: Int = 0x7f10000c
+        const val SettingsTitleTextAppearance: Int = 0x7f10000d
+        const val TextWithShadow: Int = 0x7f10000e
+        const val ThemeOverlay_Photon_Accent: Int = 0x7f10000f
+        const val ThemeOverlay_Photon_Blue: Int = 0x7f100010
+        const val ThemeOverlay_Photon_Cyan: Int = 0x7f100011
+        const val ThemeOverlay_Photon_Default: Int = 0x7f100012
+        const val ThemeOverlay_Photon_Dynamic: Int = 0x7f100013
+        const val ThemeOverlay_Photon_Eszdman: Int = 0x7f100014
+        const val ThemeOverlay_Photon_GradientBackground: Int = 0x7f100015
+        const val ThemeOverlay_Photon_Green: Int = 0x7f100016
+        const val ThemeOverlay_Photon_Orange: Int = 0x7f100017
+        const val ThemeOverlay_Photon_Pink: Int = 0x7f100018
+        const val ThemeOverlay_Photon_Red: Int = 0x7f100019
+        const val ThemeOverlay_Photon_Teal: Int = 0x7f10001a
+        const val ThemeOverlay_Photon_White: Int = 0x7f10001b
+        const val Theme_Photon_BaseApp: Int = 0x7f10001c
+        const val Theme_Photon_SettingsActivity: Int = 0x7f10001d
+        const val Theme_Photon_Splash: Int = 0x7f10001e
+        const val Widget_Photon_Toolbar: Int = 0x7f10001f
     }
     object xml {
         const val backup_descriptor: Int = 0x7f110000
@@ -969,7 +1088,16 @@ internal val R_STRINGS: Map<Int, String> = mapOf(
     R.string.aperture to "\"Aperture \"",
     R.string.app_name to "PhotonCamera",
     R.string.app_will_restart to "App Will Restart",
+    R.string.audio_bitrate to "Bitrate (kbit/s)",
+    R.string.audio_bitrate_default to "128",
+    R.string.audio_settings to "Audio Settings",
+    R.string.audio_source to "Audio source",
+    R.string.audio_source_default to "camcorder",
+    R.string.audio_stereo to "Stereo channel",
+    R.string.audio_stereo_summary to "Record in stereo. When off, audio is recorded in mono (single channel).",
     R.string.auto to "Auto",
+    R.string.auto_zoom_lens_switch to "Auto zoom lens switch",
+    R.string.auto_zoom_lens_switch_summary to "Automatically switch lenses while zooming. Shows the lock pill.",
     R.string.back_camera_ids to "back_camera_ids",
     R.string.backup to "Backup",
     R.string.backup_file_name to "PCAM_BKP_%1\$s",
@@ -1035,6 +1163,8 @@ internal val R_STRINGS: Map<Int, String> = mapOf(
     R.string.golden_ratio to "Golden Ratio",
     R.string.hdrx to "HDRX",
     R.string.hdrxNR to "Noise Reduction",
+    R.string.heic_failed_saved_jpeg to "HEIC encoding failed — saved JPEG instead",
+    R.string.heic_only to "HEIC",
     R.string.hide_gallery_icon to "Hide Gallery Icon",
     R.string.histogram to "Histogram",
     R.string.icon_string to "Icon",
@@ -1044,6 +1174,10 @@ internal val R_STRINGS: Map<Int, String> = mapOf(
     R.string.iso to "\"ISO \"",
     R.string.jpg to "JPEG",
     R.string.jpg_only to "JPEG",
+    R.string.lens_bar_position to "Lens Bar Position",
+    R.string.lens_bar_position_center to "Center",
+    R.string.lens_bar_position_left to "Left",
+    R.string.lens_bar_position_right to "Right",
     R.string.list_not_loaded to "<list not loaded>",
     R.string.long_press_to_deselect to "Long press button to deselect all",
     R.string.luma_nr_count to "Luminance Noise Reduction Strength",
@@ -1082,6 +1216,10 @@ internal val R_STRINGS: Map<Int, String> = mapOf(
     R.string.pref_af_mode_key to "pref_af_mode_key",
     R.string.pref_align_method_default to "1",
     R.string.pref_align_method_key to "pref_align_method_key",
+    R.string.pref_audio_bitrate_key to "pref_audio_bitrate_key",
+    R.string.pref_audio_source_key to "pref_audio_source_key",
+    R.string.pref_audio_stereo_key to "pref_audio_stereo_key",
+    R.string.pref_auto_zoom_switch_key to "pref_auto_zoom_switch_key",
     R.string.pref_backup_preferences_key to "pref_backup_preferences_key",
     R.string.pref_binning_key to "pref_binning_key",
     R.string.pref_bracketing_key to "pref_bracketing_mode_key",
@@ -1090,6 +1228,7 @@ internal val R_STRINGS: Map<Int, String> = mapOf(
     R.string.pref_camera_sounds_key to "pref_camera_sounds_key",
     R.string.pref_category_about_key to "pref_category_about_key",
     R.string.pref_category_advanced_key to "pref_category_advanced_key",
+    R.string.pref_category_audio_key to "pref_category_audio_key",
     R.string.pref_category_backup_restore to "pref_category_backup_restore",
     R.string.pref_category_device_key to "pref_category_device_key",
     R.string.pref_category_device_key_title to "Device",
@@ -1099,6 +1238,7 @@ internal val R_STRINGS: Map<Int, String> = mapOf(
     R.string.pref_category_photo_key to "pref_category_photo_key",
     R.string.pref_category_rawvideo_key to "pref_category_rawvideo_key",
     R.string.pref_category_video_key to "pref_category_video_key",
+    R.string.pref_category_video_shortcut_key to "pref_category_video_shortcut_key",
     R.string.pref_cfa_default_value to "-1",
     R.string.pref_cfa_key to "pref_cfa_key",
     R.string.pref_chroma_nr_seekbar_key to "pref_chroma_nr_seekbar_key",
@@ -1130,6 +1270,8 @@ internal val R_STRINGS: Map<Int, String> = mapOf(
     R.string.pref_hdrx_nr_key to "pref_hdrx_nr_key",
     R.string.pref_hide_gallery_icon_key to "pref_hide_gallery_icon_key",
     R.string.pref_horizon to "pref_horizon",
+    R.string.pref_lens_bar_position_default to "right",
+    R.string.pref_lens_bar_position_key to "pref_lens_bar_position_key",
     R.string.pref_luma_nr_seekbar_key to "pref_luma_nr_seekbar_key",
     R.string.pref_luma_seekbar_default to "12",
     R.string.pref_merge_seekbar_key to "pref_merge_seekbar_key",
@@ -1144,6 +1286,8 @@ internal val R_STRINGS: Map<Int, String> = mapOf(
     R.string.pref_preview_resolution_key to "pref_show_afdata_key",
     R.string.pref_quad_bayer_key to "pref_quad_bayer_key",
     R.string.pref_raw_mode_default_value to "0",
+    R.string.pref_rawvideo_container_default to "mcraw",
+    R.string.pref_rawvideo_container_key to "pref_rawvideo_container_key",
     R.string.pref_rawvideo_crop_169_key to "pref_rawvideo_crop_169_key",
     R.string.pref_rawvideo_downscale_4x_key to "pref_rawvideo_downscale_4x_key",
     R.string.pref_rawvideo_write_zip_key to "pref_rawvideo_write_zip_key",
@@ -1152,6 +1296,7 @@ internal val R_STRINGS: Map<Int, String> = mapOf(
     R.string.pref_restore_preferences_key to "pref_restore_preferences_key",
     R.string.pref_saturation_seekbar_default to "1.0",
     R.string.pref_saturation_seekbar_key to "pref_saturation_seekbar_key",
+    R.string.pref_save_heic_key to "pref_save_heic_key",
     R.string.pref_save_per_lens_settings to "pref_save_per_lens_settings",
     R.string.pref_save_per_lens_string to "Per Lens Settings",
     R.string.pref_save_raw_key to "pref_save_raw_key",
@@ -1159,7 +1304,6 @@ internal val R_STRINGS: Map<Int, String> = mapOf(
     R.string.pref_sharpness_seekbar_default to "0.20",
     R.string.pref_sharpness_seekbar_key to "pref_sharpness_seekbar_key",
     R.string.pref_show_afdata_key to "pref_show_afdata_key",
-    R.string.pref_show_gradient_key to "pref_show_gradient_key",
     R.string.pref_show_grid_default to "0",
     R.string.pref_show_grid_key to "pref_show_grid_key",
     R.string.pref_show_grid_title to "Show Grid",
@@ -1174,21 +1318,41 @@ internal val R_STRINGS: Map<Int, String> = mapOf(
     R.string.pref_this_device_key to "pref_this_device_key",
     R.string.pref_ultrahdr_key to "pref_ultrahdr_key",
     R.string.pref_version_key to "pref_version_key",
+    R.string.pref_video_bitrate_key to "pref_video_bitrate_key",
+    R.string.pref_video_color_range_key to "pref_video_color_range_key",
+    R.string.pref_video_hdr_key to "pref_video_hdr_key",
+    R.string.pref_video_hdr_session_type_key to "pref_video_hdr_session_type_key",
+    R.string.pref_video_hdr_transfer_key to "pref_video_hdr_transfer_key",
+    R.string.pref_video_hevc_key to "pref_video_hevc_key",
+    R.string.pref_video_logical_id_key to "pref_video_logical_id_key",
+    R.string.pref_video_logical_lenses_key to "pref_video_logical_lenses_key",
+    R.string.pref_video_ois_key to "pref_video_ois_key",
     R.string.pref_video_resolution_default to "1920x1080",
     R.string.pref_video_resolution_key to "pref_video_resolution_key",
+    R.string.pref_video_sdr_session_type_key to "pref_video_sdr_session_type_key",
+    R.string.pref_video_use_logical_id_key to "pref_video_use_logical_id_key",
+    R.string.pref_viewfinder_background_default_value to "none",
+    R.string.pref_viewfinder_background_key to "pref_viewfinder_background_key",
     R.string.pref_wide169_key to "pref_wide169_key",
+    R.string.pref_zoom_lock_key to "pref_zoom_lock_key",
     R.string.preserve_manual_wb to "Preserve Manual WB",
     R.string.preserve_manual_wb_summary to "Keep manual white balance color temperature when switching camera lenses",
     R.string.preview_format to "Preview Format",
     R.string.processing_processname to "Processing %1\$s...",
     R.string.quad_bayer_toggle_text to "Quad Bayer Res. (48/64 MP)",
     R.string.raw to "Save",
+    R.string.raw_plus_heic to "RAW + HEIC",
     R.string.raw_plus_jpg to "RAW + JPEG",
     R.string.raw_string to "RAW",
     R.string.raw_video_settings to "Raw Video Settings",
+    R.string.rawvideo_container to "Raw video container",
+    R.string.rawvideo_container_dng to "DNG (folder)",
+    R.string.rawvideo_container_mcraw to "MediaCinemaRaw (.mcraw)",
+    R.string.rawvideo_container_zip to "ZIP",
     R.string.rawvideo_crop_169 to "Crop to 16:9",
     R.string.rawvideo_downscale_4x to "Downscale 4x",
     R.string.rawvideo_write_zip to "Write ZIP",
+    R.string.record_video_desc to "Record video",
     R.string.request_permission to "This app needs camera permission.",
     R.string.reset to "Reset All",
     R.string.reset_preferences_warning to "This will reset all settings to their default values. Continue?",
@@ -1196,6 +1360,13 @@ internal val R_STRINGS: Map<Int, String> = mapOf(
     R.string.restore to "Restore",
     R.string.restore_summary_json to "Import settings from JSON or XML file",
     R.string.saturation to "Saturation",
+    R.string.save_heic to "Save HEIC",
+    R.string.save_heic_summary to "Use HEIC instead of JPEG — smaller files at the same quality",
+    R.string.secure_camera_gallery_locked to "Unlock your device to view the gallery",
+    R.string.secure_camera_settings_locked to "Unlock your device to access settings",
+    R.string.secure_camera_unlock_gallery_message to "Unlock your device to view the gallery",
+    R.string.secure_camera_unlock_title to "Unlock device",
+    R.string.seekbar_reset_desc to "Reset to default",
     R.string.select_dcim_folder_hint to "Select the DCIM folder for saving photos",
     R.string.sensor_configurations to "Sensor Configurations",
     R.string.sensor_configurations_summary to "Per-sensor tuning parameters (physical camera id)",
@@ -1203,9 +1374,9 @@ internal val R_STRINGS: Map<Int, String> = mapOf(
     R.string.settings to "Settings",
     R.string.shadows to "Shadows",
     R.string.sharpness to "Sharpness",
-    R.string.show_gradient to "Show Gradient Background",
     R.string.show_horizon_on_preview to "Show horizon on preview",
     R.string.size to "\"File Size \"",
+    R.string.stop_recording_desc to "Stop recording",
     R.string.supported_devices to "Supported Devices",
     R.string.sure_delete to "Are you sure to delete this image?",
     R.string.sure_delete_multiple to "Are you sure to delete %1\$s image(s)? %2\$s will be cleared.",
@@ -1218,6 +1389,7 @@ internal val R_STRINGS: Map<Int, String> = mapOf(
     R.string.theme_accent to "Theme Color",
     R.string.theme_accent_blue to "Blue",
     R.string.theme_accent_cyan to "Cyan",
+    R.string.theme_accent_default to "Material You",
     R.string.theme_accent_green to "Green",
     R.string.theme_accent_orange to "Orange",
     R.string.theme_accent_pink to "Pink",
@@ -1238,21 +1410,63 @@ internal val R_STRINGS: Map<Int, String> = mapOf(
     R.string.turn_on_system_nr to "System Noise Reduction",
     R.string.turn_on_watermark to "Watermark",
     R.string.ultrahdr to "Ultra HDR",
-    R.string.ultrahdr_summary to "Encode JPEGs with an Ultra HDR gain map (requires a second, lightweight tone pass)",
+    R.string.ultrahdr_summary to "Encode JPEGs with an Ultra HDR gain map (requires a second, lightweight tone pass). HEIC gain maps need Android 14+; on older versions HEIC saves as SDR.",
     R.string.unknown to "Unknown",
     R.string.unprocessed_raw to "Unprocessed RAW",
     R.string.version_summary to "v%1\$s\\n%2\$s",
     R.string.version_title to "Version",
+    R.string.video_bitrate to "Bitrate (Mbit/s)",
+    R.string.video_bitrate_default to "30",
+    R.string.video_color_range to "Color range",
+    R.string.video_color_range_default to "limited",
+    R.string.video_hdr to "HDR video",
+    R.string.video_hdr_session_type to "Session Type (HDR)",
+    R.string.video_hdr_summary to "Records 10-bit BT.2020/Rec.2020 HDR video. Requires Save storage (HEVC).",
+    R.string.video_hdr_transfer to "HDR Transfer",
+    R.string.video_hdr_transfer_default to "hlg",
+    R.string.video_hdr_unsupported to "No 10-bit HEVC (Main10) encoder on this device — HDR video unavailable.",
+    R.string.video_hevc_unsupported to "No HEVC/H.265 video encoder on this device — AVC/H.264 will be used.",
+    R.string.video_logical_id to "Logical camera id",
+    R.string.video_logical_id_default to "0",
+    R.string.video_logical_id_summary to "Logical camera id used for video when the switch above is on",
+    R.string.video_logical_id_unsupported to "That camera id is not a logical camera on this device.",
+    R.string.video_logical_lenses to "Logical lenses (manual)",
+    R.string.video_logical_lenses_default to "",
+    R.string.video_logical_lenses_summary to "Comma-separated zoom factors, e.g. \"0.6,1.0,3.1\". Used instead of auto discovery whenever set; empty means auto.",
+    R.string.video_ois to "Optical stabilization (OIS)",
+    R.string.video_ois_summary to "Keeps OIS enabled for video, including when EIS is active.",
     R.string.video_res_4k to "3840x2160 (4K)",
     R.string.video_res_fhd to "1920x1080 (Full HD)",
     R.string.video_res_hd to "1280x720 (HD)",
     R.string.video_resolution to "Video Resolution",
+    R.string.video_save_storage to "Save storage (HEVC/H.265)",
+    R.string.video_save_storage_summary to "Uses HEVC/H.265 instead of AVC/H.264 for smaller files at the same quality. Must be enabled for HDR or 10-bit video.",
+    R.string.video_sdr_session_type to "Session Type (SDR)",
+    R.string.video_session_type_default to "",
+    R.string.video_session_type_summary to "Session type integer (0 = regular). Empty uses the Sensor Configurations value.",
     R.string.video_settings to "Video Settings",
+    R.string.video_settings_summary to "Resolution, bitrate, codec, HDR and tuning",
+    R.string.video_tunable_add_summary_hdr to "Add a custom vendor tag applied for HDR video only (type, name, value)",
+    R.string.video_tunable_add_summary_sdr to "Add a custom vendor tag applied for SDR video only (type, name, value)",
+    R.string.video_tunable_keys_hdr to "HDR video tunable keys",
+    R.string.video_tunable_keys_sdr to "SDR video tunable keys",
+    R.string.video_tunable_summary_hdr to "Custom vendor tags applied for HDR video only, on every sensor",
+    R.string.video_tunable_summary_sdr to "Custom vendor tags applied for SDR video only, on every sensor",
+    R.string.video_use_logical_id to "Use logical camera id",
+    R.string.video_use_logical_id_summary to "Open one logical camera in video mode and switch its lenses without reopening. Only applies in video mode.",
+    R.string.viewfinder_background to "Viewfinder background",
+    R.string.viewfinder_background_blur to "Blurred edges",
+    R.string.viewfinder_background_gradient to "Gradient",
+    R.string.viewfinder_background_none to "None",
     R.string.wide169 to "16:9",
     R.string.yes to "Yes",
+    R.string.zoom_lock_desc to "Lock zoom to current lens",
+    R.string.zoom_slider_desc to "Zoom slider",
+    R.string.zoom_unlock_desc to "Unlock zoom (auto lens switch)",
 )
 
 internal val R_BOOLS: Map<Int, Boolean> = mapOf(
+    R.bool.pref_auto_zoom_switch_default to false,
     R.bool.pref_binning_default to false,
     R.bool.pref_camera_sounds_default to true,
     R.bool.pref_disable_align_default to false,
@@ -1265,14 +1479,16 @@ internal val R_BOOLS: Map<Int, Boolean> = mapOf(
     R.bool.pref_hide_gallery_icon_default to false,
     R.bool.pref_quad_bayer_default to false,
     R.bool.pref_remosaic_default to false,
+    R.bool.pref_save_heic_default to false,
     R.bool.pref_save_raw_default to false,
     R.bool.pref_show_afdata_default to false,
-    R.bool.pref_show_gradient_def_value to true,
     R.bool.pref_show_roundedge_default to true,
     R.bool.pref_show_watermark_default to true,
     R.bool.pref_system_nr_default to false,
     R.bool.pref_ultrahdr_default to false,
+    R.bool.pref_video_ois_default to true,
     R.bool.pref_wide169_default to false,
+    R.bool.pref_zoom_lock_default to false,
 )
 
 internal val R_INTEGERS: Map<Int, Int> = mapOf(
@@ -1287,6 +1503,8 @@ internal val R_ARRAYS: Map<Int, Array<String>> = mapOf(
     R.array.afdata_entryValues to arrayOf("0", "1", "2", "3"),
     R.array.alignset_entries to arrayOf("PCam New"),
     R.array.alignset_entryValues to arrayOf("1"),
+    R.array.audio_source_entries to arrayOf("Camcorder", "MIC", "Unprocessed"),
+    R.array.audio_source_entryvalues to arrayOf("camcorder", "mic", "unprocessed"),
     R.array.cfapat_entries to arrayOf("AUTO", "RGGB", "BGGR", "GRBG", "GBRG", "MONO", "QUAD"),
     R.array.cfapat_entryValues to arrayOf("-1", "0", "3", "1", "2", "4", "-2"),
     R.array.colorset_entries to arrayOf("Auto", "Characteristics", "Capture"),
@@ -1294,19 +1512,30 @@ internal val R_ARRAYS: Map<Int, Array<String>> = mapOf(
     R.array.countdowntimer_entryvalues to arrayOf("0", "3", "10"),
     R.array.focuspeakset_entries to arrayOf("Off", "On", "Auto"),
     R.array.focuspeakset_entryValues to arrayOf("0", "1", "2"),
+    R.array.lens_bar_position_entries to arrayOf("Right", "Center", "Left"),
+    R.array.lens_bar_position_entryvalues to arrayOf("right", "center", "left"),
     R.array.location_geotag_entryValues to arrayOf("Off", "High Accuracy", "Network"),
     R.array.preview_format_entries to arrayOf("YUV_420_888", "JPEG", "HEIC", "None"),
     R.array.preview_format_entryValues to arrayOf("35", "256", "1212500294", "0"),
     R.array.raw_mode_entries to arrayOf("JPEG", "RAW + JPEG", "RAW"),
+    R.array.raw_mode_entries_heic to arrayOf("HEIC", "RAW + HEIC", "RAW"),
     R.array.raw_mode_entryvalues to arrayOf("0", "1", "2"),
-    R.array.theme_accent_entries to arrayOf("Default", "Eszdman", "Blue", "Red", "Orange", "Green", "Pink", "Cyan", "Teal", "White"),
+    R.array.rawvideo_container_entries to arrayOf("DNG (folder)", "ZIP", "MediaCinemaRaw (.mcraw)"),
+    R.array.rawvideo_container_entryvalues to arrayOf("dng", "zip", "mcraw"),
+    R.array.theme_accent_entries to arrayOf("Material You", "Eszdman", "Blue", "Red", "Orange", "Green", "Pink", "Cyan", "Teal", "White"),
     R.array.theme_accent_entryValues to arrayOf("default", "eszdman", "blue", "red", "orange", "green", "pink", "cyan", "teal", "white"),
     R.array.theme_entries to arrayOf("Follow system", "Light", "Dark"),
     R.array.theme_entryValues to arrayOf("-1", "1", "2"),
     R.array.vf_grid_entries to arrayOf("Off", "3x3", "4x4", "Golden Ratio", "Diag. Triangles"),
     R.array.vf_grid_entryvalues to arrayOf("0", "1", "2", "3", "4"),
+    R.array.video_color_range_entries to arrayOf("Limited", "Full"),
+    R.array.video_color_range_entryvalues to arrayOf("limited", "full"),
+    R.array.video_hdr_transfer_entries to arrayOf("HLG", "PQ"),
+    R.array.video_hdr_transfer_entryvalues to arrayOf("hlg", "pq"),
     R.array.video_resolution_entries to arrayOf("3840x2160 (4K)", "1920x1080 (Full HD)", "1280x720 (HD)"),
     R.array.video_resolution_entryvalues to arrayOf("3840x2160", "1920x1080", "1280x720"),
+    R.array.viewfinder_background_entries to arrayOf("None", "Gradient", "Blurred edges"),
+    R.array.viewfinder_background_entryValues to arrayOf("none", "gradient", "blur"),
 )
 
 /**
@@ -1318,6 +1547,10 @@ internal val R_ARRAYS: Map<Int, Array<String>> = mapOf(
 val R_PREFERENCE_DEFAULTS: Map<String, String> = mapOf(
     "pref_af_mode_key" to "4",
     "pref_align_method_key" to "1",
+    "pref_audio_bitrate_key" to "128",
+    "pref_audio_source_key" to "camcorder",
+    "pref_audio_stereo_key" to "1",
+    "pref_auto_zoom_switch_key" to "0",
     "pref_binning_key" to "0",
     "pref_camera_sounds_key" to "1",
     "pref_cfa_key" to "-1",
@@ -1334,28 +1567,41 @@ val R_PREFERENCE_DEFAULTS: Map<String, String> = mapOf(
     "pref_hdrx_nr_key" to "1",
     "pref_hide_gallery_icon_key" to "0",
     "pref_horizon" to "0",
+    "pref_lens_bar_position_key" to "right",
     "pref_luma_nr_seekbar_key" to "12",
     "pref_merge_seekbar_key" to "0.0",
     "pref_noise_seekbar_key" to "0.0",
     "pref_peak_method_key" to "2",
     "pref_preserve_manual_wb_key" to "0",
     "pref_preview_format_key" to "0",
+    "pref_rawvideo_container_key" to "mcraw",
     "pref_rawvideo_crop_169_key" to "1",
     "pref_rawvideo_downscale_4x_key" to "0",
-    "pref_rawvideo_write_zip_key" to "1",
     "pref_saturation_seekbar_key" to "1.0",
+    "pref_save_heic_key" to "0",
     "pref_save_raw_key" to "0",
     "pref_shadows_seekbar_key" to "0.0",
     "pref_sharpness_seekbar_key" to "0.20",
     "pref_show_afdata_key" to "0",
-    "pref_show_gradient_key" to "1",
     "pref_show_grid_key" to "0",
     "pref_show_roundedge_key" to "1",
     "pref_show_watermark_key" to "1",
     "pref_theme_accent_key" to "default",
     "pref_theme_key" to "-1",
     "pref_ultrahdr_key" to "0",
+    "pref_video_bitrate_key" to "30",
+    "pref_video_color_range_key" to "limited",
+    "pref_video_hdr_key" to "0",
+    "pref_video_hdr_session_type_key" to "",
+    "pref_video_hdr_transfer_key" to "hlg",
+    "pref_video_hevc_key" to "0",
+    "pref_video_logical_id_key" to "0",
+    "pref_video_logical_lenses_key" to "",
+    "pref_video_ois_key" to "1",
     "pref_video_resolution_key" to "1920x1080",
+    "pref_video_sdr_session_type_key" to "",
+    "pref_video_use_logical_id_key" to "0",
+    "pref_viewfinder_background_key" to "none",
     "pref_wide169_key" to "0",
 )
 
@@ -1363,16 +1609,22 @@ val R_PREFERENCE_DEFAULTS: Map<String, String> = mapOf(
 val R_PREFERENCE_VALUES: Map<String, Array<String>> = mapOf(
     "pref_af_mode_key" to arrayOf("4", "3", "1"),
     "pref_align_method_key" to arrayOf("1"),
+    "pref_audio_source_key" to arrayOf("camcorder", "mic", "unprocessed"),
     "pref_cfa_key" to arrayOf("-1", "0", "3", "1", "2", "4", "-2"),
     "pref_color_method_key" to arrayOf("0", "1", "2"),
+    "pref_lens_bar_position_key" to arrayOf("right", "center", "left"),
     "pref_peak_method_key" to arrayOf("0", "1", "2"),
     "pref_preview_format_key" to arrayOf("35", "256", "1212500294", "0"),
+    "pref_rawvideo_container_key" to arrayOf("dng", "zip", "mcraw"),
     "pref_save_raw_key" to arrayOf("0", "1", "2"),
     "pref_show_afdata_key" to arrayOf("0", "1", "2", "3"),
     "pref_show_grid_key" to arrayOf("0", "1", "2", "3", "4"),
     "pref_theme_accent_key" to arrayOf("default", "eszdman", "blue", "red", "orange", "green", "pink", "cyan", "teal", "white"),
     "pref_theme_key" to arrayOf("-1", "1", "2"),
+    "pref_video_color_range_key" to arrayOf("limited", "full"),
+    "pref_video_hdr_transfer_key" to arrayOf("hlg", "pq"),
     "pref_video_resolution_key" to arrayOf("3840x2160", "1920x1080", "1280x720"),
+    "pref_viewfinder_background_key" to arrayOf("none", "gradient", "blur"),
 )
 
 /** One row of res/xml/preferences.xml, as the file types and orders it. */
@@ -1402,25 +1654,49 @@ val R_PREFERENCE_TREE: Array<RPreferenceNode> = arrayOf(
         RPreferenceNode("switch", "pref_energy_safe_key", title = "Battery Saver", default = "0"),
         RPreferenceNode("switch", "pref_camera_sounds_key", title = "Camera Sounds", default = "1"),
         RPreferenceNode("switch", "pref_hide_gallery_icon_key", title = "Hide Gallery Icon", default = "0"),
+        RPreferenceNode("list", "pref_lens_bar_position_key", title = "Lens Bar Position", default = "right", entries = arrayOf("Right", "Center", "Left"), values = arrayOf("right", "center", "left")),
         RPreferenceNode("list", "pref_show_grid_key", title = "Show Grid", default = "0", entries = arrayOf("Off", "3x3", "4x4", "Golden Ratio", "Diag. Triangles"), values = arrayOf("0", "1", "2", "3", "4")),
         RPreferenceNode("switch", "pref_show_roundedge_key", title = "Enable Round Edges", default = "1"),
         RPreferenceNode("switch", "pref_show_watermark_key", title = "Watermark", default = "1"),
+        RPreferenceNode("switch", "pref_auto_zoom_switch_key", title = "Auto zoom lens switch", summary = "Automatically switch lenses while zooming. Shows the lock pill.", default = "0"),
         RPreferenceNode("list", "pref_af_mode_key", title = "Auto Focus Mode", default = "4", entries = arrayOf("Continuous Picture", "Continuous Video", "Auto"), values = arrayOf("4", "3", "1")),
         RPreferenceNode("list", "pref_peak_method_key", title = "Focus Peaking", default = "2", entries = arrayOf("Off", "On", "Auto"), values = arrayOf("0", "1", "2")),
         RPreferenceNode("list", "pref_show_afdata_key", title = "Viewfinder HUD / Debug", default = "0", entries = arrayOf("Off", "HUD", "HUD + Histogram", "Full Debug"), values = arrayOf("0", "1", "2", "3")),
         RPreferenceNode("switch", "pref_save_per_lens_settings", title = "Per Lens Settings"),
         RPreferenceNode("switch", "pref_preserve_manual_wb_key", title = "Preserve Manual WB", default = "0"),
     )),
+    RPreferenceNode("category", "pref_category_video_shortcut_key", title = "Video Settings", children = arrayOf(
+        RPreferenceNode("screen", "pref_video_settings_submenu", title = "Video Settings", summary = "Resolution, bitrate, codec, HDR and tuning", children = arrayOf(
+            RPreferenceNode("category", "pref_category_video_key", title = "Video Settings", children = arrayOf(
+                RPreferenceNode("list", "pref_video_resolution_key", title = "Video Resolution", default = "1920x1080", entries = arrayOf("3840x2160 (4K)", "1920x1080 (Full HD)", "1280x720 (HD)"), values = arrayOf("3840x2160", "1920x1080", "1280x720")),
+                RPreferenceNode("seek", "pref_video_bitrate_key", title = "Bitrate (Mbit/s)", default = "30", min = 30f, max = 130f, step = 1f),
+                RPreferenceNode("switch", "pref_video_hevc_key", title = "Save storage (HEVC/H.265)", summary = "Uses HEVC/H.265 instead of AVC/H.264 for smaller files at the same quality. Must be enabled for HDR or 10-bit video.", default = "0"),
+                RPreferenceNode("switch", "pref_video_hdr_key", title = "HDR video", summary = "Records 10-bit BT.2020/Rec.2020 HDR video. Requires Save storage (HEVC).", default = "0"),
+                RPreferenceNode("list", "pref_video_hdr_transfer_key", title = "HDR Transfer", default = "hlg", entries = arrayOf("HLG", "PQ"), values = arrayOf("hlg", "pq")),
+                RPreferenceNode("list", "pref_video_color_range_key", title = "Color range", default = "limited", entries = arrayOf("Limited", "Full"), values = arrayOf("limited", "full")),
+                RPreferenceNode("switch", "pref_video_ois_key", title = "Optical stabilization (OIS)", summary = "Keeps OIS enabled for video, including when EIS is active.", default = "1"),
+                RPreferenceNode("switch", "pref_video_use_logical_id_key", title = "Use logical camera id", summary = "Open one logical camera in video mode and switch its lenses without reopening. Only applies in video mode.", default = "0"),
+                RPreferenceNode("action", "pref_video_logical_id_key", title = "Logical camera id", summary = "Logical camera id used for video when the switch above is on", default = "0"),
+                RPreferenceNode("action", "pref_video_logical_lenses_key", title = "Logical lenses (manual)", summary = "Comma-separated zoom factors, e.g. \"0.6,1.0,3.1\". Used instead of auto discovery whenever set; empty means auto.", default = ""),
+                RPreferenceNode("action", "pref_video_hdr_session_type_key", title = "Session Type (HDR)", summary = "Session type integer (0 = regular). Empty uses the Sensor Configurations value.", default = ""),
+                RPreferenceNode("action", "pref_video_sdr_session_type_key", title = "Session Type (SDR)", summary = "Session type integer (0 = regular). Empty uses the Sensor Configurations value.", default = ""),
+                RPreferenceNode("screen", "pref_video_tunable_submenu", title = "SDR video tunable keys", summary = "Custom vendor tags applied for SDR video only, on every sensor"),
+                RPreferenceNode("screen", "pref_video_hdr_tunable_submenu", title = "HDR video tunable keys", summary = "Custom vendor tags applied for HDR video only, on every sensor"),
+            )),
+            RPreferenceNode("category", "pref_category_audio_key", title = "Audio Settings", children = arrayOf(
+                RPreferenceNode("seek", "pref_audio_bitrate_key", title = "Bitrate (kbit/s)", default = "128", min = 32f, max = 512f, step = 1f),
+                RPreferenceNode("switch", "pref_audio_stereo_key", title = "Stereo channel", summary = "Record in stereo. When off, audio is recorded in mono (single channel).", default = "1"),
+                RPreferenceNode("list", "pref_audio_source_key", title = "Audio source", default = "camcorder", entries = arrayOf("Camcorder", "MIC", "Unprocessed"), values = arrayOf("camcorder", "mic", "unprocessed")),
+            )),
+            RPreferenceNode("category", "pref_category_rawvideo_key", title = "Raw Video Settings", children = arrayOf(
+                RPreferenceNode("switch", "pref_rawvideo_downscale_4x_key", title = "Downscale 4x", default = "0"),
+                RPreferenceNode("list", "pref_rawvideo_container_key", title = "Raw video container", default = "mcraw", entries = arrayOf("DNG (folder)", "ZIP", "MediaCinemaRaw (.mcraw)"), values = arrayOf("dng", "zip", "mcraw")),
+                RPreferenceNode("switch", "pref_rawvideo_crop_169_key", title = "Crop to 16:9", default = "1"),
+            )),
+        )),
+    )),
     RPreferenceNode("category", "pref_category_photo_key", title = "Photo Settings", children = arrayOf(
         RPreferenceNode("seek", "pref_frame_count_key", title = "HDR Frame Count", default = "15", min = 1f, max = 200f),
-    )),
-    RPreferenceNode("category", "pref_category_video_key", title = "Video Settings", children = arrayOf(
-        RPreferenceNode("list", "pref_video_resolution_key", title = "Video Resolution", default = "1920x1080", entries = arrayOf("3840x2160 (4K)", "1920x1080 (Full HD)", "1280x720 (HD)"), values = arrayOf("3840x2160", "1920x1080", "1280x720")),
-    )),
-    RPreferenceNode("category", "pref_category_rawvideo_key", title = "Raw Video Settings", children = arrayOf(
-        RPreferenceNode("switch", "pref_rawvideo_downscale_4x_key", title = "Downscale 4x", default = "0"),
-        RPreferenceNode("switch", "pref_rawvideo_write_zip_key", title = "Write ZIP", default = "1"),
-        RPreferenceNode("switch", "pref_rawvideo_crop_169_key", title = "Crop to 16:9", default = "1"),
     )),
     RPreferenceNode("category", "pref_category_jpg_key", title = "JPEG", children = arrayOf(
         RPreferenceNode("switch", "pref_enable_system_nr_key", title = "System Noise Reduction", default = "0"),
@@ -1431,8 +1707,9 @@ val R_PREFERENCE_TREE: Array<RPreferenceNode> = arrayOf(
     )),
     RPreferenceNode("category", "pref_category_hdrx_key", title = "HDRX", children = arrayOf(
         RPreferenceNode("list", "pref_save_raw_key", title = "Save", default = "0", entries = arrayOf("JPEG", "RAW + JPEG", "RAW"), values = arrayOf("0", "1", "2")),
+        RPreferenceNode("switch", "pref_save_heic_key", title = "Save HEIC", summary = "Use HEIC instead of JPEG — smaller files at the same quality", default = "0"),
+        RPreferenceNode("switch", "pref_ultrahdr_key", title = "Ultra HDR", summary = "Encode JPEGs with an Ultra HDR gain map (requires a second, lightweight tone pass). HEIC gain maps need Android 14+; on older versions HEIC saves as SDR.", default = "0"),
         RPreferenceNode("switch", "pref_hdrx_nr_key", title = "Noise Reduction", default = "1"),
-        RPreferenceNode("switch", "pref_ultrahdr_key", title = "Ultra HDR", summary = "Encode JPEGs with an Ultra HDR gain map (requires a second, lightweight tone pass)", default = "0"),
         RPreferenceNode("seek", "pref_sharpness_seekbar_key", title = "Sharpness", default = "0.20", min = -0.2f, max = 1.0f, step = 20f, isFloat = true),
         RPreferenceNode("seek", "pref_saturation_seekbar_key", title = "Saturation", default = "1.0", min = 0f, max = 3f, step = 10f, isFloat = true),
         RPreferenceNode("seek", "pref_contrast_seekbar_key", title = "Contrast", default = "0.0", min = 0f, max = 3f, step = 10f, isFloat = true),
@@ -1449,8 +1726,8 @@ val R_PREFERENCE_TREE: Array<RPreferenceNode> = arrayOf(
     )),
     RPreferenceNode("category", "pref_theme_category_key", title = "Theme", children = arrayOf(
         RPreferenceNode("list", "pref_theme_key", title = "Theme", default = "-1", entries = arrayOf("Follow system", "Light", "Dark"), values = arrayOf("-1", "1", "2")),
-        RPreferenceNode("list", "pref_theme_accent_key", title = "Theme Color", default = "default", entries = arrayOf("Default", "Eszdman", "Blue", "Red", "Orange", "Green", "Pink", "Cyan", "Teal", "White"), values = arrayOf("default", "eszdman", "blue", "red", "orange", "green", "pink", "cyan", "teal", "white")),
-        RPreferenceNode("switch", "pref_show_gradient_key", title = "Show Gradient Background", default = "1"),
+        RPreferenceNode("list", "pref_theme_accent_key", title = "Theme Color", default = "default", entries = arrayOf("Material You", "Eszdman", "Blue", "Red", "Orange", "Green", "Pink", "Cyan", "Teal", "White"), values = arrayOf("default", "eszdman", "blue", "red", "orange", "green", "pink", "cyan", "teal", "white")),
+        RPreferenceNode("list", "pref_viewfinder_background_key", title = "Viewfinder background", default = "none", entries = arrayOf("None", "Gradient", "Blurred edges"), values = arrayOf("none", "gradient", "blur")),
     )),
     RPreferenceNode("category", "pref_category_advanced_key", title = "Advanced", children = arrayOf(
         RPreferenceNode("screen", "pref_tunable_submenu", title = "Tunable Settings", summary = "Advanced tunable parameters"),
@@ -1478,7 +1755,6 @@ val R_PREFERENCE_TREE: Array<RPreferenceNode> = arrayOf(
 
 /** id -> resource name, for AssetManager/Resources file lookups. */
 internal val R_NAMES: Map<Int, String> = mapOf(
-    R.anim.animate_slide_right_exit to "animate_slide_right_exit",
     R.anim.fade_in to "fade_in",
     R.anim.fade_out to "fade_out",
     R.anim.slide_down_enter to "slide_down_enter",
@@ -1491,6 +1767,8 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.array.afdata_entryValues to "afdata_entryValues",
     R.array.alignset_entries to "alignset_entries",
     R.array.alignset_entryValues to "alignset_entryValues",
+    R.array.audio_source_entries to "audio_source_entries",
+    R.array.audio_source_entryvalues to "audio_source_entryvalues",
     R.array.cfapat_entries to "cfapat_entries",
     R.array.cfapat_entryValues to "cfapat_entryValues",
     R.array.colorset_entries to "colorset_entries",
@@ -1498,23 +1776,33 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.array.countdowntimer_entryvalues to "countdowntimer_entryvalues",
     R.array.focuspeakset_entries to "focuspeakset_entries",
     R.array.focuspeakset_entryValues to "focuspeakset_entryValues",
+    R.array.lens_bar_position_entries to "lens_bar_position_entries",
+    R.array.lens_bar_position_entryvalues to "lens_bar_position_entryvalues",
     R.array.location_geotag_entryValues to "location_geotag_entryValues",
     R.array.preview_format_entries to "preview_format_entries",
     R.array.preview_format_entryValues to "preview_format_entryValues",
     R.array.raw_mode_entries to "raw_mode_entries",
+    R.array.raw_mode_entries_heic to "raw_mode_entries_heic",
     R.array.raw_mode_entryvalues to "raw_mode_entryvalues",
+    R.array.rawvideo_container_entries to "rawvideo_container_entries",
+    R.array.rawvideo_container_entryvalues to "rawvideo_container_entryvalues",
     R.array.theme_accent_entries to "theme_accent_entries",
     R.array.theme_accent_entryValues to "theme_accent_entryValues",
     R.array.theme_entries to "theme_entries",
     R.array.theme_entryValues to "theme_entryValues",
     R.array.vf_grid_entries to "vf_grid_entries",
     R.array.vf_grid_entryvalues to "vf_grid_entryvalues",
+    R.array.video_color_range_entries to "video_color_range_entries",
+    R.array.video_color_range_entryvalues to "video_color_range_entryvalues",
+    R.array.video_hdr_transfer_entries to "video_hdr_transfer_entries",
+    R.array.video_hdr_transfer_entryvalues to "video_hdr_transfer_entryvalues",
     R.array.video_resolution_entries to "video_resolution_entries",
     R.array.video_resolution_entryvalues to "video_resolution_entryvalues",
+    R.array.viewfinder_background_entries to "viewfinder_background_entries",
+    R.array.viewfinder_background_entryValues to "viewfinder_background_entryValues",
     R.attr.cameraFragmentBackground to "cameraFragmentBackground",
     R.attr.horizontalPickerStyle to "horizontalPickerStyle",
-    R.attr.modeSelectedTextColor to "modeSelectedTextColor",
-    R.attr.processingProgressColor to "processingProgressColor",
+    R.bool.pref_auto_zoom_switch_default to "pref_auto_zoom_switch_default",
     R.bool.pref_binning_default to "pref_binning_default",
     R.bool.pref_camera_sounds_default to "pref_camera_sounds_default",
     R.bool.pref_disable_align_default to "pref_disable_align_default",
@@ -1527,41 +1815,40 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.bool.pref_hide_gallery_icon_default to "pref_hide_gallery_icon_default",
     R.bool.pref_quad_bayer_default to "pref_quad_bayer_default",
     R.bool.pref_remosaic_default to "pref_remosaic_default",
+    R.bool.pref_save_heic_default to "pref_save_heic_default",
     R.bool.pref_save_raw_default to "pref_save_raw_default",
     R.bool.pref_show_afdata_default to "pref_show_afdata_default",
-    R.bool.pref_show_gradient_def_value to "pref_show_gradient_def_value",
     R.bool.pref_show_roundedge_default to "pref_show_roundedge_default",
     R.bool.pref_show_watermark_default to "pref_show_watermark_default",
     R.bool.pref_system_nr_default to "pref_system_nr_default",
     R.bool.pref_ultrahdr_default to "pref_ultrahdr_default",
+    R.bool.pref_video_ois_default to "pref_video_ois_default",
     R.bool.pref_wide169_default to "pref_wide169_default",
-    R.color.Blue to "Blue",
-    R.color.BlueDis to "BlueDis",
-    R.color.GreyDis to "GreyDis",
-    R.color.LauncherBackground to "LauncherBackground",
-    R.color.Light to "Light",
-    R.color.LightDis to "LightDis",
-    R.color.ToolBar to "ToolBar",
+    R.bool.pref_zoom_lock_default to "pref_zoom_lock_default",
     R.color.White to "White",
-    R.color.aux_container_color to "aux_container_color",
-    R.color.black_white_selectable to "black_white_selectable",
+    R.color.cam_chip_text to "cam_chip_text",
+    R.color.cam_error to "cam_error",
+    R.color.cam_icon_tint to "cam_icon_tint",
+    R.color.cam_on_primary to "cam_on_primary",
+    R.color.cam_on_primary_container to "cam_on_primary_container",
+    R.color.cam_on_surface to "cam_on_surface",
+    R.color.cam_on_surface_variant to "cam_on_surface_variant",
+    R.color.cam_outline to "cam_outline",
+    R.color.cam_panel_scrim to "cam_panel_scrim",
+    R.color.cam_primary to "cam_primary",
+    R.color.cam_primary_container to "cam_primary_container",
+    R.color.cam_surface to "cam_surface",
+    R.color.cam_surface_container to "cam_surface_container",
+    R.color.cam_surface_container_high to "cam_surface_container_high",
     R.color.colorAccent to "colorAccent",
-    R.color.colorPrimary to "colorPrimary",
-    R.color.colorPrimaryColored to "colorPrimaryColored",
-    R.color.colorPrimaryContainer to "colorPrimaryContainer",
     R.color.colorPrimaryDark to "colorPrimaryDark",
-    R.color.colorSeparator to "colorSeparator",
-    R.color.colorText to "colorText",
-    R.color.controlCol to "controlCol",
     R.color.focus_circle_color to "focus_circle_color",
     R.color.gradient_bottom_shadow_color to "gradient_bottom_shadow_color",
     R.color.gradient_color to "gradient_color",
     R.color.gradient_color_video to "gradient_color_video",
     R.color.gradient_shadow_thumb_tag to "gradient_shadow_thumb_tag",
     R.color.gradient_top_shadow_color to "gradient_top_shadow_color",
-    R.color.grid_thumbnail_background to "grid_thumbnail_background",
     R.color.ic_gradient_setting_color to "ic_gradient_setting_color",
-    R.color.manual_text_color to "manual_text_color",
     R.color.md_amber_100 to "md_amber_100",
     R.color.md_amber_200 to "md_amber_200",
     R.color.md_amber_300 to "md_amber_300",
@@ -1827,65 +2114,67 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.color.md_yellow_A400 to "md_yellow_A400",
     R.color.md_yellow_A700 to "md_yellow_A700",
     R.color.panel_transparency to "panel_transparency",
+    R.color.shutter_morph_fill to "shutter_morph_fill",
+    R.color.shutter_morph_stroke to "shutter_morph_stroke",
     R.color.thumbnail_background_color to "thumbnail_background_color",
-    R.color.transparent_focus_circle to "transparent_focus_circle",
     R.color.white to "white",
     R.color.white_theme_background to "white_theme_background",
-    R.dimen.SettingSize1 to "SettingSize1",
-    R.dimen.SettingSize2 to "SettingSize2",
     R.dimen.arrow_size to "arrow_size",
     R.dimen.aux_button_internal_margin to "aux_button_internal_margin",
     R.dimen.aux_button_size to "aux_button_size",
     R.dimen.aux_container_margin to "aux_container_margin",
     R.dimen.bottombar_padding to "bottombar_padding",
-    R.dimen.bottombar_to_modeswitcher_margin to "bottombar_to_modeswitcher_margin",
-    R.dimen.camera_preference_about_padding to "camera_preference_about_padding",
-    R.dimen.camera_settings_entry_left_margin to "camera_settings_entry_left_margin",
+    R.dimen.cam_panel_blur_radius to "cam_panel_blur_radius",
+    R.dimen.cam_panel_corner_radius to "cam_panel_corner_radius",
     R.dimen.camera_settings_entry_margin to "camera_settings_entry_margin",
     R.dimen.camera_settings_icon_size to "camera_settings_icon_size",
     R.dimen.camera_settings_preference_font_size to "camera_settings_preference_font_size",
     R.dimen.camera_switch_button_size to "camera_switch_button_size",
     R.dimen.capture_progress_circle_size to "capture_progress_circle_size",
     R.dimen.exif_dialog_width to "exif_dialog_width",
-    R.dimen.flip_camera_size to "flip_camera_size",
     R.dimen.focus_circle_size to "focus_circle_size",
     R.dimen.gallery_button_size to "gallery_button_size",
     R.dimen.gallery_viewer_button_conainer_size to "gallery_viewer_button_conainer_size",
     R.dimen.gallery_viewer_button_size to "gallery_viewer_button_size",
-    R.dimen.mode_chip_height to "mode_chip_height",
-    R.dimen.mode_chip_radius to "mode_chip_radius",
-    R.dimen.mode_chip_side_margin to "mode_chip_side_margin",
+    R.dimen.lens_zoom_slider_thickness to "lens_zoom_slider_thickness",
+    R.dimen.lens_zoom_slider_width to "lens_zoom_slider_width",
+    R.dimen.lens_zoom_stack_gap to "lens_zoom_stack_gap",
+    R.dimen.manual_dome_min_height to "manual_dome_min_height",
     R.dimen.mode_chip_text_size to "mode_chip_text_size",
     R.dimen.mode_switcher_padding to "mode_switcher_padding",
-    R.dimen.mode_switcher_pading to "mode_switcher_pading",
     R.dimen.preference_category_text_height to "preference_category_text_height",
-    R.dimen.preference_seekbar_padding to "preference_seekbar_padding",
+    R.dimen.preference_icon_margin to "preference_icon_margin",
+    R.dimen.preference_icon_size to "preference_icon_size",
+    R.dimen.preference_row_horizontal_padding to "preference_row_horizontal_padding",
+    R.dimen.preference_row_min_height to "preference_row_min_height",
+    R.dimen.preference_row_vertical_padding to "preference_row_vertical_padding",
     R.dimen.preference_seekbar_value_padding to "preference_seekbar_value_padding",
     R.dimen.preference_seekbar_value_text_width to "preference_seekbar_value_text_width",
     R.dimen.shutter_button_size to "shutter_button_size",
-    R.dimen.shutter_progress_bar_size to "shutter_progress_bar_size",
     R.dimen.standard_0 to "standard_0",
+    R.dimen.standard_12 to "standard_12",
     R.dimen.standard_125 to "standard_125",
     R.dimen.standard_20 to "standard_20",
     R.dimen.standard_65 to "standard_65",
     R.dimen.topbar_button_inset to "topbar_button_inset",
-    R.dimen.topbar_icon_size to "topbar_icon_size",
     R.dimen.topbar_padding to "topbar_padding",
+    R.dimen.viewfinder_round_corner_radius to "viewfinder_round_corner_radius",
     R.dimen.viewfinder_top_padding to "viewfinder_top_padding",
-    R.drawable.analyze_lut to "analyze_lut",
     R.drawable.autofps_select_24px to "autofps_select_24px",
     R.drawable.aux_button_background to "aux_button_background",
     R.drawable.aux_container_background to "aux_container_background",
-    R.drawable.bg_ultra_hdr_toggle to "bg_ultra_hdr_toggle",
+    R.drawable.cam_badge_background to "cam_badge_background",
+    R.drawable.cam_bar_blur_overlay to "cam_bar_blur_overlay",
+    R.drawable.cam_chip_background to "cam_chip_background",
     R.drawable.camera_launch to "camera_launch",
     R.drawable.camera_launch_bg to "camera_launch_bg",
     R.drawable.camera_launch_fg to "camera_launch_fg",
     R.drawable.camera_launch_mono to "camera_launch_mono",
     R.drawable.chevron_up to "chevron_up",
-    R.drawable.circular_progress_bar to "circular_progress_bar",
-    R.drawable.circular_progress_bar2 to "circular_progress_bar2",
     R.drawable.eis_button to "eis_button",
     R.drawable.exif_background to "exif_background",
+    R.drawable.exif_background_scrim to "exif_background_scrim",
+    R.drawable.exif_background_transparent to "exif_background_transparent",
     R.drawable.fps24_select_24px to "fps24_select_24px",
     R.drawable.fps30_select_24px to "fps30_select_24px",
     R.drawable.fps60_select_24px to "fps60_select_24px",
@@ -1900,7 +2189,6 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.drawable.gradient_vector_video to "gradient_vector_video",
     R.drawable.ic_add to "ic_add",
     R.drawable.ic_baseline_arrow_back_24 to "ic_baseline_arrow_back_24",
-    R.drawable.ic_baseline_build to "ic_baseline_build",
     R.drawable.ic_baseline_info_24 to "ic_baseline_info_24",
     R.drawable.ic_bayer to "ic_bayer",
     R.drawable.ic_burst_mode_black_24dp to "ic_burst_mode_black_24dp",
@@ -1935,6 +2223,7 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.drawable.ic_info to "ic_info",
     R.drawable.ic_iso to "ic_iso",
     R.drawable.ic_multi_lens to "ic_multi_lens",
+    R.drawable.ic_ois to "ic_ois",
     R.drawable.ic_photo_library to "ic_photo_library",
     R.drawable.ic_quad_off to "ic_quad_off",
     R.drawable.ic_quad_on to "ic_quad_on",
@@ -1943,7 +2232,6 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.drawable.ic_refresh to "ic_refresh",
     R.drawable.ic_restore to "ic_restore",
     R.drawable.ic_round_battery_alert_24 to "ic_round_battery_alert_24",
-    R.drawable.ic_round_battery_std_24 to "ic_round_battery_std_24",
     R.drawable.ic_round_photo_camera_24 to "ic_round_photo_camera_24",
     R.drawable.ic_rounded_corner to "ic_rounded_corner",
     R.drawable.ic_saturation to "ic_saturation",
@@ -1965,22 +2253,18 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.drawable.ic_ultra_hdr to "ic_ultra_hdr",
     R.drawable.ic_ultra_hdr_off to "ic_ultra_hdr_off",
     R.drawable.ic_watermark to "ic_watermark",
-    R.drawable.initial_lut to "initial_lut",
+    R.drawable.ic_zoom_lock to "ic_zoom_lock",
+    R.drawable.ic_zoom_lock_open to "ic_zoom_lock_open",
     R.drawable.leaf_icon_15 to "leaf_icon_15",
     R.drawable.lut to "lut",
     R.drawable.lut2 to "lut2",
     R.drawable.neutral_lut to "neutral_lut",
-    R.drawable.photoncamera_watermark to "photoncamera_watermark",
     R.drawable.quad_button to "quad_button",
     R.drawable.raw_button to "raw_button",
-    R.drawable.rectangle to "rectangle",
     R.drawable.round to "round",
-    R.drawable.roundbutton to "roundbutton",
     R.drawable.shadowtex to "shadowtex",
     R.drawable.splash_background to "splash_background",
-    R.drawable.unlimitedbutton to "unlimitedbutton",
     R.drawable.updatetheme to "updatetheme",
-    R.font.open_sans to "open_sans",
     R.id.ae_metering_std_average_button to "ae_metering_std_average_button",
     R.id.ae_metering_std_center_button to "ae_metering_std_center_button",
     R.id.ae_metering_std_entry_layout to "ae_metering_std_entry_layout",
@@ -2030,8 +2314,15 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.id.timer_entry_layout to "timer_entry_layout",
     R.id.timer_off_button to "timer_off_button",
     R.id.torch_button to "torch_button",
+    R.id.zoom_alpha_anim_tag to "zoom_alpha_anim_tag",
+    R.id.zoom_hidden_tag to "zoom_hidden_tag",
+    R.id.zoom_offnative_tag to "zoom_offnative_tag",
+    R.id.zoom_ratio_tag to "zoom_ratio_tag",
     R.integer.config_settingsFadeAnimationDuration to "config_settingsFadeAnimationDuration",
     R.integer.grid_columns to "grid_columns",
+    R.interpolator.m3_emphasized to "m3_emphasized",
+    R.interpolator.m3_emphasized_accelerate to "m3_emphasized_accelerate",
+    R.interpolator.m3_emphasized_decelerate to "m3_emphasized_decelerate",
     R.layout.activity_camera to "activity_camera",
     R.layout.activity_gallery to "activity_gallery",
     R.layout.activity_settings to "activity_settings",
@@ -2041,8 +2332,8 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.layout.preference_seekbar to "preference_seekbar",
     R.layout.preference_tunable_checkbox to "preference_tunable_checkbox",
     R.layout.preference_tunable_seekbar to "preference_tunable_seekbar",
+    R.layout.preference_widget_material_switch to "preference_widget_material_switch",
     R.layout.preference_with_margin to "preference_with_margin",
-    R.layout.preference_with_margin_centered to "preference_with_margin_centered",
     R.layout.viewer_pager to "viewer_pager",
     R.layout.viewfinder_stack to "viewfinder_stack",
     R.mipmap.ic_gallery_launcher to "ic_gallery_launcher",
@@ -2074,7 +2365,16 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.string.aperture to "aperture",
     R.string.app_name to "app_name",
     R.string.app_will_restart to "app_will_restart",
+    R.string.audio_bitrate to "audio_bitrate",
+    R.string.audio_bitrate_default to "audio_bitrate_default",
+    R.string.audio_settings to "audio_settings",
+    R.string.audio_source to "audio_source",
+    R.string.audio_source_default to "audio_source_default",
+    R.string.audio_stereo to "audio_stereo",
+    R.string.audio_stereo_summary to "audio_stereo_summary",
     R.string.auto to "auto",
+    R.string.auto_zoom_lens_switch to "auto_zoom_lens_switch",
+    R.string.auto_zoom_lens_switch_summary to "auto_zoom_lens_switch_summary",
     R.string.back_camera_ids to "back_camera_ids",
     R.string.backup to "backup",
     R.string.backup_file_name to "backup_file_name",
@@ -2140,6 +2440,8 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.string.golden_ratio to "golden_ratio",
     R.string.hdrx to "hdrx",
     R.string.hdrxNR to "hdrxNR",
+    R.string.heic_failed_saved_jpeg to "heic_failed_saved_jpeg",
+    R.string.heic_only to "heic_only",
     R.string.hide_gallery_icon to "hide_gallery_icon",
     R.string.histogram to "histogram",
     R.string.icon_string to "icon_string",
@@ -2149,6 +2451,10 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.string.iso to "iso",
     R.string.jpg to "jpg",
     R.string.jpg_only to "jpg_only",
+    R.string.lens_bar_position to "lens_bar_position",
+    R.string.lens_bar_position_center to "lens_bar_position_center",
+    R.string.lens_bar_position_left to "lens_bar_position_left",
+    R.string.lens_bar_position_right to "lens_bar_position_right",
     R.string.list_not_loaded to "list_not_loaded",
     R.string.long_press_to_deselect to "long_press_to_deselect",
     R.string.luma_nr_count to "luma_nr_count",
@@ -2187,6 +2493,10 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.string.pref_af_mode_key to "pref_af_mode_key",
     R.string.pref_align_method_default to "pref_align_method_default",
     R.string.pref_align_method_key to "pref_align_method_key",
+    R.string.pref_audio_bitrate_key to "pref_audio_bitrate_key",
+    R.string.pref_audio_source_key to "pref_audio_source_key",
+    R.string.pref_audio_stereo_key to "pref_audio_stereo_key",
+    R.string.pref_auto_zoom_switch_key to "pref_auto_zoom_switch_key",
     R.string.pref_backup_preferences_key to "pref_backup_preferences_key",
     R.string.pref_binning_key to "pref_binning_key",
     R.string.pref_bracketing_key to "pref_bracketing_key",
@@ -2195,6 +2505,7 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.string.pref_camera_sounds_key to "pref_camera_sounds_key",
     R.string.pref_category_about_key to "pref_category_about_key",
     R.string.pref_category_advanced_key to "pref_category_advanced_key",
+    R.string.pref_category_audio_key to "pref_category_audio_key",
     R.string.pref_category_backup_restore to "pref_category_backup_restore",
     R.string.pref_category_device_key to "pref_category_device_key",
     R.string.pref_category_device_key_title to "pref_category_device_key_title",
@@ -2204,6 +2515,7 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.string.pref_category_photo_key to "pref_category_photo_key",
     R.string.pref_category_rawvideo_key to "pref_category_rawvideo_key",
     R.string.pref_category_video_key to "pref_category_video_key",
+    R.string.pref_category_video_shortcut_key to "pref_category_video_shortcut_key",
     R.string.pref_cfa_default_value to "pref_cfa_default_value",
     R.string.pref_cfa_key to "pref_cfa_key",
     R.string.pref_chroma_nr_seekbar_key to "pref_chroma_nr_seekbar_key",
@@ -2235,6 +2547,8 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.string.pref_hdrx_nr_key to "pref_hdrx_nr_key",
     R.string.pref_hide_gallery_icon_key to "pref_hide_gallery_icon_key",
     R.string.pref_horizon to "pref_horizon",
+    R.string.pref_lens_bar_position_default to "pref_lens_bar_position_default",
+    R.string.pref_lens_bar_position_key to "pref_lens_bar_position_key",
     R.string.pref_luma_nr_seekbar_key to "pref_luma_nr_seekbar_key",
     R.string.pref_luma_seekbar_default to "pref_luma_seekbar_default",
     R.string.pref_merge_seekbar_key to "pref_merge_seekbar_key",
@@ -2249,6 +2563,8 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.string.pref_preview_resolution_key to "pref_preview_resolution_key",
     R.string.pref_quad_bayer_key to "pref_quad_bayer_key",
     R.string.pref_raw_mode_default_value to "pref_raw_mode_default_value",
+    R.string.pref_rawvideo_container_default to "pref_rawvideo_container_default",
+    R.string.pref_rawvideo_container_key to "pref_rawvideo_container_key",
     R.string.pref_rawvideo_crop_169_key to "pref_rawvideo_crop_169_key",
     R.string.pref_rawvideo_downscale_4x_key to "pref_rawvideo_downscale_4x_key",
     R.string.pref_rawvideo_write_zip_key to "pref_rawvideo_write_zip_key",
@@ -2257,6 +2573,7 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.string.pref_restore_preferences_key to "pref_restore_preferences_key",
     R.string.pref_saturation_seekbar_default to "pref_saturation_seekbar_default",
     R.string.pref_saturation_seekbar_key to "pref_saturation_seekbar_key",
+    R.string.pref_save_heic_key to "pref_save_heic_key",
     R.string.pref_save_per_lens_settings to "pref_save_per_lens_settings",
     R.string.pref_save_per_lens_string to "pref_save_per_lens_string",
     R.string.pref_save_raw_key to "pref_save_raw_key",
@@ -2264,7 +2581,6 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.string.pref_sharpness_seekbar_default to "pref_sharpness_seekbar_default",
     R.string.pref_sharpness_seekbar_key to "pref_sharpness_seekbar_key",
     R.string.pref_show_afdata_key to "pref_show_afdata_key",
-    R.string.pref_show_gradient_key to "pref_show_gradient_key",
     R.string.pref_show_grid_default to "pref_show_grid_default",
     R.string.pref_show_grid_key to "pref_show_grid_key",
     R.string.pref_show_grid_title to "pref_show_grid_title",
@@ -2279,21 +2595,41 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.string.pref_this_device_key to "pref_this_device_key",
     R.string.pref_ultrahdr_key to "pref_ultrahdr_key",
     R.string.pref_version_key to "pref_version_key",
+    R.string.pref_video_bitrate_key to "pref_video_bitrate_key",
+    R.string.pref_video_color_range_key to "pref_video_color_range_key",
+    R.string.pref_video_hdr_key to "pref_video_hdr_key",
+    R.string.pref_video_hdr_session_type_key to "pref_video_hdr_session_type_key",
+    R.string.pref_video_hdr_transfer_key to "pref_video_hdr_transfer_key",
+    R.string.pref_video_hevc_key to "pref_video_hevc_key",
+    R.string.pref_video_logical_id_key to "pref_video_logical_id_key",
+    R.string.pref_video_logical_lenses_key to "pref_video_logical_lenses_key",
+    R.string.pref_video_ois_key to "pref_video_ois_key",
     R.string.pref_video_resolution_default to "pref_video_resolution_default",
     R.string.pref_video_resolution_key to "pref_video_resolution_key",
+    R.string.pref_video_sdr_session_type_key to "pref_video_sdr_session_type_key",
+    R.string.pref_video_use_logical_id_key to "pref_video_use_logical_id_key",
+    R.string.pref_viewfinder_background_default_value to "pref_viewfinder_background_default_value",
+    R.string.pref_viewfinder_background_key to "pref_viewfinder_background_key",
     R.string.pref_wide169_key to "pref_wide169_key",
+    R.string.pref_zoom_lock_key to "pref_zoom_lock_key",
     R.string.preserve_manual_wb to "preserve_manual_wb",
     R.string.preserve_manual_wb_summary to "preserve_manual_wb_summary",
     R.string.preview_format to "preview_format",
     R.string.processing_processname to "processing_processname",
     R.string.quad_bayer_toggle_text to "quad_bayer_toggle_text",
     R.string.raw to "raw",
+    R.string.raw_plus_heic to "raw_plus_heic",
     R.string.raw_plus_jpg to "raw_plus_jpg",
     R.string.raw_string to "raw_string",
     R.string.raw_video_settings to "raw_video_settings",
+    R.string.rawvideo_container to "rawvideo_container",
+    R.string.rawvideo_container_dng to "rawvideo_container_dng",
+    R.string.rawvideo_container_mcraw to "rawvideo_container_mcraw",
+    R.string.rawvideo_container_zip to "rawvideo_container_zip",
     R.string.rawvideo_crop_169 to "rawvideo_crop_169",
     R.string.rawvideo_downscale_4x to "rawvideo_downscale_4x",
     R.string.rawvideo_write_zip to "rawvideo_write_zip",
+    R.string.record_video_desc to "record_video_desc",
     R.string.request_permission to "request_permission",
     R.string.reset to "reset",
     R.string.reset_preferences_warning to "reset_preferences_warning",
@@ -2301,6 +2637,13 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.string.restore to "restore",
     R.string.restore_summary_json to "restore_summary_json",
     R.string.saturation to "saturation",
+    R.string.save_heic to "save_heic",
+    R.string.save_heic_summary to "save_heic_summary",
+    R.string.secure_camera_gallery_locked to "secure_camera_gallery_locked",
+    R.string.secure_camera_settings_locked to "secure_camera_settings_locked",
+    R.string.secure_camera_unlock_gallery_message to "secure_camera_unlock_gallery_message",
+    R.string.secure_camera_unlock_title to "secure_camera_unlock_title",
+    R.string.seekbar_reset_desc to "seekbar_reset_desc",
     R.string.select_dcim_folder_hint to "select_dcim_folder_hint",
     R.string.sensor_configurations to "sensor_configurations",
     R.string.sensor_configurations_summary to "sensor_configurations_summary",
@@ -2308,9 +2651,9 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.string.settings to "settings",
     R.string.shadows to "shadows",
     R.string.sharpness to "sharpness",
-    R.string.show_gradient to "show_gradient",
     R.string.show_horizon_on_preview to "show_horizon_on_preview",
     R.string.size to "size",
+    R.string.stop_recording_desc to "stop_recording_desc",
     R.string.supported_devices to "supported_devices",
     R.string.sure_delete to "sure_delete",
     R.string.sure_delete_multiple to "sure_delete_multiple",
@@ -2323,6 +2666,7 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.string.theme_accent to "theme_accent",
     R.string.theme_accent_blue to "theme_accent_blue",
     R.string.theme_accent_cyan to "theme_accent_cyan",
+    R.string.theme_accent_default to "theme_accent_default",
     R.string.theme_accent_green to "theme_accent_green",
     R.string.theme_accent_orange to "theme_accent_orange",
     R.string.theme_accent_pink to "theme_accent_pink",
@@ -2348,34 +2692,86 @@ internal val R_NAMES: Map<Int, String> = mapOf(
     R.string.unprocessed_raw to "unprocessed_raw",
     R.string.version_summary to "version_summary",
     R.string.version_title to "version_title",
+    R.string.video_bitrate to "video_bitrate",
+    R.string.video_bitrate_default to "video_bitrate_default",
+    R.string.video_color_range to "video_color_range",
+    R.string.video_color_range_default to "video_color_range_default",
+    R.string.video_hdr to "video_hdr",
+    R.string.video_hdr_session_type to "video_hdr_session_type",
+    R.string.video_hdr_summary to "video_hdr_summary",
+    R.string.video_hdr_transfer to "video_hdr_transfer",
+    R.string.video_hdr_transfer_default to "video_hdr_transfer_default",
+    R.string.video_hdr_unsupported to "video_hdr_unsupported",
+    R.string.video_hevc_unsupported to "video_hevc_unsupported",
+    R.string.video_logical_id to "video_logical_id",
+    R.string.video_logical_id_default to "video_logical_id_default",
+    R.string.video_logical_id_summary to "video_logical_id_summary",
+    R.string.video_logical_id_unsupported to "video_logical_id_unsupported",
+    R.string.video_logical_lenses to "video_logical_lenses",
+    R.string.video_logical_lenses_default to "video_logical_lenses_default",
+    R.string.video_logical_lenses_summary to "video_logical_lenses_summary",
+    R.string.video_ois to "video_ois",
+    R.string.video_ois_summary to "video_ois_summary",
     R.string.video_res_4k to "video_res_4k",
     R.string.video_res_fhd to "video_res_fhd",
     R.string.video_res_hd to "video_res_hd",
     R.string.video_resolution to "video_resolution",
+    R.string.video_save_storage to "video_save_storage",
+    R.string.video_save_storage_summary to "video_save_storage_summary",
+    R.string.video_sdr_session_type to "video_sdr_session_type",
+    R.string.video_session_type_default to "video_session_type_default",
+    R.string.video_session_type_summary to "video_session_type_summary",
     R.string.video_settings to "video_settings",
+    R.string.video_settings_summary to "video_settings_summary",
+    R.string.video_tunable_add_summary_hdr to "video_tunable_add_summary_hdr",
+    R.string.video_tunable_add_summary_sdr to "video_tunable_add_summary_sdr",
+    R.string.video_tunable_keys_hdr to "video_tunable_keys_hdr",
+    R.string.video_tunable_keys_sdr to "video_tunable_keys_sdr",
+    R.string.video_tunable_summary_hdr to "video_tunable_summary_hdr",
+    R.string.video_tunable_summary_sdr to "video_tunable_summary_sdr",
+    R.string.video_use_logical_id to "video_use_logical_id",
+    R.string.video_use_logical_id_summary to "video_use_logical_id_summary",
+    R.string.viewfinder_background to "viewfinder_background",
+    R.string.viewfinder_background_blur to "viewfinder_background_blur",
+    R.string.viewfinder_background_gradient to "viewfinder_background_gradient",
+    R.string.viewfinder_background_none to "viewfinder_background_none",
     R.string.wide169 to "wide169",
     R.string.yes to "yes",
+    R.string.zoom_lock_desc to "zoom_lock_desc",
+    R.string.zoom_slider_desc to "zoom_slider_desc",
+    R.string.zoom_unlock_desc to "zoom_unlock_desc",
     R.style.AlertDialogTheme to "AlertDialogTheme",
     R.style.AuxButtonText to "AuxButtonText",
-    R.style.BlueTheme to "BlueTheme",
     R.style.BoldTextWithShadow to "BoldTextWithShadow",
-    R.style.CyanTheme to "CyanTheme",
-    R.style.EszdmanTheme to "EszdmanTheme",
-    R.style.GradientBackgroundTheme to "GradientBackgroundTheme",
-    R.style.GreenTheme to "GreenTheme",
+    R.style.ManualModeKnobTextSelected to "ManualModeKnobTextSelected",
+    R.style.MaterialAlertDialogTheme to "MaterialAlertDialogTheme",
     R.style.NegativeButtonStyle to "NegativeButtonStyle",
-    R.style.OrangeTheme to "OrangeTheme",
-    R.style.PinkTheme to "PinkTheme",
     R.style.PositiveButtonStyle to "PositiveButtonStyle",
-    R.style.PreferenceActionBarStyle to "PreferenceActionBarStyle",
-    R.style.RedTheme to "RedTheme",
+    R.style.PreferenceThemeOverlay_Photon to "PreferenceThemeOverlay_Photon",
+    R.style.Preference_Photon to "Preference_Photon",
+    R.style.Preference_Photon_Category to "Preference_Photon_Category",
+    R.style.Preference_Photon_Dialog to "Preference_Photon_Dialog",
+    R.style.Preference_Photon_EditText to "Preference_Photon_EditText",
+    R.style.Preference_Photon_Switch to "Preference_Photon_Switch",
     R.style.SettingsTitleTextAppearance to "SettingsTitleTextAppearance",
-    R.style.TealTheme to "TealTheme",
     R.style.TextWithShadow to "TextWithShadow",
+    R.style.ThemeOverlay_Photon_Accent to "ThemeOverlay_Photon_Accent",
+    R.style.ThemeOverlay_Photon_Blue to "ThemeOverlay_Photon_Blue",
+    R.style.ThemeOverlay_Photon_Cyan to "ThemeOverlay_Photon_Cyan",
+    R.style.ThemeOverlay_Photon_Default to "ThemeOverlay_Photon_Default",
+    R.style.ThemeOverlay_Photon_Dynamic to "ThemeOverlay_Photon_Dynamic",
+    R.style.ThemeOverlay_Photon_Eszdman to "ThemeOverlay_Photon_Eszdman",
+    R.style.ThemeOverlay_Photon_GradientBackground to "ThemeOverlay_Photon_GradientBackground",
+    R.style.ThemeOverlay_Photon_Green to "ThemeOverlay_Photon_Green",
+    R.style.ThemeOverlay_Photon_Orange to "ThemeOverlay_Photon_Orange",
+    R.style.ThemeOverlay_Photon_Pink to "ThemeOverlay_Photon_Pink",
+    R.style.ThemeOverlay_Photon_Red to "ThemeOverlay_Photon_Red",
+    R.style.ThemeOverlay_Photon_Teal to "ThemeOverlay_Photon_Teal",
+    R.style.ThemeOverlay_Photon_White to "ThemeOverlay_Photon_White",
     R.style.Theme_Photon_BaseApp to "Theme_Photon_BaseApp",
     R.style.Theme_Photon_SettingsActivity to "Theme_Photon_SettingsActivity",
     R.style.Theme_Photon_Splash to "Theme_Photon_Splash",
-    R.style.WhiteTheme to "WhiteTheme",
+    R.style.Widget_Photon_Toolbar to "Widget_Photon_Toolbar",
     R.xml.backup_descriptor to "backup_descriptor",
     R.xml.filepaths to "filepaths",
     R.xml.gallery_preferences to "gallery_preferences",

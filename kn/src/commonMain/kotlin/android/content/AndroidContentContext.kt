@@ -70,6 +70,7 @@ open class Context(
     /** Android returns null for a service this device has not got. */
     open fun getSystemService(name: String): Any? = when (name) {
         WINDOW_SERVICE -> android.view.WindowManager
+        ACTIVITY_SERVICE -> systemServices[name] ?: android.app.ActivityManager()
         else -> systemServices[name]
     }
 

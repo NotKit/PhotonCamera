@@ -269,6 +269,19 @@ open class EGL14Api {
             photoncam.gles.eglCreatePbufferSurface(dpy?.handle, config?.handle, it.addressOf(offset))
         })
 
+    fun eglGetConfigAttrib(dpy: EGLDisplay?, config: EGLConfig?, attribute: Int,
+                           value: IntArray, offset: Int): Boolean =
+        value.usePinned {
+            photoncam.gles.eglGetConfigAttrib(dpy?.handle, config?.handle, attribute, it.addressOf(offset))
+        }.toInt() != 0
+
+    /* A window surface wants a native window, and an android.view.Surface on
+     * this port has none behind it (its one source would be an encoder's
+     * input, and MediaCodec.kt has no encoder).  EGL's answer to an unusable
+     * window is EGL_NO_SURFACE. */
+    fun eglCreateWindowSurface(dpy: EGLDisplay?, config: EGLConfig?, win: Any?,
+                               attrib_list: IntArray, offset: Int): EGLSurface = EGL_NO_SURFACE
+
     fun eglDestroySurface(dpy: EGLDisplay?, surface: EGLSurface?): Boolean =
         photoncam.gles.eglDestroySurface(dpy?.handle, surface?.handle).toInt() != 0
 
@@ -287,4 +300,14 @@ open class EGL14Api {
 
 object EGL14 : EGL14Api() {
     object Companion : EGL14Api()
+}
+
+/* EGLExt.  eglPresentationTimeANDROID stamps frames on an encoder's input
+ * surface, and no surface on this port feeds an encoder (see MediaCodec.kt),
+ * so it reports failure as EGL does for a surface without a consumer. */
+object EGLExt {
+    const val EGL_OPENGL_ES3_BIT_KHR: Int = 0x0040
+    const val EGL_RECORDABLE_ANDROID: Int = 0x3142
+
+    fun eglPresentationTimeANDROID(dpy: EGLDisplay?, surface: EGLSurface?, time: Long): Boolean = false
 }

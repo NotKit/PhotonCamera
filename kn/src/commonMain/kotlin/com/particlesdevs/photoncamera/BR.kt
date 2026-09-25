@@ -9,4 +9,6 @@ object BR {
     const val dummyAspectRatio: Int = 2
     const val histogramModel: Int = 3
     const val screenAspectRatio: Int = 4
+    const val zoomRatio: Int = 6
+    const val zoomOffNative: Int = 7
 }

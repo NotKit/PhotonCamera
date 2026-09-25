@@ -23,6 +23,7 @@ object Collections {
 	fun <K, V> unmodifiableMap(m: kotlin.collections.Map<K, V>): kotlin.collections.Map<K, V> = m.toMap()
 	fun <E> synchronizedList(list: MutableList<E>): MutableList<E> = list
 	fun <K, V> synchronizedMap(m: MutableMap<K, V>): MutableMap<K, V> = m
+	fun <E> synchronizedSet(s: MutableSet<E>): MutableSet<E> = s
 	fun <E> addAll(c: MutableCollection<E>, vararg items: E): Boolean = c.addAll(items)
 	fun <E> singletonList(e: E): kotlin.collections.List<E> = mutableListOf(e)
 	fun <E> singleton(e: E): kotlin.collections.Set<E> = mutableSetOf(e)

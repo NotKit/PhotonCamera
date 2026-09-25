@@ -90,6 +90,8 @@ open class MediaRecorder {
 	open fun setMaxDuration(durationMs: Int) {}
 	open fun setMaxFileSize(bytes: Long) {}
 	open fun setOrientationHint(degrees: Int) {}
+	open fun setCaptureRate(fps: Double) {}
+	open fun setVideoEncodingProfileLevel(profile: Int, level: Int) {}
 
 	open fun setOnInfoListener(listener: OnInfoListener?) {
 		infoListener = listener

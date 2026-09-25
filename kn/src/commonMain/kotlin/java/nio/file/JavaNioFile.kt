@@ -13,6 +13,7 @@ class Path(private val value: String) : kotlin.Comparable<Path> {
     fun getParent(): Path? = File(value).getParent()?.let { Path(it) }
     fun resolve(other: String): Path = Path(File(value, other).getPath())
     fun resolve(other: Path): Path = resolve(other.value)
+    fun resolveSibling(other: String): Path = getParent()?.resolve(other) ?: Path(other)
     fun normalize(): Path = Path(File(value).getCanonicalPath())
     fun startsWith(other: String): Boolean = value.startsWith(other)
     override fun compareTo(other: Path): Int = value.compareTo(other.value)

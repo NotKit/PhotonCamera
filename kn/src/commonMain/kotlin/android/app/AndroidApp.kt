@@ -66,3 +66,22 @@ open class Activity : android.content.Context() {
         android.os.Handler(android.os.Looper.getMainLooper()).post(action)
     }
 }
+
+/** The device's memory, from /proc/meminfo, as ActivityManager reports it. */
+class ActivityManager {
+    class MemoryInfo {
+        var availMem: Long = 0L
+        var totalMem: Long = 0L
+        var threshold: Long = 0L
+        var lowMemory: Boolean = false
+    }
+
+    fun getMemoryInfo(outInfo: MemoryInfo) {
+        val m = android.os.procFields("/proc/meminfo")
+        outInfo.totalMem = (m["MemTotal"] ?: 0L) * 1024L
+        outInfo.availMem = (m["MemAvailable"] ?: m["MemFree"] ?: 0L) * 1024L
+        // lmkd's own rule of thumb; there is no framework threshold to ask.
+        outInfo.threshold = outInfo.totalMem / 20
+        outInfo.lowMemory = outInfo.availMem < outInfo.threshold
+    }
+}

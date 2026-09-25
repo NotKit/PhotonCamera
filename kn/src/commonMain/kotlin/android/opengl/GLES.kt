@@ -17,6 +17,8 @@ import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.ptr
 import kotlinx.cinterop.reinterpret
 import kotlinx.cinterop.set
+import kotlinx.cinterop.toCPointer
+import kotlinx.cinterop.toLong
 import kotlinx.cinterop.toKString
 import kotlinx.cinterop.usePinned
 import kotlinx.cinterop.value
@@ -65,6 +67,8 @@ open class GLES20Api {
     val GL_ARRAY_BUFFER: Int = 0x8892
     val GL_ELEMENT_ARRAY_BUFFER: Int = 0x8893
     val GL_STREAM_DRAW: Int = 0x88e0
+    val GL_UNPACK_ALIGNMENT: Int = 0xcf5
+    val GL_PACK_ALIGNMENT: Int = 0xd05
     val GL_STATIC_DRAW: Int = 0x88e4
     val GL_DYNAMIC_DRAW: Int = 0x88e8
     val GL_BUFFER_SIZE: Int = 0x8764
@@ -447,6 +451,19 @@ open class GLES30Api : GLES20Api() {
     val GL_MAX_3D_TEXTURE_SIZE: Int = 0x8073
     val GL_MAX_ARRAY_TEXTURE_LAYERS: Int = 0x88ff
     val GL_NUM_EXTENSIONS: Int = 0x821d
+    val GL_STREAM_READ: Int = 0x88e1
+    val GL_STATIC_READ: Int = 0x88e5
+    val GL_DYNAMIC_READ: Int = 0x88e9
+    val GL_SYNC_GPU_COMMANDS_COMPLETE: Int = 0x9117
+    val GL_SYNC_FLUSH_COMMANDS_BIT: Int = 0x1
+    val GL_ALREADY_SIGNALED: Int = 0x911a
+    val GL_TIMEOUT_EXPIRED: Int = 0x911b
+    val GL_CONDITION_SATISFIED: Int = 0x911c
+    val GL_WAIT_FAILED: Int = 0x911d
+    val GL_PROGRAM_BINARY_RETRIEVABLE_HINT: Int = 0x8257
+    val GL_PROGRAM_BINARY_LENGTH: Int = 0x8741
+    val GL_NUM_PROGRAM_BINARY_FORMATS: Int = 0x87fe
+    val GL_PROGRAM_BINARY_FORMATS: Int = 0x87ff
 
     fun glBindBufferBase(target: Int, index: Int, buffer: Int) =
         photoncam.gles.glBindBufferBase(target.toUInt(), index.toUInt(), buffer.toUInt())
@@ -463,6 +480,41 @@ open class GLES30Api : GLES20Api() {
         value.usePinned { photoncam.gles.glUniform1uiv(location, count, it.addressOf(offset).reinterpret<UIntVar>()) }
     fun glDrawBuffers(n: Int, bufs: IntArray, offset: Int) =
         bufs.usePinned { photoncam.gles.glDrawBuffers(n, it.addressOf(offset).reinterpret<UIntVar>()) }
+
+    fun glBlitFramebuffer(srcX0: Int, srcY0: Int, srcX1: Int, srcY1: Int,
+                          dstX0: Int, dstY0: Int, dstX1: Int, dstY1: Int, mask: Int, filter: Int) =
+        photoncam.gles.glBlitFramebuffer(srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1,
+            mask.toUInt(), filter.toUInt())
+
+    fun glGetUniformiv(program: Int, location: Int, params: IntArray, offset: Int) =
+        params.usePinned { photoncam.gles.glGetUniformiv(program.toUInt(), location, it.addressOf(offset)) }
+    fun glGetUniformfv(program: Int, location: Int, params: FloatArray, offset: Int) =
+        params.usePinned { photoncam.gles.glGetUniformfv(program.toUInt(), location, it.addressOf(offset)) }
+
+    /** Into the bound GL_PIXEL_PACK_BUFFER, at a byte offset. */
+    fun glReadPixels(x: Int, y: Int, width: Int, height: Int, format: Int, type: Int, offset: Int) =
+        photoncam.gles.glReadPixels(x, y, width, height, format.toUInt(), type.toUInt(),
+            offset.toLong().toCPointer<ByteVar>())
+
+    /* A GLsync is a pointer in C and a long in Android's binding; so it is here. */
+    fun glFenceSync(condition: Int, flags: Int): Long =
+        photoncam.gles.glFenceSync(condition.toUInt(), flags.toUInt()).toLong()
+    fun glClientWaitSync(sync: Long, flags: Int, timeout: Long): Int =
+        photoncam.gles.glClientWaitSync(sync.toCPointer(), flags.toUInt(), timeout.toULong()).toInt()
+    fun glDeleteSync(sync: Long) = photoncam.gles.glDeleteSync(sync.toCPointer())
+
+    fun glProgramParameteri(program: Int, pname: Int, value: Int) =
+        photoncam.gles.glProgramParameteri(program.toUInt(), pname.toUInt(), value)
+    fun glProgramBinary(program: Int, binaryFormat: Int, binary: Buffer?, length: Int) =
+        photoncam.gles.glProgramBinary(program.toUInt(), binaryFormat.toUInt(), binary?.pointer(), length)
+    fun glGetProgramBinary(program: Int, bufSize: Int, length: IntArray, lengthOffset: Int,
+                           binaryFormat: IntArray, binaryFormatOffset: Int, binary: Buffer?) =
+        length.usePinned { l ->
+            binaryFormat.usePinned { f ->
+                photoncam.gles.glGetProgramBinary(program.toUInt(), bufSize, l.addressOf(lengthOffset),
+                    f.addressOf(binaryFormatOffset).reinterpret<UIntVar>(), binary?.pointer())
+            }
+        }
 
     /** Android hands back a direct ByteBuffer over the mapping; so does this. */
     fun glMapBufferRange(target: Int, offset: Int, length: Int, access: Int): Buffer? {
