@@ -936,6 +936,10 @@ public class ESD4D extends GLOneScript {
                 Log.d("ESD4D", "FlowNet alignment disabled, using identity alignment");
             }
         }
+        if (Objects.equals(alignerSelect, "halide") && !HalideAlignment.isAvailable()) {
+            alignerSelect = "gl";
+            Log.d("ESD4D", "libhalidealign unavailable, using GL pyramid alignment");
+        }
         if (Objects.equals(alignerSelect, "halide")) {
             // CPU/NEON Halide path; identical Result
             // atlas format, so the merge below is unchanged.
