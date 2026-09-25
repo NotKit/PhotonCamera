@@ -697,7 +697,7 @@ void main() {
     float br = (sRGB.r+sRGB.g+sRGB.b)/3.0;
     vec4 gains = textureBicubicHardware(GainMap, (vec2(xy) + vec2(u_tileOrigin)) / u_fullSize);
     gains.rgb = vec3(gains.r,(gains.g+gains.b)/2.0,gains.a);
-    float gainsVal = dot(gains.rgb,vec3(1.0/3.0));
+    float gainsVal = max(dot(gains.rgb,vec3(1.0/3.0)), 1.0);
     #if EXPOCURVE == 1
     // AutoExposureCurve response baked into a 1D LUT: gamma lift -> gain ->
     // extended Reinhard -> gamma lift -> adaptive highlight shoulder (the

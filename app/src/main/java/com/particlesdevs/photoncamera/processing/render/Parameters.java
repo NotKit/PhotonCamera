@@ -318,8 +318,20 @@ public class Parameters {
                     gainMap = new float[lensMap.getGainFactorCount()];
                     mapSize = new Point(lensMap.getColumnCount(), lensMap.getRowCount());
                     lensMap.copyGainFactors(gainMap, 0);
-                    hasGainMap = true;
-                    if ((gainMap[(gainMap.length / 8) - (gainMap.length / 8) % 4]) == 1.0f &&
+                    boolean validMap = mapSize.x > 0 && mapSize.y > 0
+                            && gainMap.length == mapSize.x * mapSize.y * 4;
+                    for (float gain : gainMap) {
+                        if (!Float.isFinite(gain) || gain <= 0.0f) validMap = false;
+                    }
+                    if (!validMap) {
+                        Log.d(TAG, "Invalid lens shading map, using identity gain map");
+                        gainMap = new float[]{1.0f, 1.0f, 1.0f, 1.0f};
+                        mapSize = new Point(1, 1);
+                        hasGainMap = false;
+                    } else {
+                        hasGainMap = true;
+                    }
+                    if (validMap && (gainMap[(gainMap.length / 8) - (gainMap.length / 8) % 4]) == 1.0f &&
                             (gainMap[(gainMap.length / 2) - (gainMap.length / 2) % 4]) == 1.0f &&
                             (gainMap[(gainMap.length / 2 + gainMap.length / 8) - (gainMap.length / 2 + gainMap.length / 8) % 4]) == 1.0f) {
                         hasGainMap = false;
@@ -340,6 +352,9 @@ public class Parameters {
                 }
             } catch (Exception e){
                 Log.d(TAG, "Error retrieving lens shading map, disabling gain map: " + Log.getStackTraceString(e));
+                gainMap = new float[]{1.0f, 1.0f, 1.0f, 1.0f};
+                mapSize = new Point(1, 1);
+                hasGainMap = false;
             }
             // Optional, and absent on most HALs. Said through a local with a
             // null test so the port's converter can see that null is a value

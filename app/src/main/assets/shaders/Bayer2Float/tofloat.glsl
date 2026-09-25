@@ -128,7 +128,8 @@ void main() {
     gains = texture(GainMap, vec2(xy)*vec2(RawInvSize));
     #endif
     gains.rgb = vec3(gains.r,(gains.g+gains.b)/2.0,gains.a);
-    // Prevent division by zero
+    // An unset lens map can read as zero; use unity instead of blacking out the frame.
+    gains.rgb = max(gains.rgb, vec3(1.0));
     gains.rgb /= max(dot(gains.rgb,vec3(1.0/3.0)), 1e-4);
     #else
     vec3 gains = vec3(1.0);
