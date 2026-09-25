@@ -108,6 +108,7 @@ class Looper internal constructor() {
     /** Drain until quit().  Sleeps 200 us between empty passes -- no condvar,
      *  but a pending message is never missed and the idle cost is negligible. */
     fun loop() {
+        bindToCurrentThread(this)
         while (true) {
             val msg = queue.poll(SystemClock.uptimeMillis())
             if (msg == null) {
@@ -125,6 +126,7 @@ class Looper internal constructor() {
 
     /** One non-blocking pass, for a host that owns its own frame loop. */
     fun pump() {
+        bindToCurrentThread(this)
         while (true) {
             val msg = queue.poll(SystemClock.uptimeMillis()) ?: return
             val cb = msg.callback
@@ -144,6 +146,16 @@ class Looper internal constructor() {
         fun loop() { (myLooper() ?: main).loop() }
 
         private fun setForCurrentThread(l: Looper) { lock.withLock { perThread[threadId()] = l } }
+
+        /* The thread that drives a looper is its thread, as on Android, where
+         * the main thread's looper is bound before anything runs.  The host
+         * pumps the main looper from its own frame loop without ever calling
+         * prepareMainLooper, so myLooper() answered null there -- and code
+         * that re-posts itself until it is on the main looper spun forever. */
+        internal fun bindToCurrentThread(l: Looper) {
+            val id = threadId()
+            lock.withLock { if (perThread[id] !== l) perThread[id] = l }
+        }
         private fun threadId(): Long = platform.posix.pthread_self().toLong()
     }
 }
