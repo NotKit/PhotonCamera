@@ -42,7 +42,10 @@ public final class Iso21496Writer {
      * @param hdrCap    log2 HDR capacity (alternate headroom)
      * @return tmap item payload: version byte + ISO binary metadata.
      */
-    public static byte[] tmapPayload(float gainMin, float gainMax, float hdrCap) {
+    public static byte[] tmapPayload(float gainMinIn, float gainMaxIn, float hdrCapIn) {
+        float gainMin = gainMinIn;
+        float gainMax = gainMaxIn;
+        float hdrCap = hdrCapIn;
         if (!Float.isFinite(gainMin)) {
             gainMin = 0f;
         }
@@ -83,7 +86,8 @@ public final class Iso21496Writer {
      * dyadic rationals (1/64), best-effort otherwise. Returns {n, d} with
      * d in [1, MAX_DENOMINATOR]; n fits s32 for sane photographic values.
      */
-    static long[] toFraction(double value) {
+    static long[] toFraction(double valueIn) {
+        double value = valueIn;
         if (!Double.isFinite(value)) {
             value = 0;
         }

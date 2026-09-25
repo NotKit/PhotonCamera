@@ -85,7 +85,8 @@ public class GLCoreBlockProcessing extends GLContext implements AutoCloseable {
     public GLCoreBlockProcessing(Point size, GLImage out, GLFormat glFormat, GLDrawParams.Allocate alloc) {
         this(size, glFormat,alloc);
         allocation = alloc;
-        mOut = out;
+        // PostPipeline passes null when the result goes to a Bitmap instead.
+        this.mOut = out;
     }
     public GLCoreBlockProcessing(Point size, GLImage out, GLFormat glFormat) {
         this(size, glFormat, GLDrawParams.Allocate.Direct);

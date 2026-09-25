@@ -1516,7 +1516,8 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
      * animator for intermediate values). Identity crop; the ratio carries the
      * zoom. Also records the last submitted ratio for animation seeding.
      */
-    private void applyZoomLogical(CaptureRequest.Builder builder, float ratio) {
+    private void applyZoomLogical(CaptureRequest.Builder builder, float requested) {
+        float ratio = requested;
         if (builder == null) return;
         CameraCharacteristics chars = mCameraCharacteristics;
         if (chars == null) return;
@@ -1729,8 +1730,14 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
      */
     private void armOrCancelIszTransition() {
         String targetId = PhotonCamera.getSettings().mCameraID;
-        boolean switchingLens = zoomDrivenLensSwitch
-                || (targetId != null && !targetId.equals(zoomController.getActiveLensId()));
+        // Null until configureZoomLenses has run.
+        String activeLensId = zoomController.getActiveLensId();
+        boolean switchingLens = zoomDrivenLensSwitch;
+        if (activeLensId == null) {
+            if (targetId != null) switchingLens = true;
+        } else if (targetId != null && !activeLensId.equals(targetId)) {
+            switchingLens = true;
+        }
         if (targetId != null && CameraManager2.isIszVirtual(targetId) && switchingLens && mTextureView != null) {
             mTextureView.beginPreviewSettleTracking();
         }
@@ -2810,13 +2817,13 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
         try {
             if (mVideoRecorderSurface != null && outputSurface == mVideoRecorderSurface
                     && isUseCaseSupported(mCameraCharacteristics,
-                            CameraMetadata.SCALER_AVAILABLE_STREAM_USE_CASES_VIDEO_RECORD)) {
+                            (long) CameraMetadata.SCALER_AVAILABLE_STREAM_USE_CASES_VIDEO_RECORD)) {
                 config.setStreamUseCase(
-                        CameraMetadata.SCALER_AVAILABLE_STREAM_USE_CASES_VIDEO_RECORD);
+                        (long) CameraMetadata.SCALER_AVAILABLE_STREAM_USE_CASES_VIDEO_RECORD);
             } else if (outputSurface == surface
                     && isUseCaseSupported(mCameraCharacteristics,
-                            CameraMetadata.SCALER_AVAILABLE_STREAM_USE_CASES_PREVIEW)) {
-                config.setStreamUseCase(CameraMetadata.SCALER_AVAILABLE_STREAM_USE_CASES_PREVIEW);
+                            (long) CameraMetadata.SCALER_AVAILABLE_STREAM_USE_CASES_PREVIEW)) {
+                config.setStreamUseCase((long) CameraMetadata.SCALER_AVAILABLE_STREAM_USE_CASES_PREVIEW);
             }
         } catch (Exception e) {
             Log.w(TAG, "stream use case not applied", e);
@@ -2941,8 +2948,6 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                 }
             }
 
-            CaptureRequest sessionParams = buildSessionParams();
-
             CameraCaptureSession.StateCallback stateCallback =
                     new CameraCaptureSession.StateCallback() {
                 @Override
@@ -3059,6 +3064,8 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                         sessionExecutor,
                         stateCallback
                 );
+                // Null when there is nothing to put in them.
+                CaptureRequest sessionParams = buildSessionParams();
                 if (sessionParams != null) {
                     try {
                         configuration.setSessionParameters(sessionParams);
@@ -3186,9 +3193,9 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                 continue;
             }
             try {
-                CaptureRequest.Key<?> key = tunableKey.toCaptureRequestKey();
+                CaptureRequest.Key<Object> key = tunableKey.toCaptureRequestKey();
                 Object parsedValue = tunableKey.parseValue();
-                ((CaptureRequest.Builder) builder).set((CaptureRequest.Key) key, parsedValue);
+                builder.set(key, parsedValue);
                 tunableKey.supported = true;
                 applied++;
                 Log.d(TAG, "Applied session key " + tunableKey.name + " = " + tunableKey.value);
@@ -3441,13 +3448,15 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                 return;
             }
             mLogicalRenderRatio = from;
-            mLogicalZoomAnimator = ValueAnimator.ofFloat(from, to);
-            mLogicalZoomAnimator.setDuration(LOGICAL_ZOOM_ANIM_MS);
+            // A local, so the field can be cleared from a callback mid-setup.
+            final ValueAnimator animator = ValueAnimator.ofFloat(from, to);
+            mLogicalZoomAnimator = animator;
+            animator.setDuration(LOGICAL_ZOOM_ANIM_MS);
             try {
-                mLogicalZoomAnimator.setInterpolator(Motion.emphasized(activity));
+                animator.setInterpolator(Motion.emphasized(activity));
             } catch (Exception ignored) {
             }
-            mLogicalZoomAnimator.addUpdateListener(animation -> {
+            animator.addUpdateListener(animation -> {
                 try {
                     float value = (float) animation.getAnimatedValue();
                     if (mPreviewRequestBuilder != null) {
@@ -3462,7 +3471,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                     Log.w(TAG, "logical zoom tick failed", e);
                 }
             });
-            mLogicalZoomAnimator.addListener(new AnimatorListenerAdapter() {
+            animator.addListener(new AnimatorListenerAdapter() {
                 @Override
                 public void onAnimationEnd(Animator animation) {
                     mLogicalZoomAnimator = null;
@@ -3483,7 +3492,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                     }
                 }
             });
-            mLogicalZoomAnimator.start();
+            animator.start();
         } catch (Exception e) {
             Log.w(TAG, "startLogicalZoom failed", e);
         }
@@ -3496,8 +3505,9 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
                 mMainHandler.post(this::cancelLogicalZoom);
                 return;
             }
-            if (mLogicalZoomAnimator != null) {
-                mLogicalZoomAnimator.cancel();
+            ValueAnimator animator = mLogicalZoomAnimator;
+            if (animator != null) {
+                animator.cancel();
                 mLogicalZoomAnimator = null;
             }
         } catch (Exception e) {
@@ -3556,8 +3566,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
             Range<Integer>[] ranges = characteristics.get(
                     CameraCharacteristics.CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
             if (ranges == null) {
-                ranges = new Range[1];
-                ranges[0] = new Range<>(14, 30);
+                ranges = new Range[]{new Range<>(14, 30)};
             }
             int minLower = Integer.MAX_VALUE;
             for (Range<Integer> range : ranges) {
@@ -4971,7 +4980,7 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
         }
         mVideoFrameRate = videoFrameRate;
         mMediaRecorder.setVideoFrameRate(videoFrameRate);
-        mMediaRecorder.setCaptureRate(videoFrameRate);
+        mMediaRecorder.setCaptureRate((double) videoFrameRate);
         mMediaRecorder.setVideoSize(videoSize.getWidth(), videoSize.getHeight());
         mVideoSize = videoSize;
         boolean useHevc = false;
@@ -5228,8 +5237,8 @@ public class CaptureController implements MediaRecorder.OnInfoListener {
         long now = SystemClock.elapsedRealtime();
         if (now - mUsableSpaceCachedAtMs > 5000 || mUsableSpaceCachedAtMs == 0) {
             try {
-                mUsableSpaceCachedBytes = new File(Environment.getExternalStorageDirectory()
-                        + "//DCIM//Camera//").getUsableSpace();
+                mUsableSpaceCachedBytes = new File(Environment.getExternalStorageDirectory(),
+                        "DCIM/Camera").getUsableSpace();
             } catch (Exception ignored) {
             }
             mUsableSpaceCachedAtMs = now;

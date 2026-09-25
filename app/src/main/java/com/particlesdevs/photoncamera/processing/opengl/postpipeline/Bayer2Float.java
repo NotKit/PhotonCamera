@@ -113,7 +113,12 @@ public class Bayer2Float extends Node {
                 Log.d(Name, "InpaintOpposed clip level:" + clipLevel);
             }
         }
-        hlChromaResult = hlChroma;
+        // Null when nothing clipped; spelled out so the conversion keeps it nullable.
+        if (hlChroma == null) {
+            hlChromaResult = null;
+        } else {
+            hlChromaResult = hlChroma;
+        }
 
         // Defines/uniforms/draw live in drawMain() below (shared full + strip).
         // One-time sensor calibration (must run exactly once per shot — NOT
@@ -219,7 +224,7 @@ public class Bayer2Float extends Node {
         // The fp16 input is already site-normalized (black removed, white at
         // 1.0), so tofloat's blackLevel uniform is zero regardless of what the
         // parameters carried.
-        glProg.setVar("blackLevel", new float[]{0.f, 0.f, 0.f, 0.f});
+        glProg.setVar("blackLevel", new float[]{0.0f, 0.0f, 0.0f, 0.0f});
         if (hlChromaResult != null) glProg.setVar("Chrominance", hlChromaResult);
         Log.d(Name, "CfaPattern:" + basePipeline.mParameters.cfaPattern);
         postPipeline.regenerationSense = 10.0f;
@@ -231,9 +236,9 @@ public class Bayer2Float extends Node {
                 minimal = i;
             }
         }
-        if (basePipeline.mParameters.cfaPattern == 4) postPipeline.regenerationSense = 1.f;
-        postPipeline.regenerationSense = 1.f / postPipeline.regenerationSense;
-        postPipeline.regenerationSense = 1.f;
+        if (basePipeline.mParameters.cfaPattern == 4) postPipeline.regenerationSense = 1.0f;
+        postPipeline.regenerationSense = 1.0f / postPipeline.regenerationSense;
+        postPipeline.regenerationSense = 1.0f;
         glProg.setVar("Regeneration", postPipeline.regenerationSense);
         glProg.setVar("MinimalInd", minimal);
         glProg.setVar("yOffset", tileActive() ? tileY0 : 0);

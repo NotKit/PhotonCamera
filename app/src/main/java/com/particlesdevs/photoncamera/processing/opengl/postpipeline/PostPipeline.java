@@ -1021,7 +1021,7 @@ public class PostPipeline extends GLBasePipeline {
                     int[] row = new int[gw];
                     for (int y = 0; y < gh; y++) {
                         for (int x = 0; x < gw; x++) {
-                            int v = gm.get() & 0xFF;
+                            int v = (int) gm.get() & 0xFF;
                             row[x] = 0xFF000000 | (v << 16) | (v << 8) | v;
                         }
                         gmBmp.setPixels(row, 0, gw, 0, y, gw, 1);

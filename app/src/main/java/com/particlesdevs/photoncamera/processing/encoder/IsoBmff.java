@@ -133,7 +133,7 @@ public final class IsoBmff {
     }
 
     public static int fullVersion(byte[] fullBoxPayload) {
-        return fullBoxPayload[0] & 0xFF;
+        return (int) fullBoxPayload[0] & 0xFF;
     }
 
     public static byte[] concat(List<byte[]> parts) {
@@ -158,8 +158,8 @@ public final class IsoBmff {
     }
 
     public static long u32(byte[] d, int o) {
-        return ((d[o] & 0xFFL) << 24) | ((d[o + 1] & 0xFFL) << 16)
-                | ((d[o + 2] & 0xFFL) << 8) | (d[o + 3] & 0xFFL);
+        return (((long) d[o] & 0xFFL) << 24) | (((long) d[o + 1] & 0xFFL) << 16)
+                | (((long) d[o + 2] & 0xFFL) << 8) | ((long) d[o + 3] & 0xFFL);
     }
 
     public static long u64(byte[] d, int o) {
@@ -169,7 +169,7 @@ public final class IsoBmff {
     }
 
     public static int u16(byte[] d, int o) {
-        return ((d[o] & 0xFF) << 8) | (d[o + 1] & 0xFF);
+        return (((int) d[o] & 0xFF) << 8) | ((int) d[o + 1] & 0xFF);
     }
 
     public static void putU32(ByteBuffer bb, long v) {

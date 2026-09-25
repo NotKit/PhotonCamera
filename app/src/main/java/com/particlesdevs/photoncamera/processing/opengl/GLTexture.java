@@ -68,6 +68,12 @@ public class GLTexture implements AutoCloseable {
             java.util.Collections.synchronizedMap(
                     new java.util.WeakHashMap<GLTexture, Integer>());
 
+    /** A live texture's registered size; 0 once a weak key has cleared. */
+    private static int bytesOf(GLTexture t) {
+        Integer bytes = sLive.get(t);
+        return bytes == null ? 0 : bytes;
+    }
+
     /** Sums live texture bytes (see sLive). */
     public static long liveBytes() {
         long sum = 0;
@@ -126,14 +132,14 @@ public class GLTexture implements AutoCloseable {
         // the peak); weak keys may clear mid-iteration, guarded below.
         java.util.List<String> top = new java.util.ArrayList<>();
         synchronized (sLive) {
-            java.util.List<java.util.Map.Entry<GLTexture, Integer>> entries =
-                    new java.util.ArrayList<>(sLive.entrySet());
-            entries.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
-            for (int i = 0; i < Math.min(6, entries.size()); i++) {
-                GLTexture t = entries.get(i).getKey();
+            java.util.List<GLTexture> live = new java.util.ArrayList<>(sLive.keySet());
+            java.util.Collections.sort(live,
+                    (a, b) -> Integer.compare(bytesOf(b), bytesOf(a)));
+            for (int i = 0; i < Math.min(6, live.size()); i++) {
+                GLTexture t = live.get(i);
                 top.add(t == null ? "?"
-                        : (t.mSize.x + "x" + t.mSize.y + "="
-                                + (entries.get(i).getValue() / 1048576) + "MB"));
+                        : (String.valueOf(t.mSize.x) + "x" + t.mSize.y + "="
+                                + (bytesOf(t) / 1048576) + "MB"));
             }
         }
         Log.d(tag, "VramStage[" + stage + "] live=" + (total / 1048576)

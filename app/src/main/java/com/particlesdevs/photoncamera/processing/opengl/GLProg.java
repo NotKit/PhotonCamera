@@ -94,14 +94,9 @@ public class GLProg implements AutoCloseable {
      * normal compile+link, so worst case is today's behavior.
      */
     private static final int PROGRAM_BINARY_CACHE_MAX = 64;
-    private static final Map<String, CachedBinary> sBinaryCache =
-            new java.util.LinkedHashMap<String, CachedBinary>(64, 0.75f, true) {
-                @Override
-                protected boolean removeEldestEntry(
-                        java.util.Map.Entry<String, CachedBinary> eldest) {
-                    return size() > PROGRAM_BINARY_CACHE_MAX;
-                }
-            };
+    /** LRU by hand: a hit moves the key to the end, a put past the cap drops the first. */
+    private static final java.util.LinkedHashMap<String, CachedBinary> sBinaryCache =
+            new java.util.LinkedHashMap<String, CachedBinary>();
     private static volatile Boolean sBinariesSupported;
 
     private static final class CachedBinary {
@@ -121,7 +116,10 @@ public class GLProg implements AutoCloseable {
     private static int tryLoadBinary(String key) {
         CachedBinary cached;
         synchronized (sBinaryCache) {
-            cached = sBinaryCache.get(key);
+            cached = sBinaryCache.remove(key);
+            if (cached != null) {
+                sBinaryCache.put(key, cached);
+            }
         }
         if (cached == null) {
             return 0;
@@ -177,7 +175,11 @@ public class GLProg implements AutoCloseable {
             byte[] stored = written[0] == bytes.length
                     ? bytes : java.util.Arrays.copyOf(bytes, written[0]);
             synchronized (sBinaryCache) {
+                sBinaryCache.remove(key);
                 sBinaryCache.put(key, new CachedBinary(format[0], stored));
+                if (sBinaryCache.size() > PROGRAM_BINARY_CACHE_MAX) {
+                    sBinaryCache.remove(sBinaryCache.keySet().iterator().next());
+                }
             }
         } catch (Throwable ignored) {
         }

@@ -77,8 +77,8 @@ public final class KernelNetPrep extends Node {
 
             glProg.useAssetProgram("upscalecrop/singleluma");
             glProg.setTexture("InputBuffer", rawTex);
-            glProg.setVar("blMean", 0.f);
-            glProg.setVar("whiteLevel", 1.f);
+            glProg.setVar("blMean", 0.0f);
+            glProg.setVar("whiteLevel", 1.0f);
             lumaTex = new GLTexture(lumaTexSize, new GLFormat(GLFormat.DataType.FLOAT_16, 4));
             glProg.drawBlocks(lumaTex);
             glProg.closed = true;

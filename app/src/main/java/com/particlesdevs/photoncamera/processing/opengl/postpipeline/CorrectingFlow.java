@@ -102,7 +102,7 @@ public class CorrectingFlow extends Node {
             return false;
         }
         float[] c = p.sensorSpecifics.aberrationCorrection;
-        return c.length >= 2 && (c[0] != 0.0 || c[1] != 0.0);
+        return c.length >= 2 && (c[0] != 0.0f || c[1] != 0.0f);
     }
 
     public void Run() {

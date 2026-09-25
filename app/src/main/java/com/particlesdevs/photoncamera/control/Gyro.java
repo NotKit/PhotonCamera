@@ -527,9 +527,15 @@ public class Gyro {
         MediaCinemaRawSamples samples = new MediaCinemaRawSamples(
                 recTimestamps, recGx, recGy, recGz, recCount);
         recTimestamps = null;
-        recGx = recGy = recGz = null;
-        recAx = recAy = recAz = null;
-        recMx = recMy = recMz = null;
+        recGx = null;
+        recGy = null;
+        recGz = null;
+        recAx = null;
+        recAy = null;
+        recAz = null;
+        recMx = null;
+        recMy = null;
+        recMz = null;
         return samples;
     }
 

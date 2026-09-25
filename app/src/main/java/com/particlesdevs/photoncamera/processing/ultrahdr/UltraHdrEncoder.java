@@ -11,6 +11,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Orchestrates the full Ultra HDR encode:
@@ -45,12 +46,12 @@ public final class UltraHdrEncoder {
         // The two compresses are independent (distinct bitmaps, deterministic
         // per-input encoders): run them together, so latency is the max
         // instead of the sum. Byte-identical outputs either way.
-        final byte[][] sdrHolder = new byte[1][];
-        final byte[][] gainHolder = new byte[1][];
+        final AtomicReference<byte[]> sdrHolder = new AtomicReference<>();
+        final AtomicReference<byte[]> gainHolder = new AtomicReference<>();
         final Throwable[] failure = new Throwable[1];
         Thread sdrThread = new Thread(() -> {
             try {
-                sdrHolder[0] = compress(sdr, DEFAULT_QUALITY);
+                sdrHolder.set(compress(sdr, DEFAULT_QUALITY));
             } catch (Throwable t) {
                 failure[0] = t;
             }
@@ -61,7 +62,7 @@ public final class UltraHdrEncoder {
                 if (!gm.gainMap.compress(Bitmap.CompressFormat.JPEG, DEFAULT_QUALITY, gainOut)) {
                     throw new RuntimeException("Failed to compress gain map");
                 }
-                gainHolder[0] = gainOut.toByteArray();
+                gainHolder.set(gainOut.toByteArray());
             } catch (Throwable t) {
                 failure[0] = t;
             }
@@ -81,9 +82,9 @@ public final class UltraHdrEncoder {
             }
             throw new RuntimeException("Parallel compress failed", failure[0]);
         }
-        final byte[] sdrJpeg = sdrHolder[0];
+        final byte[] sdrJpeg = sdrHolder.get();
         final byte[] sdrJpegExif = (exif != null) ? injectExif(sdrJpeg, exif) : sdrJpeg;
-        final byte[] gainMapJpeg = gainHolder[0];
+        final byte[] gainMapJpeg = gainHolder.get();
 
         return UltraHdrContainer.encode(sdrJpegExif, gainMapJpeg,
                 gm.gainMapMin, gm.gainMapMax, gm.hdrCapacityMax);

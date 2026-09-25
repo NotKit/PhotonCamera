@@ -52,7 +52,7 @@ public final class StillHeicEncoder {
     private static final String TAG = "StillHeicEncoder";
     /** HEVC quality matching {@code ImageSaver.JPG_QUALITY} (98). */
     public static final int HEIC_QUALITY = 98;
-    private static final int DEQUEUE_TIMEOUT_US = 10_000;
+    private static final long DEQUEUE_TIMEOUT_US = 10_000L;
     /** Caps a stalled encoder at ~10 s per queue side instead of hanging the shot. */
     private static final int MAX_STALL_LOOPS = 1000;
     /** Full stack traces per failed attempt are only useful while bring-up. */
@@ -136,8 +136,11 @@ public final class StillHeicEncoder {
     private static void encodeWithCandidate(Path dest, Bitmap sdr, int width, int height,
             HeicSupport.HeicCandidate c, byte[] exifPayload, boolean attachExif)
             throws Exception {
-        try (BitmapPixels pixels = BitmapPixels.open(sdr)) {
+        BitmapPixels pixels = BitmapPixels.open(sdr);
+        try {
             encode8Bit(dest, pixels, width, height, c, exifPayload, attachExif);
+        } finally {
+            pixels.close();
         }
     }
 

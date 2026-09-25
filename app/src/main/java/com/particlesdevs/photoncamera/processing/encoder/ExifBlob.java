@@ -149,10 +149,10 @@ public final class ExifBlob {
         }
         int pos = 2; // skip SOI
         while (pos + 4 <= jpeg.length) {
-            if ((jpeg[pos] & 0xFF) != 0xFF) {
+            if (jpeg[pos] != (byte) 0xFF) {
                 break;
             }
-            int marker = jpeg[pos + 1] & 0xFF;
+            int marker = (int) jpeg[pos + 1] & 0xFF;
             if (marker == 0xD8 || marker == 0xD9) {
                 pos += 2;
                 continue;
@@ -161,7 +161,7 @@ public final class ExifBlob {
                 pos += 2;
                 continue;
             }
-            int len = ((jpeg[pos + 2] & 0xFF) << 8) | (jpeg[pos + 3] & 0xFF);
+            int len = (((int) jpeg[pos + 2] & 0xFF) << 8) | ((int) jpeg[pos + 3] & 0xFF);
             if (len < 2 || pos + 2 + len > jpeg.length) {
                 break;
             }

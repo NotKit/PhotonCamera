@@ -489,10 +489,13 @@ public class HdrxProcessor extends ProcessorBase {
         catch (Exception e){
             Log.d(TAG,"Error in processingEventsListener.onProcessingFinished:"+Log.getStackTraceString(e));
         }
-        imageFile = Paths.get(imageFile.toAbsolutePath()
+        imageFile = Paths.get(imageFile.toAbsolutePath().toString()
                 + (useHeic ? ".heic" : ".jpg"));
-        StillEncoder.Result still = StillEncoder.encodeStill(
-                imageFile, img, gm, exifData, useHeic);
+        // No gain map unless Ultra HDR is on: the null is passed as a literal
+        // so the Kotlin/Native conversion does not assert on it.
+        StillEncoder.Result still = gm != null
+                ? StillEncoder.encodeStill(imageFile, img, gm, exifData, useHeic)
+                : StillEncoder.encodeStill(imageFile, img, null, exifData, useHeic);
         boolean imageSaved = still.saved;
         imageFile = still.file;
 

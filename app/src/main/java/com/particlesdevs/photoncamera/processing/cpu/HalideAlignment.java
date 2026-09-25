@@ -156,7 +156,7 @@ public class HalideAlignment implements AutoCloseable {
             // Alt normalized values are layerMpy times larger than base's;
             // effective white rescales them back (highlights clamp at the
             // base's range, same as the GLSL exposure clamp).
-            float whiteEff = frame.pair.layerMpy > 0.f ? frame.pair.layerMpy : 1.f;
+            float whiteEff = frame.pair.layerMpy > 0.0f ? frame.pair.layerMpy : 1.0f;
             t0 = System.currentTimeMillis();
             float[] vecs = nAlignFrame(ctx, frame.buffer, whiteEff);
             if (vecs == null) {

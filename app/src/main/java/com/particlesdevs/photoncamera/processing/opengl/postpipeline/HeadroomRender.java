@@ -131,7 +131,7 @@ public class HeadroomRender extends Node {
         if (pipeline.GainMap == null && fallbackGainMap == null) {
             fallbackGainMap = new GLTexture(new Point(1, 1),
                     new GLFormat(GLFormat.DataType.FLOAT_16, 4),
-                    BufferUtils.getFrom(new float[]{1.f, 1.f, 1.f, 1.f}),
+                    BufferUtils.getFrom(new float[]{1.0f, 1.0f, 1.0f, 1.0f}),
                     GL_LINEAR, GL_CLAMP_TO_EDGE);
         }
 

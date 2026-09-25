@@ -156,19 +156,19 @@ import java.nio.Buffer;
 
         float sat =(float) basePipeline.mSettings.saturation;
         if(basePipeline.mSettings.cfaPattern == 4) {
-            sat = 0.f;
+            sat = 0.0f;
         }
         glProg.setDefine("SATURATION2",sat);
         glProg.setDefine("SATURATION",sat*highersatmpy);
-        float green = ((((PostPipeline)basePipeline).analyzedBL[0]+((PostPipeline)basePipeline).analyzedBL[2]+0.0002f)/2.f)/
+        float green = ((((PostPipeline)basePipeline).analyzedBL[0]+((PostPipeline)basePipeline).analyzedBL[2]+0.0002f)/2.0f)/
                         (((PostPipeline)basePipeline).analyzedBL[1]+0.0001f);
         if(green > 0.0f && green < 1.7f) {
-            float tcor = (green+1.f)/2.f;
+            float tcor = (green+1.0f)/2.0f;
             glProg.setDefine("TINT",tcor);
-            glProg.setDefine("TINT2",((1.f/tcor+1.f)/2.f));
+            glProg.setDefine("TINT2",((1.0f/tcor+1.0f)/2.0f));
         }
         float[] WP = basePipeline.mParameters.whitePoint;
-        float minP = (WP[0]+WP[1]+WP[2])/3.f;
+        float minP = (WP[0]+WP[1]+WP[2])/3.0f;
         if (basePipeline.mParameters.hsvMap != null)
             glProg.setDefine("USE_HSV", 1);
         if (basePipeline.mParameters.lookMap != null)
@@ -232,7 +232,7 @@ import java.nio.Buffer;
         glProg.setVar("u_fullSize", (float) fullSize.x, (float) fullSize.y);
         glProg.setTexture("IntenseCurve",interpolatedCurve);
         glProg.setTexture("GainMap", ((PostPipeline)basePipeline).GainMap);
-        glProg.setVar("toneMapCoeffs", -2.f+2.f*toneMix, 3.f-3.f*toneMix, toneMix, 0.f);
+        glProg.setVar("toneMapCoeffs", -2.0f+2.0f*toneMix, 3.0f-3.0f*toneMix, toneMix, 0.0f);
         Log.d(Name,"sensorToIntermediate: "+ Arrays.toString(basePipeline.mParameters.sensorToProPhoto));
         glProg.setVar("sensorToIntermediate",basePipeline.mParameters.sensorToProPhoto);
         Log.d(Name,"intermediateToSRGB: "+ Arrays.toString(cct));

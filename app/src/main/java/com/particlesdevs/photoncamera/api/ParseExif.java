@@ -208,7 +208,7 @@ public class ParseExif {
             if (pos + 1 >= jpeg.length) {
                 return null;
             }
-            int marker = jpeg[pos + 1] & 0xFF;
+            int marker = (int) jpeg[pos + 1] & 0xFF;
             pos += 2;
             if (marker == 0xD8 || marker == 0x01
                     || (marker >= 0xD0 && marker <= 0xD7)) {
@@ -220,14 +220,14 @@ public class ParseExif {
             if (pos + 2 > jpeg.length) {
                 return null;
             }
-            int len = ((jpeg[pos] & 0xFF) << 8) | (jpeg[pos + 1] & 0xFF);
+            int len = (((int) jpeg[pos] & 0xFF) << 8) | ((int) jpeg[pos + 1] & 0xFF);
             if (len < 2 || pos + len > jpeg.length) {
                 return null;
             }
             if (marker == 0xE1 && len >= 8
-                    && jpeg[pos + 2] == 'E' && jpeg[pos + 3] == 'x'
-                    && jpeg[pos + 4] == 'i' && jpeg[pos + 5] == 'f'
-                    && jpeg[pos + 6] == 0 && jpeg[pos + 7] == 0) {
+                    && jpeg[pos + 2] == (byte) 'E' && jpeg[pos + 3] == (byte) 'x'
+                    && jpeg[pos + 4] == (byte) 'i' && jpeg[pos + 5] == (byte) 'f'
+                    && jpeg[pos + 6] == (byte) 0 && jpeg[pos + 7] == (byte) 0) {
                 byte[] seg = new byte[2 + len];
                 seg[0] = (byte) 0xFF;
                 seg[1] = (byte) 0xE1;

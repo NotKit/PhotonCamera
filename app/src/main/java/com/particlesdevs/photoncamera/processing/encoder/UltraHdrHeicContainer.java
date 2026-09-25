@@ -301,7 +301,7 @@ public final class UltraHdrHeicContainer {
         // v0 entry), so a zeroed body of the final count measures exactly.
         byte[] metaHeader = base.metaFullHeader;
         byte[] ftypBox = withTmapBrand(baseFtyp);
-        long ftypSize = ftypBox.length;
+        long ftypSize = (long) ftypBox.length;
         int extentCount = baseOrder.size() + gg.freshOrder.size() + 3
                 + (exifItemPayload != null ? 1 : 0);
         List<Extent> zeroExtents = new ArrayList<>();
@@ -314,7 +314,7 @@ public final class UltraHdrHeicContainer {
         byte[] iprpBox = IsoBmff.buildBox("iprp", listOf(newIpco, newIpma));
         // altr group scoping tmap<->base (readers may ignore tmap outside it).
         byte[] grplBox = buildAltrGroup(altrGroupId, new int[]{tmapId, primaryId});
-        long metaBoxSize = 8 + 4 + base.hdlr.length + base.pitm.length
+        long metaBoxSize = 8L + 4 + base.hdlr.length + base.pitm.length
                 + zeroIloc.length + newIinf.length + newIref.length + iprpBox.length
                 + grplBox.length;
         long mdatDataStart = ftypSize + metaBoxSize + 8;
@@ -322,23 +322,23 @@ public final class UltraHdrHeicContainer {
         List<Extent> extents = new ArrayList<>();
         for (int id : baseOrder) {
             byte[] payload = baseKept.get(id);
-            extents.add(new Extent(id, cursor, payload.length));
+            extents.add(new Extent(id, cursor, (long) payload.length));
             cursor += payload.length;
         }
         if (exifItemPayload != null) {
-            extents.add(new Extent(exifId, cursor, exifItemPayload.length));
+            extents.add(new Extent(exifId, cursor, (long) exifItemPayload.length));
             cursor += exifItemPayload.length;
         }
         for (int fresh : gg.freshOrder) {
             byte[] payload = gainKept.get(reverseLookup(gg.idRemap, fresh));
-            extents.add(new Extent(fresh, cursor, payload.length));
+            extents.add(new Extent(fresh, cursor, (long) payload.length));
             cursor += payload.length;
         }
-        extents.add(new Extent(xmpPrimaryId, cursor, xmpPrimary.length));
+        extents.add(new Extent(xmpPrimaryId, cursor, (long) xmpPrimary.length));
         cursor += xmpPrimary.length;
-        extents.add(new Extent(xmpGainId, cursor, xmpGain.length));
+        extents.add(new Extent(xmpGainId, cursor, (long) xmpGain.length));
         cursor += xmpGain.length;
-        extents.add(new Extent(tmapId, cursor, tmapPayload.length));
+        extents.add(new Extent(tmapId, cursor, (long) tmapPayload.length));
         cursor += tmapPayload.length;
         byte[] ilocBox = IsoBmff.buildBox("iloc",
                 IsoBmff.fullBoxPayload(0, 0, buildIlocBody(extents)));
@@ -386,8 +386,8 @@ public final class UltraHdrHeicContainer {
                     sb.append(" head=");
                     for (int i = 0; i < 16; i++) {
                         byte v = mdatBox[(int) at + i];
-                        sb.append(Character.forDigit((v >> 4) & 0xF, 16));
-                        sb.append(Character.forDigit(v & 0xF, 16));
+                        sb.append(Character.forDigit(((int) v >> 4) & 0xF, 16));
+                        sb.append(Character.forDigit((int) v & 0xF, 16));
                     }
                 } else {
                     sb.append(" head=OOB");
@@ -618,7 +618,7 @@ public final class UltraHdrHeicContainer {
         }
         byte[] zeroIloc = IsoBmff.buildBox("iloc",
                 IsoBmff.fullBoxPayload(0, 0, buildIlocBody(zero)));
-        long metaBoxSize = 8 + 4 + m.hdlr.length + m.pitm.length
+        long metaBoxSize = 8L + 4 + m.hdlr.length + m.pitm.length
                 + zeroIloc.length + newIinf.length
                 + (newIref != null ? newIref.length : 0) + iprpBox.length;
         long cursor = ftyp.length + metaBoxSize + 8;
@@ -626,11 +626,11 @@ public final class UltraHdrHeicContainer {
         List<Extent> extents = new ArrayList<>();
         for (int id : order) {
             byte[] payload = kept.get(id);
-            extents.add(new Extent(id, cursor, payload.length));
+            extents.add(new Extent(id, cursor, (long) payload.length));
             cursor += payload.length;
         }
         if (exifItem != null) {
-            extents.add(new Extent(exifId, cursor, exifItem.length));
+            extents.add(new Extent(exifId, cursor, (long) exifItem.length));
             cursor += exifItem.length;
         }
         byte[] ilocBox = IsoBmff.buildBox("iloc",
@@ -700,8 +700,9 @@ public final class UltraHdrHeicContainer {
      * meta, primary ispe).
      */
     static int[] primarySize(java.nio.file.Path file) throws java.io.IOException {
-        try (java.nio.channels.FileChannel ch = java.nio.channels.FileChannel.open(
-                file, java.nio.file.StandardOpenOption.READ)) {
+        java.nio.channels.FileChannel ch = java.nio.channels.FileChannel.open(
+                file, java.nio.file.StandardOpenOption.READ);
+        try {
             long fileSize = ch.size();
             java.nio.ByteBuffer header = java.nio.ByteBuffer.allocate(16)
                     .order(java.nio.ByteOrder.BIG_ENDIAN);
@@ -758,6 +759,8 @@ public final class UltraHdrHeicContainer {
                 throw new IllegalStateException("merged HEIC has no usable meta box");
             }
             return primaryIspe(Meta.parse(metaPayload));
+        } finally {
+            ch.close();
         }
     }
 
@@ -867,8 +870,8 @@ public final class UltraHdrHeicContainer {
 
     static byte[] buildIspe(int w, int h) {
         ByteBuffer bb = ByteBuffer.allocate(8).order(ByteOrder.BIG_ENDIAN);
-        IsoBmff.putU32(bb, w);
-        IsoBmff.putU32(bb, h);
+        IsoBmff.putU32(bb, (long) w);
+        IsoBmff.putU32(bb, (long) h);
         return IsoBmff.fullBoxPayload(0, 0, bb.array());
     }
 
@@ -879,8 +882,9 @@ public final class UltraHdrHeicContainer {
 
     /** pixi property body (callers wrap in FullBox): channel count + bits. */
     static byte[] buildPixiBody(int... bits) {
-        ByteBuffer bb = ByteBuffer.allocate(1 + bits.length).order(ByteOrder.BIG_ENDIAN);
-        bb.put((byte) (bits.length & 0xFF));
+        int channels = bits.length;
+        ByteBuffer bb = ByteBuffer.allocate(1 + channels).order(ByteOrder.BIG_ENDIAN);
+        bb.put((byte) (channels & 0xFF));
         for (int b : bits) {
             bb.put((byte) (b & 0xFF));
         }
@@ -914,7 +918,7 @@ public final class UltraHdrHeicContainer {
         ByteBuffer bb = ByteBuffer.allocate(4 + 4 + 4 * entityIds.length)
                 .order(ByteOrder.BIG_ENDIAN);
         IsoBmff.putU32(bb, groupId);
-        IsoBmff.putU32(bb, entityIds.length);
+        IsoBmff.putU32(bb, (long) entityIds.length);
         for (int id : entityIds) {
             IsoBmff.putU32(bb, id);
         }
@@ -929,21 +933,23 @@ public final class UltraHdrHeicContainer {
      * tmap handling on this brand.
      */
     static byte[] withTmapBrand(IsoBmff.Box baseFtyp) {
-        byte[] p = baseFtyp.payload;
-        if (p.length < 8 || ((p.length - 8) % 4) != 0) {
+        byte[] brands = baseFtyp.payload;
+        int len = brands.length;
+        if (len < 8 || ((len - 8) % 4) != 0) {
             throw new IllegalArgumentException("malformed ftyp");
         }
-        for (int i = 8; i + 4 <= p.length; i += 4) {
-            if (p[i] == 't' && p[i + 1] == 'm' && p[i + 2] == 'a' && p[i + 3] == 'p') {
-                return IsoBmff.buildBox(baseFtyp.type, p);
+        for (int i = 8; i + 4 <= len; i += 4) {
+            if (brands[i] == (byte) 't' && brands[i + 1] == (byte) 'm'
+                    && brands[i + 2] == (byte) 'a' && brands[i + 3] == (byte) 'p') {
+                return IsoBmff.buildBox(baseFtyp.type, brands);
             }
         }
-        byte[] out = new byte[p.length + 4];
-        System.arraycopy(p, 0, out, 0, p.length);
-        out[p.length] = 't';
-        out[p.length + 1] = 'm';
-        out[p.length + 2] = 'a';
-        out[p.length + 3] = 'p';
+        byte[] out = new byte[len + 4];
+        System.arraycopy(brands, 0, out, 0, len);
+        out[len] = (byte) 't';
+        out[len + 1] = (byte) 'm';
+        out[len + 2] = (byte) 'a';
+        out[len + 3] = (byte) 'p';
         return IsoBmff.buildBox(baseFtyp.type, out);
     }
 
@@ -968,9 +974,9 @@ public final class UltraHdrHeicContainer {
     }
 
     static int fullFlags(byte[] fullBoxPayload) {
-        return ((fullBoxPayload[1] & 0xFF) << 16)
-                | ((fullBoxPayload[2] & 0xFF) << 8)
-                | (fullBoxPayload[3] & 0xFF);
+        return (((int) fullBoxPayload[1] & 0xFF) << 16)
+                | (((int) fullBoxPayload[2] & 0xFF) << 8)
+                | ((int) fullBoxPayload[3] & 0xFF);
     }
 
     static int[] toIntArray(List<Integer> list) {
@@ -1004,7 +1010,7 @@ public final class UltraHdrHeicContainer {
         if (version == 0) {
             IsoBmff.putU16(bb, count);
         } else {
-            IsoBmff.putU32(bb, count);
+            IsoBmff.putU32(bb, (long) count);
         }
         for (byte[] e : keptInfe) {
             bb.put(e);
@@ -1088,7 +1094,7 @@ public final class UltraHdrHeicContainer {
                 itemId = (int) IsoBmff.u32(p, pos);
                 pos += 4;
             }
-            int assocCount = p[pos++] & 0xFF;
+            int assocCount = (int) p[pos++] & 0xFF;
             List<PropRef> refs = new ArrayList<>();
             for (int a = 0; a < assocCount; a++) {
                 if (wide) {
@@ -1102,7 +1108,7 @@ public final class UltraHdrHeicContainer {
                     if (pos + 1 > p.length) {
                         throw new IllegalArgumentException("truncated ipma assoc");
                     }
-                    int v = p[pos++] & 0xFF;
+                    int v = (int) p[pos++] & 0xFF;
                     refs.add(new PropRef((v & 0x80) != 0, v & 0x7F));
                 }
             }
@@ -1124,7 +1130,7 @@ public final class UltraHdrHeicContainer {
         bb.put((byte) ((flags >> 16) & 0xFF));
         bb.put((byte) ((flags >> 8) & 0xFF));
         bb.put((byte) (flags & 0xFF));
-        IsoBmff.putU32(bb, order.size());
+        IsoBmff.putU32(bb, (long) order.size());
         for (int id : order) {
             List<PropRef> refs = entries.get(id);
             if (version == 0) {
@@ -1286,10 +1292,10 @@ public final class UltraHdrHeicContainer {
             throw new IllegalArgumentException(
                     "unsupported iloc v" + version + " (SDR fallback)");
         }
-        int offSize = (ilocPayload[4] >> 4) & 0xF;
-        int lenSize = ilocPayload[4] & 0xF;
-        int baseSize = (ilocPayload[5] >> 4) & 0xF;
-        int indexSize = version >= 1 ? ilocPayload[5] & 0xF : 0;
+        int offSize = ((int) ilocPayload[4] >> 4) & 0xF;
+        int lenSize = (int) ilocPayload[4] & 0xF;
+        int baseSize = ((int) ilocPayload[5] >> 4) & 0xF;
+        int indexSize = version >= 1 ? (int) ilocPayload[5] & 0xF : 0;
         if (indexSize != 0 && indexSize != 4 && indexSize != 8) {
             throw new IllegalArgumentException("bad iloc index_size " + indexSize);
         }
@@ -1488,13 +1494,13 @@ public final class UltraHdrHeicContainer {
             long size = IsoBmff.u32(file, p);
             String t = IsoBmff.fourcc(file, p + 4);
             int header = 8;
-            if (size == 1) {
+            if (size == 1L) {
                 if (pos + 16 > end) {
                     return null;
                 }
                 size = IsoBmff.u64(file, p + 8);
                 header = 16;
-            } else if (size == 0) {
+            } else if (size == 0L) {
                 size = end - pos;
             }
             if (size < header || pos + size > end) {
@@ -1523,9 +1529,10 @@ public final class UltraHdrHeicContainer {
             // output width/height u16 BE. Observed on-device as
             // 00 00 07 05 0c00 1000 (8x6 grid for 48 tiles).
             // tileCount includes the grid itself, so it covers tileCount-1.
-            if (buf.length == 8) {
-                int rows = (buf[2] & 0xFF) + 1;
-                int cols = (buf[3] & 0xFF) + 1;
+            int bufLength = buf.length;
+            if (bufLength == 8) {
+                int rows = ((int) buf[2] & 0xFF) + 1;
+                int cols = ((int) buf[3] & 0xFF) + 1;
                 long w = IsoBmff.u16(buf, 4);
                 long h = IsoBmff.u16(buf, 6);
                 if (rows < 1 || rows > 64 || cols < 1 || cols > 64
@@ -1540,7 +1547,7 @@ public final class UltraHdrHeicContainer {
             return;
         }
         long nalLen = IsoBmff.u32(buf, 0);
-        if (nalLen <= 0 || nalLen + 4 > buf.length || (buf[4] & 0x80) != 0) {
+        if (nalLen <= 0 || nalLen + 4 > buf.length || ((int) buf[4] & 0x80) != 0) {
             throw new IllegalArgumentException(tag + " item " + id + " not HEVC-like");
         }
     }
@@ -1585,7 +1592,7 @@ public final class UltraHdrHeicContainer {
     /** Returns a copy of an infe full box with the item id replaced. */
     static byte[] patchInfeId(byte[] infeBox, int newId) {
         byte[] out = infeBox.clone();
-        int v = out[8] & 0xFF; // FullBox version inside the box bytes
+        int v = (int) out[8] & 0xFF; // FullBox version inside the box bytes
         if (v >= 3) {
             ByteBuffer bb = ByteBuffer.wrap(out, 8 + 4, 4).order(ByteOrder.BIG_ENDIAN);
             bb.putInt(newId);
@@ -1799,10 +1806,8 @@ public final class UltraHdrHeicContainer {
         return xml.getBytes(StandardCharsets.UTF_8);
     }
 
-    static String fmt(float v) {
-        if (!Float.isFinite(v)) {
-            v = 0f;
-        }
+    static String fmt(float value) {
+        float v = Float.isFinite(value) ? value : 0f;
         return String.format(java.util.Locale.US, "%.6f", v);
     }
 

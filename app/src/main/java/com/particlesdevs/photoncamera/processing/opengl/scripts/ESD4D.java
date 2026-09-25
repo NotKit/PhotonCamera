@@ -510,10 +510,13 @@ public class ESD4D extends GLOneScript {
             if (frame.packedBits > 0) {
                 // Frame arrived as a packed bitstream (burst-memory saving):
                 // unpack to uint16 first — createF16 reads raw sample counts.
-                try (ImageFrame.Upload up = frame.upload()) {
+                ImageFrame.Upload up = frame.upload();
+                try {
                     normalized = Allocator.createF16(up.buffer,
                             parameters.rawSize.x, parameters.rawSize.y,
                             parameters.whiteLevel, parameters.blackLevel);
+                } finally {
+                    up.close();
                 }
             } else {
                 normalized = Allocator.createF16(frame.buffer,
@@ -530,7 +533,7 @@ public class ESD4D extends GLOneScript {
         }
         Log.d("ESD4D", "Stage[f16-convert] elapsed:" + (System.currentTimeMillis() - f16T) + " ms");
 
-        float minExp = 1.f;
+        float minExp = 1.0f;
         int minExpIdx = 0;
         int lowCnt = 0;
         for (int i = 1; i < images.size(); i++) {
@@ -631,7 +634,7 @@ public class ESD4D extends GLOneScript {
         int tile = 8;
         glProg.setLayout(tile,tile,1);
         glProg.useAssetProgram("merge/merge00",true);
-        glProg.setVar("exposure", 1.f/images.get(0).pair.layerMpy);
+        glProg.setVar("exposure", 1.0f/images.get(0).pair.layerMpy);
         glProg.setVar("createDiff", 0);
         glProg.setVar("cfaShift", cfaShift);
         glProg.setVar("analogBalance", analogBalance);
@@ -1030,7 +1033,7 @@ public class ESD4D extends GLOneScript {
             stageT = System.currentTimeMillis();
             glProg.setLayout(tile, tile, 1);
             glProg.useAssetProgram("merge/merge00", true);
-            glProg.setVar("exposure", 1.f/images.get(0).pair.layerMpy);
+            glProg.setVar("exposure", 1.0f/images.get(0).pair.layerMpy);
             glProg.setVar("createDiff", 0);
             glProg.setVar("cfaShift", cfaShift);
             glProg.setTexture("inTexture", inputAlter);

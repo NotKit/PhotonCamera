@@ -19,7 +19,7 @@ public class DirectedMedian extends Node {
     public void Run() {
         GLTexture grad;
         grad = basePipeline.getMain3();
-        glUtils.ConvDiff(previousNode.workingTexture, grad, 0.f);
+        glUtils.ConvDiff(previousNode.workingTexture, grad, 0.0f);
         {
             glProg.setDefine("INTENSE", (float) basePipeline.mSettings.noiseRstr);
             glProg.setDefine("INSIZE", previousNode.workingTexture.mSize);

@@ -1,11 +1,10 @@
 package com.particlesdevs.photoncamera.util;
 
+import android.os.ParcelFileDescriptor;
+
 import java.io.Closeable;
 import java.io.File;
-import java.io.FileDescriptor;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 
 /**
@@ -29,7 +28,7 @@ public class McrawWriter implements Closeable {
     }
 
     private long nativePtr;
-    private FileOutputStream fallbackStream;
+    private ParcelFileDescriptor fallbackFd;
 
     private McrawWriter(long nativePtr) {
         this.nativePtr = nativePtr;
@@ -38,7 +37,7 @@ public class McrawWriter implements Closeable {
     /**
      * Creates the output file and writes the container header.
      * File creation goes through SAF first (required on Android 11+ for
-     * DCIM locations) with a plain FileOutputStream fallback.
+     * DCIM locations) with a plain file descriptor fallback.
      * Must be called at most ONCE per output path: SAF deletes and
      * recreates an existing file, so a second open discards everything
      * written so far.
@@ -54,24 +53,21 @@ public class McrawWriter implements Closeable {
             return new McrawWriter(ptr);
         }
         // Fallback for app-specific paths or older APIs.
+        // The native writer dups the descriptor, so this one stays ours to close.
         File file = new File(path);
         if (file.getParentFile() != null) file.getParentFile().mkdirs();
-        FileOutputStream fos = new FileOutputStream(file);
+        ParcelFileDescriptor pfd = ParcelFileDescriptor.open(file,
+                ParcelFileDescriptor.MODE_WRITE_ONLY | ParcelFileDescriptor.MODE_CREATE
+                        | ParcelFileDescriptor.MODE_TRUNCATE);
         try {
-            Field field = FileDescriptor.class.getDeclaredField("descriptor");
-            field.setAccessible(true);
-            int rawFd = (int) field.get(fos.getFD());
-            long ptr = nativeCreate(rawFd, containerMetadata);
+            long ptr = nativeCreate(pfd.getFd(), containerMetadata);
             if (ptr == 0) throw new IOException("mcraw container create failed for " + path);
             McrawWriter writer = new McrawWriter(ptr);
-            writer.fallbackStream = fos;
+            writer.fallbackFd = pfd;
             return writer;
         } catch (IOException e) {
-            fos.close();
+            pfd.close();
             throw e;
-        } catch (ReflectiveOperationException e) {
-            fos.close();
-            throw new IOException("fd extraction failed", e);
         }
     }
 
@@ -157,9 +153,9 @@ public class McrawWriter implements Closeable {
             nativePtr = 0;
             nativeClose(ptr); // flushes indexes and footers, fsyncs
         }
-        if (fallbackStream != null) {
-            fallbackStream.close();
-            fallbackStream = null;
+        if (fallbackFd != null) {
+            fallbackFd.close();
+            fallbackFd = null;
         }
     }
 

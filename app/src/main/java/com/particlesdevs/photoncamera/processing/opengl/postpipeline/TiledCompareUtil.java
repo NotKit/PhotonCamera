@@ -23,8 +23,8 @@ public final class TiledCompareUtil {
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(buf.array());
             StringBuilder sb = new StringBuilder(digest.length * 2);
             for (byte b : digest) {
-                sb.append(Character.forDigit((b >> 4) & 0xF, 16));
-                sb.append(Character.forDigit(b & 0xF, 16));
+                sb.append(Character.forDigit(((int) b >> 4) & 0xF, 16));
+                sb.append(Character.forDigit((int) b & 0xF, 16));
             }
             return sb.toString();
         } catch (Exception e) {

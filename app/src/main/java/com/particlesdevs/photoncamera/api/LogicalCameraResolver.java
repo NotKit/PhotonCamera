@@ -16,7 +16,6 @@ import com.particlesdevs.photoncamera.util.Log;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -374,7 +373,11 @@ public final class LogicalCameraResolver {
                 if (best > 0.05f) reference = null;
             }
             if (reference == null) {
-                reference = Collections.min(found, Comparator.comparingDouble(m -> m.focal35mm));
+                // The widest lens: the smallest 35mm-equivalent focal length.
+                reference = found.get(0);
+                for (Member m : found) {
+                    if (m.focal35mm < reference.focal35mm) reference = m;
+                }
             }
             final float referenceFocal35 = reference.focal35mm;
             Log.d(TAG, "logical " + logicalId + " zoom reference=" + reference.physicalId);
@@ -383,7 +386,7 @@ public final class LogicalCameraResolver {
                         m.focal35mm, m.focal35mm / referenceFocal35,
                         m.maxDigitalZoom, m.facing));
             }
-            out.sort(Comparator.comparingDouble(m -> m.zoomFactor));
+            Collections.sort(out, (a, b) -> Float.valueOf(a.zoomFactor).compareTo(b.zoomFactor));
             Log.d(TAG, "logical " + logicalId + " members=" + out);
         } catch (Exception e) {
             Log.w(TAG, "resolveMembers failed for " + logicalId, e);

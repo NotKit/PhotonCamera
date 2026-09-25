@@ -198,9 +198,12 @@ public class UnlimitedProcessor extends ProcessorBase {
                     + "ms PeakVram=" + parameters.peakVramMB
                     + "MB PeakMemory=" + parameters.peakMemoryMB + "MB");
         }
-        imageFile = Paths.get(imageFile.toAbsolutePath() + (useHeic ? ".heic" : ".jpg"));
-        StillEncoder.Result still = StillEncoder.encodeStill(
-                imageFile, bitmap, gm, exifData, useHeic);
+        imageFile = Paths.get(imageFile.toAbsolutePath().toString() + (useHeic ? ".heic" : ".jpg"));
+        // No gain map unless Ultra HDR is on: the null is passed as a literal
+        // so the Kotlin/Native conversion does not assert on it.
+        StillEncoder.Result still = gm != null
+                ? StillEncoder.encodeStill(imageFile, bitmap, gm, exifData, useHeic)
+                : StillEncoder.encodeStill(imageFile, bitmap, null, exifData, useHeic);
         boolean imageSaved = still.saved;
         imageFile = still.file;
 

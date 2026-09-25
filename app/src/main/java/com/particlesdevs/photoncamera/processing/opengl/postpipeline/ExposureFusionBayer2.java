@@ -81,7 +81,7 @@ public class ExposureFusionBayer2 extends Node {
         // pre-multiplied red. Folding the factor into exposure[0] measures
         // the same bins directly on lowGauss (~129 MB less GPU traffic).
         glHistogram = new GLHistogram(basePipeline.glint.glProcessing);
-        glHistogram.exposure[0] = 4.f;
+        glHistogram.exposure[0] = 4.0f;
         glHistogram.Compute(lowGauss);
         glHistogram.Bc = false;
         glHistogram.Gc = false;
@@ -461,7 +461,7 @@ public class ExposureFusionBayer2 extends Node {
         basePipeline.main2.mSize.y = workSize.y;
         basePipeline.getMain3().mSize.x = workSize.x;
         basePipeline.getMain3().mSize.y = workSize.y;
-        //if(PhotonCamera.getManualMode().getCurrentExposureValue() != 0 && PhotonCamera.getManualMode().getCurrentISOValue() != 0) compressor = 1.f;
+        //if(PhotonCamera.getManualMode().getCurrentExposureValue() != 0 && PhotonCamera.getManualMode().getCurrentISOValue() != 0) compressor = 1.0f;
         float perlevel = downScalePerLevel;
         int levelcount = (int)(Math.log10(workSize.x)/Math.log10(perlevel));
         if(levelcount <= 0) levelcount = 2;
@@ -578,7 +578,7 @@ public class ExposureFusionBayer2 extends Node {
         basePipeline.getMain3().mSize.x = initialSize.x;
         basePipeline.getMain3().mSize.y = initialSize.y;
         ((PostPipeline)basePipeline).fusionMap =
-                fusionMap(binnedFuse,exposureBase, (float)((PostPipeline)basePipeline).AecCorr/2.f);
+                fusionMap(binnedFuse,exposureBase, (float)((PostPipeline)basePipeline).AecCorr/2.0f);
         //Use EDI to interpolate fusionmap
 
 

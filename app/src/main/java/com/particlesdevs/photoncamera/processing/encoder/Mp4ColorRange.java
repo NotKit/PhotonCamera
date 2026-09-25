@@ -93,7 +93,8 @@ public final class Mp4ColorRange {
             long fileLength = file.length();
             long[] moov;
             byte[] moovPayload;
-            try (RandomAccessFile raf = new RandomAccessFile(file, "rw")) {
+            RandomAccessFile raf = new RandomAccessFile(file, "rw");
+            try {
                 moov = findTopLevelMoov(raf, fileLength);
                 if (moov == null) {
                     return new Result(false, false, false, false, "no moov");
@@ -106,6 +107,8 @@ public final class Mp4ColorRange {
                 moovPayload = new byte[(int) (moovSize - headerSize)];
                 raf.seek(moov[0] + headerSize);
                 raf.readFully(moovPayload);
+            } finally {
+                raf.close();
             }
             byte[] patchedPayload = modifyMoov(moovPayload, state);
             if (patchedPayload == null) {
@@ -135,11 +138,11 @@ public final class Mp4ColorRange {
             raf.readFully(typeBytes);
             String type = new String(typeBytes, StandardCharsets.US_ASCII);
             long header = 8;
-            if (size == 1) {
+            if (size == 1L) {
                 if (pos + 16 > fileLength) return null;
                 size = raf.readLong();
                 header = 16;
-            } else if (size == 0) {
+            } else if (size == 0L) {
                 size = fileLength - pos;
             }
             if (size < header || pos + size > fileLength) return null;
@@ -246,7 +249,7 @@ public final class Mp4ColorRange {
         } catch (Exception e) {
             return null;
         }
-        List<byte[]> out = new ArrayList<>(children.size() + 1);
+        ArrayList<byte[]> out = new ArrayList<>(children.size() + 1);
         out.add(Arrays.copyOfRange(payload, 0, VISUAL_SAMPLE_ENTRY_FIXED));
         boolean changed = false;
         boolean hasColr = false;
@@ -273,7 +276,7 @@ public final class Mp4ColorRange {
         if (!hasColr) {
             byte[] colr = buildColrBox(state);
             if (hvcCIndex >= 0 && hvcCIndex + 1 <= out.size()) {
-                out.add(hvcCIndex + 1, colr);
+                out.listIterator(hvcCIndex + 1).add(colr);
             } else {
                 out.add(colr);
             }
@@ -305,14 +308,14 @@ public final class Mp4ColorRange {
     private static byte[] flipVuiFullRange(byte[] hvcC, State state) {
         try {
             if (hvcC.length < 23) return null;
-            int numArrays = hvcC[22] & 0xFF;
+            int numArrays = (int) hvcC[22] & 0xFF;
             int off = 23;
             for (int a = 0; a < numArrays && off + 3 <= hvcC.length; a++) {
-                int nalType = hvcC[off] & 0x3F;
-                int numNalus = ((hvcC[off + 1] & 0xFF) << 8) | (hvcC[off + 2] & 0xFF);
+                int nalType = (int) hvcC[off] & 0x3F;
+                int numNalus = (((int) hvcC[off + 1] & 0xFF) << 8) | ((int) hvcC[off + 2] & 0xFF);
                 off += 3;
                 for (int n = 0; n < numNalus && off + 2 <= hvcC.length; n++) {
-                    int nalLen = ((hvcC[off] & 0xFF) << 8) | (hvcC[off + 1] & 0xFF);
+                    int nalLen = (((int) hvcC[off] & 0xFF) << 8) | ((int) hvcC[off + 1] & 0xFF);
                     off += 2;
                     if (nalLen < 3 || off + nalLen > hvcC.length) return null;
                     if (nalType == 33) {
@@ -321,10 +324,10 @@ public final class Mp4ColorRange {
                         if (rangeBit != null) {
                             int bitInRbspByte = 7 - (rangeBit & 7);
                             int rawByte = rbsp.rawIndex[rangeBit >> 3];
-                            if ((hvcC[rawByte] & (1 << bitInRbspByte)) != 0) {
+                            if (((int) hvcC[rawByte] & (1 << bitInRbspByte)) != 0) {
                                 return null;
                             }
-                            hvcC[rawByte] |= (byte) (1 << bitInRbspByte);
+                            hvcC[rawByte] = (byte) ((int) hvcC[rawByte] | (1 << bitInRbspByte));
                             state.vuiPatched = true;
                             return hvcC;
                         }
@@ -354,9 +357,9 @@ public final class Mp4ColorRange {
         int[] map = new int[length];
         int n = 0;
         for (int i = 0; i < length; i++) {
-            if (i >= 2 && src[offset + i - 2] == 0 && src[offset + i - 1] == 0
-                    && (src[offset + i] & 0xFF) == 0x03
-                    && i + 1 < length && (src[offset + i + 1] & 0xFF) <= 0x03) {
+            if (i >= 2 && src[offset + i - 2] == (byte) 0 && src[offset + i - 1] == (byte) 0
+                    && ((int) src[offset + i] & 0xFF) == 0x03
+                    && i + 1 < length && ((int) src[offset + i + 1] & 0xFF) <= 0x03) {
                 continue;
             }
             out[n] = src[offset + i];
@@ -399,14 +402,15 @@ public final class Mp4ColorRange {
     }
 
     private static int appendByte(int[] bits, int offset, int value) {
+        int pos = offset;
         for (int i = 7; i >= 0; i--) {
-            bits[offset++] = (value >> i) & 1;
+            bits[pos++] = (value >> i) & 1;
         }
-        return offset;
+        return pos;
     }
 
     private static int bitAt(byte[] data, int bit) {
-        return (data[bit >> 3] >> (7 - (bit & 7))) & 1;
+        return ((int) data[bit >> 3] >> (7 - (bit & 7))) & 1;
     }
 
     /**
@@ -421,12 +425,15 @@ public final class Mp4ColorRange {
         if (!moovLast && newMoov.length != moovSize) {
             throw new IOException("moov not last, size change unsupported");
         }
-        try (RandomAccessFile raf = new RandomAccessFile(file, "rw")) {
+        RandomAccessFile raf = new RandomAccessFile(file, "rw");
+        try {
             raf.seek(moovOffset);
             raf.write(newMoov);
             if (moovLast) {
                 raf.setLength(moovOffset + newMoov.length);
             }
+        } finally {
+            raf.close();
         }
     }
 
