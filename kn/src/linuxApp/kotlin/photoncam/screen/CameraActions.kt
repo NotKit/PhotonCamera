@@ -80,10 +80,13 @@ internal class CameraActions(
 			is CameraUiEvent.OpenGallery ->
 				log("OpenGallery: there is no gallery screen on this port yet")
 			is CameraUiEvent.FlipCamera -> {
-				setId(cycler(PreferenceKeys.getCameraID()))
+				val id = cycler(PreferenceKeys.getCameraID())
+				if (!lensData.containsKey(id) || id == PreferenceKeys.getCameraID()) return
+				setId(id)
 				restartCamera()
 			}
 			is CameraUiEvent.SelectAux -> {
+				if (!lensData.containsKey(event.cameraId)) return
 				setId(event.cameraId)
 				restartCamera()
 			}
@@ -313,14 +316,30 @@ internal class CameraActions(
 
 	/**
 	 * CameraFragment.initCameraIDLists, plus the aux list the AuxButtonsViewModel
-	 * pushed.  Called from the camera-opened event, as on Android.
+	 * pushed.  Called from the camera-opened event, as on Android, and once
+	 * before the first open.  Lenses without RAW capture are left out; false
+	 * means none is left.
 	 */
-	fun initCameraIdLists(cameraManager: CameraManager?) {
-		val manager = cameraManager ?: return
+	fun initCameraIdLists(cameraManager: CameraManager?): Boolean {
+		val manager = cameraManager ?: return false
 		val map = runCatching {
 			CameraManager2(manager, PhotonCamera.getSettingsManagerStatic()).getCameraLensDataMap()
-		}.onFailure { log("camera lens data failed: $it") }.getOrNull() ?: return
+		}.onFailure { log("camera lens data failed: $it") }.getOrNull()?.filter { (id, _) ->
+			runCatching {
+				val physicalId = id.split('-').let { if (it.size > 1) it[1] else it[0] }
+				val characteristics = manager.getCameraCharacteristics(physicalId)
+				val raw = characteristics?.get(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES)
+					?.contains(CameraCharacteristics.REQUEST_AVAILABLE_CAPABILITIES_RAW) == true
+				if (!raw) log("hiding camera $id: RAW capture is not supported")
+				raw
+			}.getOrDefault(false)
+		} ?: return false
 		lensData = map
+		if (map.isEmpty()) {
+			log("No cameras support RAW capture")
+			host.setAuxLenses(emptyList(), "")
+			return false
+		}
 		// Re-anchor the two ids to cameras that exist: "0"/"1" are static
 		// defaults and not every device has them.
 		if (!map.containsKey(activeBackId))
@@ -329,7 +348,12 @@ internal class CameraActions(
 		if (!map.containsKey(activeFrontId))
 			map.entries.firstOrNull { it.value.facing == CameraCharacteristics.LENS_FACING_FRONT }
 				?.let { activeFrontId = it.key }
+		if (!map.containsKey(activeBackId)) activeBackId = map.keys.first()
+		if (!map.containsKey(activeFrontId)) activeFrontId = activeBackId
+		// Preferences can still point to a lens hidden by the RAW filter.
+		if (!map.containsKey(PreferenceKeys.getCameraID())) setId(activeBackId)
 		pushAuxLenses()
+		return true
 	}
 
 	/** CameraFragment.pushAuxLenses: the front or back list, by which holds the active id. */

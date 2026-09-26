@@ -20,6 +20,8 @@
 package photoncam.screen
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -275,6 +277,8 @@ internal class CameraRig(
 		private set
 	var actions: CameraActions? = null
 		private set
+	var rawCameraAvailable by mutableStateOf(true)
+		private set
 	/** CameraFragment.mTouchFocus, built once the preview surface exists. */
 	var touchFocus: TouchFocus? = null
 		private set
@@ -290,6 +294,9 @@ internal class CameraRig(
 		val a = CameraActions(application, host, this, onOpenSettings)
 		actions = a
 		host.setEventListener { event -> a.onEvent(event) }
+		rawCameraAvailable = a.initCameraIdLists(application.getSystemService(Context.CAMERA_SERVICE) as CameraManager)
+		if (!rawCameraAvailable)
+			return
 		val c = CaptureController(activity, preview, executor, HostCameraEvents(this))
 		controller = c
 		// CameraFragment.onViewCreated does this; it decides whether a burst
@@ -430,7 +437,10 @@ private fun CameraContent(onOpenSettings: () -> Unit) {
 	CameraScreen(
 		state = host.state,
 		onEvent = { host.onEvent(it) },
-		viewfinder = { CameraViewfinder(rig.preview, rig.overlay) },
+		viewfinder = {
+			if (rig.rawCameraAvailable) CameraViewfinder(rig.preview, rig.overlay)
+			else Text("No cameras support RAW capture", Modifier.align(Alignment.Center))
+		},
 		manualBar = { ManualPalette(host.manualBar, { host.onEvent(it) }) },
 	)
 }
