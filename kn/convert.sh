@@ -147,6 +147,27 @@ for f in pathlib.Path(sys.argv[2]).rglob("*.kt"):
 print(f"`this.field = param!!` on a nullable pair, unasserted: {n}")
 PARAMEOF
 
+# The first control has no previous model, and fixed-focus lenses have no
+# focus range. Java accepts both nulls; j2k asserts them before the panel opens.
+"$PY" - "$GEN_NEW/com/particlesdevs/photoncamera/circularbarlib/console/ManualModeConsoleImpl.kt" <<'MANUALEOF'
+from pathlib import Path
+import sys
+p = Path(sys.argv[1])
+s = p.read_text()
+for old, new in (
+    ("previousModel = selectedModel!!", "previousModel = selectedModel"),
+    ("cameraProperties!!.focusRange!!", "cameraProperties!!.focusRange"),
+):
+    assert s.count(old) == 1
+    s = s.replace(old, new)
+p.write_text(s)
+focus = p.parent.parent / "control/models/FocusModel.kt"
+s = focus.read_text()
+old = "super(cameraCharacteristics!!, range!!, manualParamModel!!"
+assert s.count(old) == 1
+focus.write_text(s.replace(old, "super(cameraCharacteristics!!, range, manualParamModel!!"))
+MANUALEOF
+
 # A `for` LOOP'S UPDATE IS THE LAST STATEMENT OF THE `while` j2k writes, so a
 # `continue` in the body skips it and the loop spins on the same index for
 # ever -- silently, at 100% of a core, with no exception and no output.

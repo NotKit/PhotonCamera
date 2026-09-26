@@ -3410,6 +3410,11 @@ static void camera2ndk_set_frame_callback(struct atl_camera *camera, atl_camera_
 	g_mutex_lock(&camera->lock);
 	camera->frame_cb = cb;
 	camera->frame_user = user;
+	/* An image listener may have copied the old callback before this call.
+	 * Let it finish before its stream owner is freed. */
+	if (!cb)
+		while (camera->callbacks_running)
+			g_cond_wait(&camera->idle, &camera->lock);
 	g_mutex_unlock(&camera->lock);
 }
 

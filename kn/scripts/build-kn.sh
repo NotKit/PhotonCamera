@@ -34,6 +34,24 @@ cd "$HERE"
 
 "$HERE/scripts/convert-drawables.sh"
 
+for arg in "$@"; do
+	if [ "$arg" = -PwithApp ]; then
+		case "$ARCH" in
+			x64) ATL_ARCH=x86_64 ;;
+			arm64) ATL_ARCH=arm64 ;;
+		esac
+		if [ -n "${ATL_ARCH:-}" ]; then
+			ATL_ARCHIVE="$HERE/host/atlcamera/build-$ATL_ARCH/libatlcamera.a"
+			if [ ! -f "$ATL_ARCHIVE" ] ||
+				[ -n "$(find "$HERE/host/atlcamera" -type f \( -name '*.c' -o -name '*.h' \) -newer "$ATL_ARCHIVE" -print -quit)" ]; then
+				"$HERE/host/atlcamera/build.sh" "$ATL_ARCH"
+				rm -rf "$HERE"/build/classes/kotlin/*/main/cinterop "$HERE"/build/klib
+			fi
+		fi
+		break
+	fi
+done
+
 case "$ARCH" in
 	x64)   "$HERE/scripts/build-mgwl.sh" x64
 	       TASK=linkDebugExecutableLinuxX64 ;;
