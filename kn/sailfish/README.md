@@ -18,15 +18,25 @@ development library such as `libpng.so`.
 (`/srv/sailfishos/sdks/sfossdk/mer-sdk-chroot`, target `SailfishOS-latest-aarch64`;
 `SFOS_SDK` and `SFOS_TARGET` override them).
 
+CI builds the click once, then packages its staged binary and resources:
+
+    PC_SFOS_BIN_DIR="$PWD/kn/out/click/install" PC_SFOS_RPMBUILD=host kn/sailfish/build.sh
+
+Host packaging needs `rpm`, `patchelf`, `python3`, and ImageMagick. It does not
+need the Sailfish SDK or compile any code. Both packages are uploaded by
+`.github/workflows/kn-click.yml` and attached to the same test release.
+
 ## What differs from Ubuntu Touch
 
 * **TLS alignment.** Sailfish's libhybris reads bionic's TLS slots at `tp+16`.
   With glibc on aarch64 that is where the executable's own TLS block starts, so
   the first EGL call faulted inside the hybris linker. `host/mgwl.c` aligns the
   block to 256, which moves it to `tp+256`. `build.sh` refuses a binary without it.
-* **Two bundled libraries.** `libmaliit-glib.so.0` as on UT, plus `libcrypt.so.1`
-  from the noble sysroot. Sailfish ships only `.so.2`, and the binary imports
-  nothing from it. `device-libs.txt` is the phone's `ldconfig -p`.
+* **Bundled library.** `libmaliit-glib.so.0`, as on UT. The unused
+  `libcrypt.so.1` dependency is removed from the staged RPM binary with
+  `patchelf`; packaging refuses removal if it imports any of the library's
+  symbols or symbol versions. The original build and click are unchanged.
+  `device-libs.txt` is the phone's `ldconfig -p`.
 * **Launcher** (`run.sh`, installed as `/usr/bin/photoncamera`): it sets
   `EGL_PLATFORM=wayland`, which an ssh shell lacks. It derives `GRID_UNIT_PX`
   from Silica's pixel ratio (1.5 -> density 2.25), and it `cd`s to the app

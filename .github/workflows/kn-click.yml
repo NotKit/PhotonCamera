@@ -1,4 +1,4 @@
-name: Build Ubuntu Touch click (Kotlin/Native port)
+name: Build Ubuntu Touch click and Sailfish RPM (Kotlin/Native port)
 
 # The arm64 click of kn/: PhotonCamera as one Kotlin/Native ELF, no JVM and no
 # Android runtime. Kotlin/Native ships no linux-aarch64 host compiler, but it
@@ -180,6 +180,16 @@ jobs:
           clickable build --arch arm64 --skip-review --verbose 2>&1 |
             tee kn/out/click-build.log
 
+      - name: Package the Sailfish RPM from the same ARM binary
+        env:
+          PC_SFOS_BIN_DIR: ${{ github.workspace }}/kn/out/click/install
+          PC_SFOS_RPMBUILD: host
+        run: |
+          set -o pipefail
+          sudo apt-get update
+          sudo apt-get install -y rpm patchelf imagemagick
+          kn/sailfish/build.sh 2>&1 | tee kn/out/rpm-build.log
+
       # A half-fetched kn/deps saved under the right key would be worse than no
       # cache at all -- every later run would restore it and skip the fetch. So
       # the save is gated on the two markers fetch-deps.sh itself checks: the
@@ -243,7 +253,7 @@ jobs:
         if: always()
         run: |
           {
-            echo "## Ubuntu Touch click (Kotlin/Native)"
+            echo "## Ubuntu Touch click and Sailfish RPM (Kotlin/Native)"
             echo
             click=$(ls kn/out/click/*.click 2>/dev/null | head -1) || true
             if [ -n "${click:-}" ]; then
@@ -261,6 +271,12 @@ jobs:
             grep -q 'FlowNet/KernelNet report unavailable' kn/out/click-build.log 2>/dev/null &&
               echo "* ⚠️ no arm64 ncnn: FlowNet and KernelNet report unavailable, and the merge runs with no kernel map" || true
             echo "* deps cache: ${{ steps.deps.outputs.cache-hit == 'true' && 'hit' || 'miss' }}, toolchain cache: ${{ steps.toolchain.outputs.cache-hit == 'true' && 'hit' || 'miss' }}, ncnn cache: ${{ steps.ncnn.outputs.cache-hit == 'true' && 'hit' || 'miss' }}"
+            rpm=$(ls kn/out/sailfish/RPMS/aarch64/*.rpm 2>/dev/null | head -1) || true
+            if [ -n "${rpm:-}" ]; then
+              echo "* \`$(basename "$rpm")\` — $(( $(stat -c%s "$rpm") / 1024 / 1024 )) MB"
+            else
+              echo "* no RPM was produced"
+            fi
             bin=kn/out/click/install/photoncam-kn
             if [ -f "$bin" ]; then
               echo
@@ -296,6 +312,13 @@ jobs:
           path: kn/out/click/*.click
           if-no-files-found: error
 
+      - name: Upload the RPM
+        uses: actions/upload-artifact@v4
+        with:
+          name: photoncamera-kn-rpm-arm64
+          path: kn/out/sailfish/RPMS/aarch64/*.rpm
+          if-no-files-found: error
+
       # Actions artifacts need a GitHub login to download; a prerelease does
       # not, which is what testers actually use. The version is the app's
       # versionName plus build.sh's CLICK_REV, so the tag names the build.
@@ -310,16 +333,19 @@ jobs:
         run: |
           set -eu
           click=$(ls kn/out/click/*.click)
+          rpm=$(ls kn/out/sailfish/RPMS/aarch64/*.rpm)
           version=$(basename "$click" | cut -d_ -f2)
           tag="kn-v${version}-${GITHUB_SHA::7}"
-          notes=$(printf '%s\n' \
-            "Unofficial test build of PhotonCamera for Ubuntu Touch 24.04 (arm64) — the Kotlin/Native port: one native ELF, no JVM and no Android runtime. Not a stable release." \
+          notes_file=$(mktemp)
+          printf '%s\n' \
+            "Unofficial test build of PhotonCamera for Ubuntu Touch 24.04 and Sailfish OS (arm64) — the Kotlin/Native port: one native ELF, no JVM and no Android runtime. Not a stable release." \
             "" \
-            "Install with \`clickable install --ssh <device>\`, or copy it over and \`pkcon install-local --allow-untrusted <file>.click\`.")
+            "Install the RPM on Sailfish with \`devel-su pkcon install-local <file>.rpm\`." \
+            "Install the click with \`clickable install --ssh <device>\`, or copy it over and \`pkcon install-local --allow-untrusted <file>.click\`." >"$notes_file"
           if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" "$click" --clobber
+            gh release upload "$tag" "$click" "$rpm" --clobber
           else
-            gh release create "$tag" "$click" \
-              --title "PhotonCamera ${version} (Kotlin/Native, Ubuntu Touch)" \
-              --prerelease --notes "$notes"
+            gh release create "$tag" "$click" "$rpm" \
+              --title "PhotonCamera ${version} (Kotlin/Native, Ubuntu Touch and Sailfish)" \
+              --prerelease --notes-file "$notes_file"
           fi

@@ -3,7 +3,7 @@
 %define __strip /bin/true
 %define debug_package %{nil}
 %define __provides_exclude_from ^%{_datadir}/%{name}/.*$
-%define __requires_exclude ^(libmaliit-glib|libcrypt)\\.so.*$
+%define __requires_exclude ^libmaliit-glib\\.so.*$
 
 Name:       photoncamera
 Summary:    PhotonCamera, the Kotlin/Native port
@@ -11,7 +11,6 @@ Version:    %{pc_version}
 Release:    1
 License:    GPLv3
 URL:        https://github.com/eszdman/PhotonCamera
-BuildArch:  aarch64
 Requires:   libhybris
 Requires:   dconf
 

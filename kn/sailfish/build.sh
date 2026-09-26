@@ -5,8 +5,8 @@
 #
 #   kn/sailfish/build.sh        -> kn/out/sailfish/RPMS/aarch64/photoncamera-*.rpm
 #
-# The RPM is built with the Sailfish Platform SDK's sb2 target, so it gets the
-# phone's own rpm macros.  SFOS_SDK and SFOS_TARGET pick another SDK.
+# Uses the Sailfish SDK by default; PC_SFOS_RPMBUILD=host uses host rpmbuild.
+# SFOS_SDK and SFOS_TARGET pick another SDK.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"            # kn/sailfish
 KN="$(cd "$HERE/.." && pwd)"
@@ -57,6 +57,8 @@ SYSROOT=$(first_dir "${PC_ARM_SYSROOT:-}" "$KN/deps/sysroot-arm64") ||
 rm -rf "$OUT"
 mkdir -p "$STAGE/app/lib" "$STAGE/icons"
 install -m 0755 "$KEXE" "$STAGE/app/photoncam-kn"
+python3 "$HERE/strip-unused-crypt.py" "$STAGE/app/photoncam-kn" \
+	"$SYSROOT/usr/lib/aarch64-linux-gnu/libcrypt.so.1"
 cp -a "$BIN_DIR/resources" "$STAGE/app/resources"
 cp -a "$ROOT/app/src/main/assets" "$STAGE/app/assets"
 install -m 0755 "$HERE/run.sh" "$STAGE/run.sh"
@@ -70,9 +72,7 @@ for s in 86 108 128 172; do
 		-alpha off -compose CopyOpacity -composite "$STAGE/icons/$s.png"
 done
 
-# Bundle every DT_NEEDED the phone does not have, transitively.  Today that is
-# libmaliit-glib (Aurora's 0.99 build) and libcrypt.so.1, which Sailfish ships
-# only as .so.2 and the binary links without using.
+# Bundle every DT_NEEDED the phone does not have, transitively.
 unavailable=""
 while :; do
 	needed=$(for f in "$STAGE/app/photoncam-kn" "$STAGE"/app/lib/*; do
@@ -105,9 +105,16 @@ version=$(sed -n "s/^[[:space:]]*versionName[[:space:]]*'\([^']*\)'.*/\1/p" \
 # RPM versions cannot carry a '-'.
 version="${version//-/_}"
 
-[ -x "$SFOS_SDK" ] || die "no Sailfish Platform SDK at $SFOS_SDK (set SFOS_SDK)"
-log "rpmbuild $version in $SFOS_TARGET"
-"$SFOS_SDK" sb2 -t "$SFOS_TARGET" rpmbuild -bb \
+if [ "${PC_SFOS_RPMBUILD:-sdk}" = host ]; then
+	command -v rpmbuild >/dev/null || die "install rpm for host packaging"
+	rpm_command=(rpmbuild --define '_build_id_links none' --define '_rpmformat 4')
+else
+	[ -x "$SFOS_SDK" ] || die "no Sailfish Platform SDK at $SFOS_SDK (set SFOS_SDK)"
+	rpm_command=("$SFOS_SDK" sb2 -t "$SFOS_TARGET" rpmbuild)
+fi
+log "rpmbuild $version"
+"${rpm_command[@]}" --target aarch64 -bb \
+	--define '_binary_payload w9.gzdio' \
 	--define "_topdir $OUT" --define "pc_version $version" \
 	"$HERE/photoncamera.spec"
 

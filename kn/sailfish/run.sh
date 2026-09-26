@@ -5,7 +5,7 @@ set -e
 
 APP_DIR="${PC_APP_DIR:-/usr/share/photoncamera}"
 
-# libmaliit-glib.so.0 and libcrypt.so.1 are DT_NEEDED and Sailfish has neither.
+# Sailfish lacks the bundled libmaliit-glib.so.0.
 export LD_LIBRARY_PATH="$APP_DIR/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export GLIBC_TUNABLES=glibc.rtld.optional_static_tls=4096
 export ATL_APPDIR="$APP_DIR"
