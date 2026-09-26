@@ -213,6 +213,8 @@ fun BoxScope.CameraViewfinder(surface: ComposePreviewSurface, overlay: Viewfinde
 			withFrameNanos { nanos ->
 				val raster = converter.take()
 				if (raster != null) {
+					// A lens can switch from gralloc buffers to copied frames.
+					gpu.clearFrame()
 					drawn++
 					convertNanos += raster.nanos
 					val img = raster.toSkiaImage()
@@ -287,6 +289,14 @@ private class GpuPreviewRenderer(
 	private val frameState = mutableStateOf<PreviewFrame?>(null)
 
 	val frame: PreviewFrame? get() = frameState.value
+
+	fun clearFrame() {
+		skia?.close()
+		skia = null
+		frameState.value = null
+		held?.release()
+		held = null
+	}
 
 	fun update(context: DirectContext) {
 		if (failed)
