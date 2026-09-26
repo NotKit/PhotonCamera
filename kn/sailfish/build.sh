@@ -114,7 +114,7 @@ else
 fi
 log "rpmbuild $version"
 "${rpm_command[@]}" --target aarch64 -bb \
-	--define '_binary_payload w9.gzdio' \
+	--define '_binary_payload w19.zstdio' \
 	--define "_topdir $OUT" --define "pc_version $version" \
 	"$HERE/photoncamera.spec"
 
